@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../services/globals.dart';
 import '../widgets/interactive_card.dart';
 import '../models/sample_movies.dart';
 
@@ -14,6 +15,9 @@ class _SearchScreenState extends State<SearchScreen> {
   final _searchController = TextEditingController();
   List<SampleMovie> _results = [];
   bool _isSearching = false;
+  final Set<String> _watchlist = {};
+
+  String get _userId => authService.currentUser?.id ?? guestService.guestId;
 
   @override
   void dispose() {
@@ -130,11 +134,24 @@ class _SearchScreenState extends State<SearchScreen> {
                         style: const TextStyle(color: Colors.white54, fontSize: 12),
                       ),
                       trailing: InteractiveCard(
-                        onTap: () {
+                        onTap: () async {
                           HapticFeedback.lightImpact();
+                          final isWatch = _watchlist.contains(movie.id);
+                          setState(() {
+                            if (isWatch) {
+                              _watchlist.remove(movie.id);
+                            } else {
+                              _watchlist.add(movie.id);
+                            }
+                          });
+                          if (!guestService.isGuest && authService.currentUser != null) {
+                            await databaseService.toggleWatchlist(_userId, movie.id,
+                              title: movie.title, genre: movie.genre, year: movie.year, rating: movie.rating);
+                          }
+                          if (!mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text('${movie.title} added to watchlist'),
+                              content: Text(isWatch ? 'Removed from watchlist' : 'Added to watchlist'),
                               duration: const Duration(seconds: 1),
                             ),
                           );
@@ -146,8 +163,9 @@ class _SearchScreenState extends State<SearchScreen> {
                             border: Border.all(color: Colors.white24),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Icon(Icons.bookmark_border,
-                              color: Colors.white38, size: 18),
+                          child: Icon(
+                            _watchlist.contains(movie.id) ? Icons.bookmark : Icons.bookmark_border,
+                              color: _watchlist.contains(movie.id) ? const Color(0xFFE50914) : Colors.white38, size: 18),
                         ),
                       ),
                     ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../services/globals.dart';
 import '../models/chat_message_model.dart';
 import '../services/contacts_service.dart';
 import '../widgets/interactive_card.dart';
@@ -15,8 +16,29 @@ class _ChatScreenState extends State<ChatScreen> {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
   final _contactsService = ContactsService();
-  final List<ChatMessageModel> _messages = [];
   final Set<String> _onlineUsers = {'1', '2', '3', '4'};
+
+  List<ChatMessageModel> get _messages => realtimeService.messages;
+
+  @override
+  void initState() {
+    super.initState();
+    realtimeService.connect();
+    realtimeService.addListener(_onRealtimeUpdate);
+  }
+
+  void _onRealtimeUpdate() {
+    if (mounted) setState(() {});
+    _scrollToBottom();
+  }
+
+  @override
+  void dispose() {
+    realtimeService.removeListener(_onRealtimeUpdate);
+    _messageController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   final List<Map<String, dynamic>> _chatUsers = [
     {'id': '1', 'name': 'MovieBot AI', 'avatar': '🤖', 'color': const Color(0xFF1E88E5), 'lastMsg': 'Recommended 3 movies for you', 'time': '2m', 'unread': 2},
@@ -29,13 +51,6 @@ class _ChatScreenState extends State<ChatScreen> {
     {'id': '8', 'name': 'Movie Night', 'avatar': '🍿', 'color': const Color(0xFFD32F2F), 'lastMsg': 'This Friday at 8?', 'time': '3d', 'unread': 0},
   ];
 
-  @override
-  void dispose() {
-    _messageController.dispose();
-    _scrollController.dispose();
-    super.dispose();
-  }
-
   void _sendMessage() {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
@@ -43,28 +58,26 @@ class _ChatScreenState extends State<ChatScreen> {
     HapticFeedback.mediumImpact();
     final message = ChatMessageModel(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-      userId: 'me',
-      username: 'You',
+      userId: authService.currentUser?.id ?? guestService.guestId,
+      username: authService.currentUser?.username ?? 'You',
       content: text,
       createdAt: DateTime.now(),
     );
 
-    setState(() => _messages.add(message));
+    realtimeService.sendMessage(message);
     _messageController.clear();
     _scrollToBottom();
 
     if (text.toLowerCase().contains('movie') || text.toLowerCase().contains('film')) {
       Future.delayed(const Duration(seconds: 1), () {
         if (mounted) {
-          setState(() {
-            _messages.add(ChatMessageModel(
-              id: 'resp_${DateTime.now().millisecondsSinceEpoch}',
-              userId: '1',
-              username: 'MovieBot AI',
-              content: 'I found some great movies for you! Check out "Dune: Part Two" and "Inception" — both have amazing reviews! 🎬',
-              createdAt: DateTime.now(),
-            ));
-          });
+          realtimeService.sendMessage(ChatMessageModel(
+            id: 'resp_${DateTime.now().millisecondsSinceEpoch}',
+            userId: '1',
+            username: 'MovieBot AI',
+            content: 'I found some great movies for you! Check out "Dune: Part Two" and "Inception" — both have amazing reviews! 🎬',
+            createdAt: DateTime.now(),
+          ));
           _scrollToBottom();
         }
       });
@@ -123,7 +136,12 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ),
           InteractiveCard(
-            onTap: () => HapticFeedback.lightImpact(),
+            onTap: () {
+              HapticFeedback.lightImpact();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('New message'), duration: Duration(seconds: 1)),
+              );
+            },
             scaleAmount: 0.88,
             child: const Padding(
               padding: EdgeInsets.all(8),
@@ -155,7 +173,15 @@ class _ChatScreenState extends State<ChatScreen> {
               final user = _chatUsers[index];
               final isOnline = _onlineUsers.contains(user['id']);
               return InteractiveCard(
-                onTap: () => HapticFeedback.mediumImpact(),
+                onTap: () {
+                  HapticFeedback.mediumImpact();
+                  setState(() {
+                    _messages.isNotEmpty ? null : null;
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Opening chat with ${user['name']}...'), duration: const Duration(seconds: 1)),
+                  );
+                },
                 child: ListTile(
                   leading: Stack(
                     children: [
@@ -220,7 +246,12 @@ class _ChatScreenState extends State<ChatScreen> {
             final user = _chatUsers[i];
             final isOnline = _onlineUsers.contains(user['id']);
             return InteractiveCard(
-              onTap: () => HapticFeedback.lightImpact(),
+              onTap: () {
+                HapticFeedback.lightImpact();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Chat with ${user['name']}'), duration: const Duration(seconds: 1)),
+                );
+              },
               scaleAmount: 0.9,
               child: Column(
                 children: [
@@ -330,7 +361,12 @@ class _ChatScreenState extends State<ChatScreen> {
         child: Row(
           children: [
             InteractiveCard(
-              onTap: () => HapticFeedback.lightImpact(),
+              onTap: () {
+                HapticFeedback.lightImpact();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Attach media coming soon'), duration: Duration(seconds: 1)),
+                );
+              },
               scaleAmount: 0.85,
               child: Container(
                 padding: const EdgeInsets.all(10),

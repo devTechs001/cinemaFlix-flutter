@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../services/globals.dart';
 import '../models/sample_movies.dart';
+import '../models/review_model.dart';
 import '../widgets/interactive_card.dart';
 import 'movie_play_screen.dart';
 
@@ -20,6 +22,29 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   bool _isFavorited = false;
   bool _inWatchlist = false;
 
+  String get _userId => authService.currentUser?.id ?? '';
+
+  @override
+  void initState() {
+    super.initState();
+    _comments.addAll(_sampleComments);
+    _loadStates();
+  }
+
+  Future<void> _loadStates() async {
+    if (authService.currentUser == null) return;
+    try {
+      final allFavs = await databaseService.getFavorites(_userId);
+      final watch = await databaseService.isInWatchlist(_userId, widget.movie.id);
+      if (mounted) {
+        setState(() {
+          _isFavorited = allFavs.any((m) => m.id == widget.movie.id);
+          _inWatchlist = watch;
+        });
+      }
+    } catch (_) {}
+  }
+
   final List<Map<String, dynamic>> _sampleComments = const [
     {'user': 'Sarah J.', 'avatar': 'S', 'comment': 'Absolutely stunning cinematography! The visual effects were mind-blowing. A must-watch for any sci-fi fan.', 'rating': 5, 'time': '2h ago', 'likes': 24},
     {'user': 'Mike Chen', 'avatar': 'M', 'comment': 'The storyline kept me on the edge of my seat. One of the best movies this year!', 'rating': 4, 'time': '5h ago', 'likes': 18},
@@ -29,34 +54,45 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   ];
 
   @override
-  void initState() {
-    super.initState();
-    _comments.addAll(_sampleComments);
-  }
-
-  @override
   void dispose() {
     _commentController.dispose();
     super.dispose();
   }
 
-  void _addComment() {
+  Future<void> _addComment() async {
     final text = _commentController.text.trim();
     if (text.isEmpty) return;
 
     HapticFeedback.mediumImpact();
+    final newReview = {
+      'user': 'You',
+      'avatar': 'Y',
+      'comment': text,
+      'rating': _userRating,
+      'time': 'just now',
+      'likes': 0,
+    };
     setState(() {
-      _comments.insert(0, {
-        'user': 'You',
-        'avatar': 'Y',
-        'comment': text,
-        'rating': _userRating,
-        'time': 'just now',
-        'likes': 0,
-      });
+      _comments.insert(0, newReview);
     });
     _commentController.clear();
     _userRating = 0;
+
+    if (authService.currentUser != null) {
+      try {
+        await databaseService.addReview(
+          ReviewModel(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            userId: _userId,
+            movieId: widget.movie.id,
+            rating: _userRating,
+            content: text,
+            createdAt: DateTime.now(),
+          ),
+        );
+      } catch (_) {}
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Review added!'), duration: Duration(seconds: 1)),
     );
@@ -163,14 +199,22 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      _actionButton(Icons.bookmark_border, Icons.bookmark, _inWatchlist, () {
+                      _actionButton(Icons.bookmark_border, Icons.bookmark, _inWatchlist, () async {
                         HapticFeedback.lightImpact();
                         setState(() => _inWatchlist = !_inWatchlist);
+                        if (authService.currentUser != null) {
+                          await databaseService.toggleWatchlist(_userId, widget.movie.id,
+                            title: widget.movie.title, genre: widget.movie.genre, year: widget.movie.year, rating: widget.movie.rating);
+                        }
                       }),
                       const SizedBox(width: 12),
-                      _actionButton(Icons.favorite_border, Icons.favorite, _isFavorited, () {
+                      _actionButton(Icons.favorite_border, Icons.favorite, _isFavorited, () async {
                         HapticFeedback.lightImpact();
                         setState(() => _isFavorited = !_isFavorited);
+                        if (authService.currentUser != null) {
+                          await databaseService.toggleFavorite(_userId, widget.movie.id,
+                            title: widget.movie.title, genre: widget.movie.genre, year: widget.movie.year, rating: widget.movie.rating);
+                        }
                       }),
                     ],
                   ),
@@ -322,7 +366,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                     Row(
                       children: [
                         ...List.generate(5, (i) => Icon(
-                          i < (comment['rating'] as int) ? Icons.star : Icons.star_border,
+                          i < (comment['rating'] as num).toInt() ? Icons.star : Icons.star_border,
                           color: Colors.amber, size: 12,
                         )),
                         const SizedBox(width: 6),

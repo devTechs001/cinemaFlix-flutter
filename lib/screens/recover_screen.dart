@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../services/supabase_service.dart';
 import '../widgets/interactive_card.dart';
 
 class RecoverScreen extends StatefulWidget {
@@ -78,10 +79,19 @@ class _RecoverScreenState extends State<RecoverScreen> {
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton(
-                    onPressed: () {
+                    onPressed: () async {
                       if (_emailController.text.trim().isEmpty) return;
                       HapticFeedback.mediumImpact();
-                      setState(() => _sent = true);
+                      try {
+                        await SupabaseService().auth.resetPasswordForEmail(_emailController.text.trim());
+                        setState(() => _sent = true);
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error: ${e.toString().replaceAll('Exception: ', '')}'), backgroundColor: const Color(0xFFE50914)),
+                          );
+                        }
+                      }
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFE50914),

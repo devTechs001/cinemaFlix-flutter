@@ -101,13 +101,21 @@ class _ShortsScreenState extends State<ShortsScreen> {
                               const SizedBox(width: 8),
                               const Text('CinemaFlix', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
                               const SizedBox(width: 8),
-                              Container(
+                              InteractiveCard(
+                                onTap: () {
+                                  HapticFeedback.lightImpact();
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Following CinemaFlix'), duration: Duration(seconds: 1)),
+                                  );
+                                },
+                                child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                 decoration: BoxDecoration(
                                   color: Colors.white.withAlpha(30),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: const Text('Follow', style: TextStyle(color: Colors.white, fontSize: 11)),
+                              ),
                               ),
                             ],
                           ),
@@ -136,7 +144,12 @@ class _ShortsScreenState extends State<ShortsScreen> {
                             });
                           }),
                           const SizedBox(height: 16),
-                          _actionColumn(Icons.chat_bubble, Icons.chat_bubble_outline, false, _formatCount(short.comments), () => HapticFeedback.lightImpact()),
+                          _actionColumn(Icons.chat_bubble, Icons.chat_bubble_outline, false, _formatCount(short.comments), () {
+                            HapticFeedback.lightImpact();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Comments coming soon'), duration: Duration(seconds: 1)),
+                            );
+                          }),
                           const SizedBox(height: 16),
                           _actionColumn(Icons.bookmark, Icons.bookmark_border, isBookmarked, '', () {
                             HapticFeedback.lightImpact();
@@ -145,7 +158,12 @@ class _ShortsScreenState extends State<ShortsScreen> {
                             });
                           }),
                           const SizedBox(height: 16),
-                          _actionColumn(Icons.share, Icons.share_outlined, false, _formatCount(short.shares), () => HapticFeedback.lightImpact()),
+                          _actionColumn(Icons.share, Icons.share_outlined, false, _formatCount(short.shares), () {
+                            HapticFeedback.lightImpact();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Share ${short.movie.title}'), duration: const Duration(seconds: 1)),
+                            );
+                          }),
                         ],
                       ),
                     ),
@@ -174,46 +192,131 @@ class _ShortsScreenState extends State<ShortsScreen> {
               );
             },
           ),
+          // Top Tabs
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 10,
+            left: 0,
+            right: 0,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _topTab('Following', false),
+                const SizedBox(width: 20),
+                _topTab('For You', true),
+              ],
+            ),
+          ),
+          
           Positioned(
             bottom: 0,
             left: 0,
             right: 0,
             child: Container(
               padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).padding.bottom,
-                top: 8,
+                bottom: MediaQuery.of(context).padding.bottom + 10,
+                top: 15,
               ),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [Colors.transparent, Colors.black87],
+                  colors: [Colors.transparent, Colors.black.withAlpha(200)],
                 ),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _navItem(Icons.home, 'Home', false, () => Navigator.pushReplacementNamed(context, '/main')),
-                  _navItem(Icons.explore, 'Explore', false, () => HapticFeedback.lightImpact()),
-                  InteractiveCard(
-                    onTap: () => HapticFeedback.mediumImpact(),
-                    scaleAmount: 0.9,
-                    child: Container(
-                      width: 48, height: 48,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFE50914),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.add, color: Colors.white, size: 28),
-                    ),
-                  ),
-                  _navItem(Icons.chat, 'Chat', false, () => HapticFeedback.lightImpact()),
-                  _navItem(Icons.person, 'Profile', false, () => HapticFeedback.lightImpact()),
+                  _navItem(Icons.home_filled, 'Home', false, () => Navigator.pushReplacementNamed(context, '/main')),
+                  _navItem(Icons.explore, 'Explore', false, () => Navigator.pushReplacementNamed(context, '/main')),
+                  _addShortButton(),
+                  _navItem(Icons.chat_bubble, 'Inbox', false, () => Navigator.pushReplacementNamed(context, '/main')),
+                  _navItem(Icons.person, 'Profile', false, () => Navigator.pushReplacementNamed(context, '/main')),
                 ],
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _topTab(String label, bool active) {
+    return InteractiveCard(
+      onTap: () {
+        HapticFeedback.lightImpact();
+      },
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: active ? Colors.white : Colors.white60,
+              fontWeight: active ? FontWeight.bold : FontWeight.w500,
+              fontSize: 16,
+            ),
+          ),
+          if (active)
+            Container(
+              margin: const EdgeInsets.only(top: 4),
+              width: 24,
+              height: 2,
+              color: Colors.white,
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _addShortButton() {
+    return InteractiveCard(
+      onTap: () {
+        HapticFeedback.mediumImpact();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Upload short coming soon'), duration: Duration(seconds: 1)),
+        );
+      },
+      scaleAmount: 0.9,
+      child: Container(
+        width: 45,
+        height: 30,
+        child: Stack(
+          children: [
+            Positioned(
+              left: 0,
+              child: Container(
+                width: 38,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF20D5EC),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+            Positioned(
+              right: 0,
+              child: Container(
+                width: 38,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF0050),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+            Center(
+              child: Container(
+                width: 38,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.add, color: Colors.black, size: 20),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -254,8 +357,8 @@ class _ShortsScreenState extends State<ShortsScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: active ? const Color(0xFFE50914) : Colors.white54, size: 22),
-            Text(label, style: TextStyle(color: active ? const Color(0xFFE50914) : Colors.white38, fontSize: 10)),
+            Icon(icon, color: Colors.white, size: 22),
+            Text(label, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
           ],
         ),
       ),

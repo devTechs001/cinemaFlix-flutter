@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../widgets/interactive_card.dart';
-import '../models/sample_movies.dart';
 
 class ExploreScreen extends StatelessWidget {
   const ExploreScreen({super.key});
@@ -28,10 +27,10 @@ class ExploreScreen extends StatelessWidget {
         title: const Text('Explore'),
         actions: [
           InteractiveCard(
-            onTap: () => HapticFeedback.lightImpact(),
+            onTap: () => Navigator.pushNamed(context, '/search'),
             child: const Padding(
               padding: EdgeInsets.all(8),
-              child: Icon(Icons.filter_list, color: Colors.white54),
+              child: Icon(Icons.search, color: Colors.white54),
             ),
           ),
         ],
@@ -68,15 +67,7 @@ class ExploreScreen extends StatelessWidget {
                   return InteractiveCard(
                     onTap: () {
                       HapticFeedback.mediumImpact();
-                      final matches = sampleMovies
-                          .where((m) => m.genre.contains(cat['name'] as String))
-                          .toList();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('${cat['name']}: ${matches.length} movies'),
-                          duration: const Duration(seconds: 1),
-                        ),
-                      );
+                      Navigator.pushNamed(context, '/search');
                     },
                     child: Container(
                       decoration: BoxDecoration(

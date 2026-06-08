@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../services/globals.dart';
 import '../widgets/interactive_card.dart';
 import '../widgets/app_logo.dart';
 import '../models/sample_movies.dart';
@@ -13,11 +14,28 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _isEditing = false;
-  final _nameController = TextEditingController(text: 'Cinema Fan');
-  final _bioController = TextEditingController(text: 'Movie enthusiast 🎬 | 100+ films watched');
+  late final TextEditingController _nameController;
+  late final TextEditingController _bioController;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: authService.currentUser?.username ?? 'Cinema Fan');
+    _bioController = TextEditingController(text: 'Movie enthusiast 🎬 | 100+ films watched');
+    authService.addListener(_onAuthChange);
+  }
+
+  void _onAuthChange() {
+    if (mounted) {
+      setState(() {
+        _nameController.text = authService.currentUser?.username ?? 'Cinema Fan';
+      });
+    }
+  }
 
   @override
   void dispose() {
+    authService.removeListener(_onAuthChange);
     _nameController.dispose();
     _bioController.dispose();
     super.dispose();
@@ -30,8 +48,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
         title: const Text('Profile', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
           InteractiveCard(
-            onTap: () {
+            onTap: () async {
               HapticFeedback.mediumImpact();
+              if (_isEditing && authService.currentUser != null) {
+                await authService.updateProfile(username: _nameController.text.trim());
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Profile updated'), duration: Duration(seconds: 1)),
+                );
+              }
               setState(() => _isEditing = !_isEditing);
             },
             scaleAmount: 0.88,
@@ -72,7 +96,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: _isEditing
                         ? IconButton(
                             icon: const Icon(Icons.camera_alt, color: Colors.white38, size: 28),
-                            onPressed: () => HapticFeedback.lightImpact(),
+                            onPressed: () {
+                              HapticFeedback.lightImpact();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Camera/gallery picker coming soon'), duration: Duration(seconds: 1)),
+                              );
+                            },
                           )
                         : const Icon(Icons.person, size: 48, color: Color(0xFFE50914)),
                   ),
@@ -192,8 +221,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
               HapticFeedback.lightImpact();
               Navigator.pushNamed(context, '/notifications');
             }),
-            _buildMenuTile(Icons.download_outlined, 'Downloads', '3 movies offline', () => HapticFeedback.lightImpact()),
-            _buildMenuTile(Icons.language, 'Language', 'English', () => HapticFeedback.lightImpact()),
+            _buildMenuTile(Icons.download_outlined, 'Downloads', '3 movies offline', () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Downloads management'), duration: Duration(seconds: 1)),
+              );
+            }),
+            _buildMenuTile(Icons.language, 'Language', 'English', () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Language settings coming soon'), duration: Duration(seconds: 1)),
+              );
+            }),
             _buildMenuTile(Icons.admin_panel_settings_outlined, 'Dev Panel', 'Developer options', () {
               HapticFeedback.mediumImpact();
               Navigator.pushNamed(context, '/dev-panel');
@@ -362,9 +399,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () {
+                    onPressed: () async {
                       HapticFeedback.heavyImpact();
+                      authService.signOut();
                       Navigator.pop(context);
+                      Navigator.pushReplacementNamed(context, '/auth');
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red,

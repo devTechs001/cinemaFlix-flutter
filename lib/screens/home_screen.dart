@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../services/globals.dart';
 import '../models/sample_movies.dart';
 import '../widgets/interactive_card.dart';
 import '../widgets/shimmer_loading.dart';
@@ -13,17 +14,29 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   bool _initialLoading = true;
-  final Set<String> _favorites = {};
-  final Set<String> _watchlist = {};
+  Set<String> _favorites = {};
+  Set<String> _watchlist = {};
 
   @override
   void initState() {
     super.initState();
-    _simulateLoad();
+    _loadData();
   }
 
-  Future<void> _simulateLoad() async {
-    await Future.delayed(const Duration(milliseconds: 1000));
+  String get _userId => authService.currentUser?.id ?? guestService.guestId;
+
+  Future<void> _loadData() async {
+    if (guestService.isGuest || authService.currentUser == null) {
+      await Future.delayed(const Duration(milliseconds: 1000));
+    } else {
+      try {
+        final favs = await databaseService.getFavorites(_userId);
+        final watch = await databaseService.getWatchlist(_userId);
+        _favorites = favs.map((m) => m.id).toSet();
+        _watchlist = watch.map((m) => m.id).toSet();
+      } catch (_) {}
+      await Future.delayed(const Duration(milliseconds: 500));
+    }
     if (mounted) setState(() => _initialLoading = false);
   }
 
@@ -67,6 +80,14 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         actions: [
+          InteractiveCard(
+            onTap: () => Navigator.pushNamed(context, '/search'),
+            scaleAmount: 0.88,
+            child: const Padding(
+              padding: EdgeInsets.all(8),
+              child: Icon(Icons.search, color: Colors.white54),
+            ),
+          ),
           Stack(
             children: [
               InteractiveCard(
@@ -139,13 +160,13 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           _buildFeaturedSection(),
           const SizedBox(height: 24),
-          _buildSectionHeader('Trending Now', () {}),
+          _buildSectionHeader('Trending Now', () => Navigator.pushNamed(context, '/search')),
           _buildTrendingRow(),
           const SizedBox(height: 24),
-          _buildSectionHeader('Continue Watching', () {}),
+          _buildSectionHeader('Continue Watching', () => Navigator.pushNamed(context, '/records')),
           _buildContinueWatching(),
           const SizedBox(height: 24),
-          _buildSectionHeader('Popular on CinemaFlix', () {}),
+          _buildSectionHeader('Popular on CinemaFlix', () => Navigator.pushNamed(context, '/search')),
           _buildPopularGrid(),
           const SizedBox(height: 24),
         ],
@@ -196,7 +217,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           Icons.favorite_border,
                           Icons.favorite,
                           isFav,
-                          () {
+                          () async {
                             HapticFeedback.lightImpact();
                             setState(() {
                               if (isFav) {
@@ -205,6 +226,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                 _favorites.add(movie.id);
                               }
                             });
+                            if (!guestService.isGuest && authService.currentUser != null) {
+                              await databaseService.toggleFavorite(_userId, movie.id,
+                                title: movie.title, genre: movie.genre, year: movie.year, rating: movie.rating);
+                            }
+                            if (!mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(isFav ? 'Removed from favorites' : 'Added to favorites'),
@@ -218,7 +244,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           Icons.bookmark_border,
                           Icons.bookmark,
                           isWatch,
-                          () {
+                          () async {
                             HapticFeedback.lightImpact();
                             setState(() {
                               if (isWatch) {
@@ -227,6 +253,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                 _watchlist.add(movie.id);
                               }
                             });
+                            if (!guestService.isGuest && authService.currentUser != null) {
+                              await databaseService.toggleWatchlist(_userId, movie.id,
+                                title: movie.title, genre: movie.genre, year: movie.year, rating: movie.rating);
+                            }
+                            if (!mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(isWatch ? 'Removed from watchlist' : 'Added to watchlist'),
@@ -355,9 +386,7 @@ class _HomeScreenState extends State<HomeScreen> {
           InteractiveCard(
             onTap: () {
               HapticFeedback.lightImpact();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Showing all $title'), duration: const Duration(seconds: 1)),
-              );
+              onSeeAll();
             },
             child: const Text(
               'See All',
@@ -411,11 +440,11 @@ class _HomeScreenState extends State<HomeScreen> {
                           size: 36,
                         ),
                       ),
-                      Positioned(
+                        Positioned(
                         top: 0,
                         right: 0,
                         child: InteractiveCard(
-                          onTap: () {
+                          onTap: () async {
                             HapticFeedback.lightImpact();
                             setState(() {
                               if (isFav) {
@@ -424,6 +453,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                 _favorites.add(movie.id);
                               }
                             });
+                            if (!guestService.isGuest && authService.currentUser != null) {
+                              await databaseService.toggleFavorite(_userId, movie.id,
+                                title: movie.title, genre: movie.genre, year: movie.year, rating: movie.rating);
+                            }
                           },
                           scaleAmount: 0.8,
                           child: Container(
@@ -512,7 +545,46 @@ class _HomeScreenState extends State<HomeScreen> {
                             top: 8,
                             right: 8,
                             child: InteractiveCard(
-                              onTap: () {},
+                              onTap: () {
+                                HapticFeedback.lightImpact();
+                                showModalBottomSheet(
+                                  context: context,
+                                  backgroundColor: const Color(0xFF1F1F1F),
+                                  shape: const RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                                  ),
+                                  builder: (_) => SafeArea(
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Container(
+                                          margin: const EdgeInsets.only(top: 8),
+                                          width: 32, height: 4,
+                                          decoration: BoxDecoration(
+                                            color: Colors.white24,
+                                            borderRadius: BorderRadius.circular(2),
+                                          ),
+                                        ),
+                                        ListTile(
+                                          leading: const Icon(Icons.playlist_remove, color: Colors.white54),
+                                          title: const Text('Remove from Continue Watching', style: TextStyle(color: Colors.white)),
+                                          onTap: () => Navigator.pop(context),
+                                        ),
+                                        ListTile(
+                                          leading: const Icon(Icons.check_circle_outline, color: Colors.white54),
+                                          title: const Text('Mark as Watched', style: TextStyle(color: Colors.white)),
+                                          onTap: () => Navigator.pop(context),
+                                        ),
+                                        ListTile(
+                                          leading: const Icon(Icons.bookmark_border, color: Colors.white54),
+                                          title: const Text('Add to Watchlist', style: TextStyle(color: Colors.white)),
+                                          onTap: () => Navigator.pop(context),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
                               scaleAmount: 0.85,
                               child: Container(
                                 padding: const EdgeInsets.all(4),

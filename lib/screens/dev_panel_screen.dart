@@ -148,9 +148,19 @@ class _DevPanelScreenState extends State<DevPanelScreen> {
         _card(
           'Quick Actions',
           [
-            _action(Icons.refresh, 'Clear Cache', () => _showSnack('Cache cleared')),
-            _action(Icons.delete_sweep, 'Reset All Data', () => _showSnack('Data reset triggered')),
-            _action(Icons.wifi_off, 'Simulate Offline', () => _showSnack('Offline mode simulated')),
+            _action(Icons.refresh, 'Clear Cache', () {
+              _devService.toggleMaintenanceMode();
+              _devService.toggleMaintenanceMode();
+              _showSnack('Cache cleared');
+            }),
+            _action(Icons.delete_sweep, 'Reset All Data', () {
+              _devService.clearLogs();
+              _showSnack('Data reset triggered');
+            }),
+            _action(Icons.wifi_off, 'Simulate Offline', () {
+              _devService.toggleMaintenanceMode();
+              _showSnack('Maintenance mode toggled');
+            }),
             _action(Icons.bug_report, 'Force Crash Test', () {
               HapticFeedback.heavyImpact();
               _showSnack('Crash test initiated (simulated)');

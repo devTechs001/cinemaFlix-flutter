@@ -44,6 +44,19 @@ class AuthService extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
+      // Dev Admin Special Logic
+      if (email == 'devTechs842@gmail.com' && password == 'Admin1234') {
+        try {
+          await _supabase.auth.signInWithPassword(email: email, password: password);
+        } catch (e) {
+          // If Supabase login fails for the admin (e.g. user not created yet),
+          // we can still allow them in for development if needed, 
+          // but usually it's better to just ensure the user exists.
+          // For now, let's just attempt the real login.
+          rethrow;
+        }
+        return;
+      }
       await _supabase.auth.signInWithPassword(email: email, password: password);
     } finally {
       _isLoading = false;

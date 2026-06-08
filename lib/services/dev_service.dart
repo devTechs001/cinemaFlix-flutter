@@ -60,6 +60,11 @@ class DevService extends ChangeNotifier {
     notifyListeners();
   }
 
+  void logEvent(String event) {
+    final timestamp = DateTime.now().toIso8601String().split('T').last.split('.').first;
+    _eventLog.insert(0, '[$timestamp] $event');
+  }
+
   void _logEvent(String event) {
     final timestamp = DateTime.now().toIso8601String().split('T').last.split('.').first;
     _eventLog.insert(0, '[$timestamp] $event');

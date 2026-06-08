@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../services/globals.dart';
 import 'app_logo.dart';
 import 'interactive_card.dart';
 
@@ -24,28 +25,42 @@ class AppDrawer extends StatelessWidget {
                 children: [
                   _sectionTitle('Main'),
                   _drawerItem(Icons.home_rounded, 'Home', () => _navigate(context, '/main')),
-                  _drawerItem(Icons.live_tv_rounded, 'Live', () => _navigate(context, '/main', extra: 1)),
-                  _drawerItem(Icons.video_library_rounded, 'Shorts', () => Navigator.pushNamed(context, '/shorts')),
-                  _drawerItem(Icons.explore_rounded, 'Explore', () => _navigate(context, '/main', extra: 2)),
-                  _drawerItem(Icons.chat_rounded, 'Chat', () => _navigate(context, '/main', extra: 3)),
+                  _drawerItem(Icons.dynamic_feed_rounded, 'Feed', () => _navigate(context, '/main', extra: 1)),
+                  _drawerItem(Icons.live_tv_rounded, 'Live', () => _navigate(context, '/main', extra: 3)),
+                  _drawerItem(Icons.video_library_rounded, 'Shorts', () => _navigate(context, '/main', extra: 2)),
+                  _drawerItem(Icons.chat_rounded, 'Chat', () => _navigate(context, '/main', extra: 4)),
+                  _drawerItem(Icons.explore_rounded, 'Explore', () => Navigator.pushNamed(context, '/explore')),
                   _sectionTitle('Library'),
-                  _drawerItem(Icons.bookmark_rounded, 'Watchlist', () => HapticFeedback.lightImpact()),
-                  _drawerItem(Icons.favorite_rounded, 'Favorites', () => HapticFeedback.lightImpact()),
+                  _drawerItem(Icons.bookmark_rounded, 'Watchlist', () => Navigator.pushNamed(context, '/search')),
+                  _drawerItem(Icons.favorite_rounded, 'Favorites', () => Navigator.pushNamed(context, '/search')),
                   _drawerItem(Icons.history_rounded, 'History', () => Navigator.pushNamed(context, '/records')),
-                  _drawerItem(Icons.download_rounded, 'Downloads', () => HapticFeedback.lightImpact()),
+                  _drawerItem(Icons.download_rounded, 'Downloads', () {
+                    HapticFeedback.lightImpact();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Downloads: 3 movies offline'), duration: Duration(seconds: 1)),
+                    );
+                  }),
                   _sectionTitle('Social'),
                   _drawerItem(Icons.notifications_rounded, 'Notifications', () => Navigator.pushNamed(context, '/notifications'), badge: '3'),
                   _drawerItem(Icons.card_giftcard_rounded, 'Gifting', () => Navigator.pushNamed(context, '/gifting')),
-                  _drawerItem(Icons.group_rounded, 'Contacts', () => HapticFeedback.lightImpact()),
+                  _drawerItem(Icons.group_rounded, 'Contacts', () {
+                    HapticFeedback.lightImpact();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Contacts feature coming soon'), duration: Duration(seconds: 1)),
+                    );
+                  }),
                   _sectionTitle('Settings'),
                   _drawerItem(Icons.settings_rounded, 'Settings', () => Navigator.pushNamed(context, '/settings')),
                   _drawerItem(Icons.palette_rounded, 'Themes', () => Navigator.pushNamed(context, '/themes')),
-                  _drawerItem(Icons.admin_panel_settings_rounded, 'Dev Panel', () => Navigator.pushNamed(context, '/dev-panel')),
+                  if (authService.currentUser?.isAdmin ?? false)
+                    _drawerItem(Icons.admin_panel_settings_rounded, 'Dev Panel', () => Navigator.pushNamed(context, '/dev-panel')),
                   _sectionTitle('Account'),
                   _drawerItem(Icons.person_rounded, 'Profile', () => _navigate(context, '/main', extra: 4)),
-                  _drawerItem(Icons.logout_rounded, 'Sign Out', () {
+                  _drawerItem(Icons.logout_rounded, 'Sign Out', () async {
                     HapticFeedback.heavyImpact();
                     Navigator.pop(context);
+                    await authService.signOut();
+                    Navigator.pushReplacementNamed(context, '/auth');
                   }, isDanger: true),
                 ],
               ),
@@ -151,8 +166,29 @@ class AppDrawer extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           _footerIcon(Icons.settings, 'Settings', () => Navigator.pushNamed(context, '/settings')),
-          _footerIcon(Icons.help_outline, 'Help', () => HapticFeedback.lightImpact()),
-          _footerIcon(Icons.info_outline, 'About', () => HapticFeedback.lightImpact()),
+          _footerIcon(Icons.help_outline, 'Help', () {
+            HapticFeedback.lightImpact();
+            showAboutDialog(
+              context: context,
+              applicationName: 'CinemaFlix',
+              applicationVersion: '1.0.0',
+              children: [
+                const Text('For help, visit our support page or contact support@cinemaflix.com'),
+              ],
+            );
+          }),
+          _footerIcon(Icons.info_outline, 'About', () {
+            HapticFeedback.lightImpact();
+            showAboutDialog(
+              context: context,
+              applicationName: 'CinemaFlix',
+              applicationVersion: '1.0.0',
+              applicationLegalese: '\u00a9 2024 CinemaFlix',
+              children: [
+                const Text('Your Movie World. Built with Flutter and Supabase.'),
+              ],
+            );
+          }),
         ],
       ),
     );
@@ -175,8 +211,8 @@ class AppDrawer extends StatelessWidget {
 
   void _navigate(BuildContext context, String route, {int extra = 0}) {
     Navigator.pop(context);
-    if (extra > 0) {
-      Navigator.pushReplacementNamed(context, route);
+    if (route == '/main') {
+      Navigator.pushReplacementNamed(context, route, arguments: extra);
     } else {
       Navigator.pushNamed(context, route);
     }

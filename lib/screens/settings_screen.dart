@@ -33,9 +33,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _section('Account'),
           _card(
             children: [
-              _settingTile(Icons.person, 'Profile Settings', 'Manage your account', () => HapticFeedback.lightImpact()),
+              _settingTile(Icons.person, 'Profile Settings', 'Manage your account', () => Navigator.pushNamed(context, '/main')),
               _settingTile(Icons.lock_outline, 'Privacy & Security', 'Password, data', () => Navigator.pushNamed(context, '/recover')),
-              _settingTile(Icons.email_outlined, 'Email Preferences', 'Notifications, updates', () => HapticFeedback.lightImpact()),
+              _settingTile(Icons.email_outlined, 'Email Preferences', 'Notifications, updates', () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Email preferences coming soon'), duration: Duration(seconds: 1)),
+                );
+              }),
             ],
           ),
           const SizedBox(height: 20),
@@ -68,7 +72,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               _toggleTile(Icons.wifi, 'Download on Wi-Fi Only', _downloadOnWifi, (v) => setState(() => _downloadOnWifi = v)),
               _toggleTile(Icons.auto_awesome, 'Smart Downloads', _smartDownloads, (v) => setState(() => _smartDownloads = v)),
-              _settingTile(Icons.download_outlined, 'Manage Downloads', '3 movies downloaded', () => HapticFeedback.lightImpact()),
+              _settingTile(Icons.download_outlined, 'Manage Downloads', '3 movies downloaded', () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Downloads management'), duration: Duration(seconds: 1)),
+                );
+              }),
             ],
           ),
           const SizedBox(height: 20),
@@ -76,8 +84,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _card(
             children: [
               _toggleTile(Icons.notifications_outlined, 'Push Notifications', _notificationsEnabled, (v) => setState(() => _notificationsEnabled = v)),
-              _settingTile(Icons.movie_outlined, 'Movie Alerts', 'New releases, trending', () => HapticFeedback.lightImpact()),
-              _settingTile(Icons.chat_outlined, 'Chat Notifications', 'Messages, replies', () => HapticFeedback.lightImpact()),
+              _settingTile(Icons.movie_outlined, 'Movie Alerts', 'New releases, trending', () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Movie alerts settings'), duration: Duration(seconds: 1)),
+                );
+              }),
+              _settingTile(Icons.chat_outlined, 'Chat Notifications', 'Messages, replies', () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Chat notification settings'), duration: Duration(seconds: 1)),
+                );
+              }),
             ],
           ),
           const SizedBox(height: 20),
