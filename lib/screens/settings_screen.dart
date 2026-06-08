@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../widgets/interactive_card.dart';
 import '../services/media_service.dart';
+import '../services/globals.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -19,6 +22,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _subtitles = true;
   bool _notificationsEnabled = true;
   bool _smartDownloads = false;
+
+  String _version = '1.0.0';
+  String _buildNumber = '1';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPackageInfo();
+  }
+
+  Future<void> _loadPackageInfo() async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      if (mounted) {
+        setState(() {
+          _version = info.version;
+          _buildNumber = info.buildNumber;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading package info: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -97,16 +123,154 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ],
           ),
           const SizedBox(height: 20),
-          _section('About'),
+          _section('App Info'),
           _card(
             children: [
-              _infoTile('Version', '1.0.0'),
-              _infoTile('Build', '2024.06.08'),
+              _updateTile(),
+              _settingTile(Icons.share, 'Share App', 'Share CinemaFlix with friends', _shareApp),
+              _settingTile(Icons.download, 'Download Hub', 'Get CinemaFlix for other devices', _showDownloadLinks),
+              _infoTile('Version', _version),
+              _infoTile('Build', _buildNumber),
               _infoTile('Platform', Theme.of(context).platform.name.toUpperCase()),
               _settingTile(Icons.code, 'Developer Options', 'Advanced settings', () => Navigator.pushNamed(context, '/dev-panel')),
             ],
           ),
           const SizedBox(height: 40),
+        ],
+      ),
+    );
+  }
+
+  void _shareApp() {
+    HapticFeedback.mediumImpact();
+    Share.share(
+      '🎬 Watch the latest movies and live streams on CinemaFlix! Download now: https://cinemaflix.app/download',
+      subject: 'Join me on CinemaFlix!',
+    );
+  }
+
+  void _showDownloadLinks() {
+    HapticFeedback.mediumImpact();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1F1F1F),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 12),
+            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text('Download CinemaFlix', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+            ),
+            _downloadItem(Icons.android, 'Android APK', 'Download direct installer'),
+            _downloadItem(Icons.apple, 'iOS App Store', 'Install from App Store'),
+            _downloadItem(Icons.laptop, 'Windows / macOS', 'Desktop version'),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _downloadItem(IconData icon, String title, String subtitle) {
+    return ListTile(
+      leading: Icon(icon, color: Colors.white70),
+      title: Text(title, style: const TextStyle(color: Colors.white)),
+      subtitle: Text(subtitle, style: const TextStyle(color: Colors.white38, fontSize: 12)),
+      onTap: () {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Starting $title download...'), duration: const Duration(seconds: 2)),
+        );
+      },
+    );
+  }
+
+  Widget _updateTile() {
+    return ListenableBuilder(
+      listenable: updateService,
+      builder: (context, _) {
+        final update = updateService.latestUpdate;
+        final isChecking = updateService.isChecking;
+
+        return InteractiveCard(
+          onTap: () async {
+            if (isChecking) return;
+            HapticFeedback.mediumImpact();
+            final hasUpdate = await updateService.checkForUpdates();
+            if (!hasUpdate && mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Your app is up to date!'), duration: Duration(seconds: 2)),
+              );
+            } else if (hasUpdate && mounted) {
+              _showUpdateDialog();
+            }
+          },
+          child: ListTile(
+            leading: Icon(
+              update != null ? Icons.system_update_alt : Icons.update,
+              color: update != null ? const Color(0xFFE50914) : Colors.white54,
+              size: 22,
+            ),
+            title: Text(
+              update != null ? 'Update Available: v${update.version}' : 'Check for Updates',
+              style: TextStyle(
+                color: update != null ? const Color(0xFFE50914) : Colors.white,
+                fontSize: 15,
+                fontWeight: update != null ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+            subtitle: Text(
+              isChecking ? 'Checking for updates...' : (update != null ? 'Tap to view details' : 'Last checked: Today'),
+              style: const TextStyle(color: Colors.white38, fontSize: 12),
+            ),
+            trailing: isChecking
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white38))
+                : const Icon(Icons.chevron_right, color: Colors.white24, size: 20),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showUpdateDialog() {
+    final update = updateService.latestUpdate;
+    if (update == null) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1F1F1F),
+        title: Text('New Update: v${update.version}', style: const TextStyle(color: Colors.white)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Release Notes:', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Text(update.releaseNotes, style: const TextStyle(color: Colors.white54, fontSize: 13)),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Later', style: TextStyle(color: Colors.white38)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Downloading update...'), duration: Duration(seconds: 2)),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE50914)),
+            child: const Text('Update Now', style: TextStyle(color: Colors.white)),
+          ),
         ],
       ),
     );
