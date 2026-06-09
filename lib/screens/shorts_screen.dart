@@ -548,8 +548,11 @@ class _ShortsScreenState extends State<ShortsScreen> with TickerProviderStateMix
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
+        _navItem(Icons.menu_rounded, 'Menu', false, () {
+          HapticFeedback.lightImpact();
+          Scaffold.of(context).openDrawer();
+        }),
         _navItem(Icons.home_filled, 'Home', false, () => Navigator.pushReplacementNamed(context, '/main', arguments: 0)),
-        _navItem(Icons.search, 'Explore', false, () => Navigator.pushReplacementNamed(context, '/search')),
         _uploadNavButton(),
         _navItem(Icons.notifications_outlined, 'Inbox', false, () => Navigator.pushReplacementNamed(context, '/notifications')),
         _navItem(Icons.person, 'Profile', false, () => Navigator.pushReplacementNamed(context, '/main', arguments: 4)),
