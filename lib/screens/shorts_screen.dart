@@ -252,10 +252,6 @@ class _ShortsScreenState extends State<ShortsScreen> with TickerProviderStateMix
     );
   }
 
-  void _navigateTo(String route) {
-    Navigator.pushReplacementNamed(context, route);
-  }
-
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -446,11 +442,23 @@ class _ShortsScreenState extends State<ShortsScreen> with TickerProviderStateMix
             top: MediaQuery.of(context).padding.top + 10,
             left: 0, right: 0,
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                InteractiveCard(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    Scaffold.of(context).openDrawer();
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 12, right: 8),
+                    child: Icon(Icons.menu_rounded, color: Colors.white, size: 24, shadows: const [Shadow(color: Colors.black54, blurRadius: 8)]),
+                  ),
+                ),
+                const Spacer(),
                 _topTab('Following', false),
                 const SizedBox(width: 20),
                 _topTab('For You', true),
+                const Spacer(),
+                const SizedBox(width: 44),
               ],
             ),
           ),
@@ -540,16 +548,11 @@ class _ShortsScreenState extends State<ShortsScreen> with TickerProviderStateMix
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        _navItem(Icons.home_filled, 'Home', false, () => _navigateTo('/main')),
-        _navItem(Icons.search, 'Explore', false, () => _navigateTo('/explore')),
+        _navItem(Icons.home_filled, 'Home', false, () => Navigator.pushReplacementNamed(context, '/main', arguments: 0)),
+        _navItem(Icons.search, 'Explore', false, () => Navigator.pushReplacementNamed(context, '/search')),
         _uploadNavButton(),
-        _navItem(Icons.mail_outline, 'Inbox', false, () {
-          HapticFeedback.lightImpact();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Inbox coming soon'), backgroundColor: Color(0xFFE50914), behavior: SnackBarBehavior.floating),
-          );
-        }),
-        _navItem(Icons.person, 'Profile', false, () => _navigateTo('/main')),
+        _navItem(Icons.notifications_outlined, 'Inbox', false, () => Navigator.pushReplacementNamed(context, '/notifications')),
+        _navItem(Icons.person, 'Profile', false, () => Navigator.pushReplacementNamed(context, '/main', arguments: 4)),
       ],
     );
   }
@@ -571,9 +574,7 @@ class _ShortsScreenState extends State<ShortsScreen> with TickerProviderStateMix
     return InteractiveCard(
       onTap: () {
         HapticFeedback.mediumImpact();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Upload Video'), duration: Duration(seconds: 1)),
-        );
+        Navigator.pushNamed(context, '/creator-upload');
       },
       scaleAmount: 0.93,
       child: Padding(
