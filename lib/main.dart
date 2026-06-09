@@ -233,6 +233,7 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
+    final showBottomNav = _currentIndex != 2;
     return Scaffold(
       key: _scaffoldKey,
       drawer: const AppDrawer(),
@@ -243,26 +244,28 @@ class _MainShellState extends State<MainShell> {
           children: _screens,
         ),
       ),
-      bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          border: Border(top: BorderSide(color: Color(0xFF2A2A2A), width: 0.5)),
-        ),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: (index) {
-            HapticFeedback.selectionClick();
-            setState(() => _currentIndex = index);
-          },
-          type: BottomNavigationBarType.fixed,
-          items: [
-            const BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Home'),
-            const BottomNavigationBarItem(icon: Icon(Icons.dynamic_feed_outlined), activeIcon: Icon(Icons.dynamic_feed), label: 'Feed'),
-            const BottomNavigationBarItem(icon: Icon(Icons.video_library_outlined), activeIcon: Icon(Icons.video_library), label: 'Shorts'),
-            const BottomNavigationBarItem(icon: Icon(Icons.live_tv_outlined), activeIcon: Icon(Icons.live_tv), label: 'Live'),
-            const BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Profile'),
-          ],
-        ),
-      ),
+      bottomNavigationBar: showBottomNav
+          ? Container(
+              decoration: const BoxDecoration(
+                border: Border(top: BorderSide(color: Color(0xFF2A2A2A), width: 0.5)),
+              ),
+              child: BottomNavigationBar(
+                currentIndex: _currentIndex,
+                onTap: (index) {
+                  HapticFeedback.selectionClick();
+                  setState(() => _currentIndex = index);
+                },
+                type: BottomNavigationBarType.fixed,
+                items: [
+                  const BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Home'),
+                  const BottomNavigationBarItem(icon: Icon(Icons.dynamic_feed_outlined), activeIcon: Icon(Icons.dynamic_feed), label: 'Feed'),
+                  const BottomNavigationBarItem(icon: Icon(Icons.video_library_outlined), activeIcon: Icon(Icons.video_library), label: 'Shorts'),
+                  const BottomNavigationBarItem(icon: Icon(Icons.live_tv_outlined), activeIcon: Icon(Icons.live_tv), label: 'Live'),
+                  const BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Profile'),
+                ],
+              ),
+            )
+          : null,
     );
   }
 }
