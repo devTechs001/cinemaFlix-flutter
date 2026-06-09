@@ -252,13 +252,16 @@ class _MovieDetailScreenState extends State<MovieDetailScreen>
                               color: const Color(0xFFE50914),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.play_arrow, color: Colors.white, size: 24),
-                                SizedBox(width: 8),
-                                Text('Play Now', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
-                              ],
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.play_arrow, color: Colors.white, size: 24),
+                                  SizedBox(width: 8),
+                                  Text('Play Now', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+                                ],
+                              ),
                             ),
                           ),
                         ),

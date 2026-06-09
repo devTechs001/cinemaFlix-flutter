@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/connectivity_service.dart';
 
@@ -19,7 +20,7 @@ class _OfflineBannerState extends State<OfflineBanner>
     with SingleTickerProviderStateMixin {
   late AnimationController _slideController;
   late Animation<Offset> _slideAnimation;
-  bool _wasOffline = false;
+  Timer? _dismissTimer;
 
   @override
   void initState() {
@@ -36,26 +37,26 @@ class _OfflineBannerState extends State<OfflineBanner>
       curve: Curves.easeOutCubic,
     ));
     widget.connectivityService.addListener(_onConnectivityChanged);
-    if (!widget.connectivityService.isOnline) {
-      _wasOffline = true;
-      _slideController.value = 1.0;
-    }
   }
 
   void _onConnectivityChanged() {
     if (!mounted) return;
-    if (widget.connectivityService.isOnline && _wasOffline) {
-      _slideController.reverse();
-      _wasOffline = false;
-    } else if (!widget.connectivityService.isOnline && !_wasOffline) {
+    if (!widget.connectivityService.isOnline) {
       _slideController.forward();
-      _wasOffline = true;
+      _dismissTimer?.cancel();
+      _dismissTimer = Timer(const Duration(seconds: 4), () {
+        if (mounted) _slideController.reverse();
+      });
+    } else {
+      _dismissTimer?.cancel();
+      _slideController.reverse();
     }
   }
 
   @override
   void dispose() {
     widget.connectivityService.removeListener(_onConnectivityChanged);
+    _dismissTimer?.cancel();
     _slideController.dispose();
     super.dispose();
   }
