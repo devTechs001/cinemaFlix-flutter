@@ -28,10 +28,48 @@ class _HomeScreenState extends State<HomeScreen> {
     {'name': 'Cinephile', 'color': const Color(0xFF5E35B1)},
   ];
 
+  List<SampleMovie> _recommendations = [];
+
   @override
   void initState() {
     super.initState();
     _loadData();
+    _computeRecommendations();
+  }
+
+  void _computeRecommendations() {
+    final favGenres = <String>[];
+    for (final id in _favorites) {
+      final movie = getSampleMovieById(id);
+      favGenres.add(movie.genre);
+    }
+    if (favGenres.isEmpty) {
+      _recommendations = sampleMovies.take(6).toList();
+      return;
+    }
+    final scores = <SampleMovie, int>{};
+    for (final movie in sampleMovies) {
+      if (_favorites.contains(movie.id)) continue;
+      int score = 0;
+      for (final genre in favGenres) {
+        if (movie.genre.contains(genre.split('/').first)) score += 2;
+        final parts = genre.split('/');
+        for (final p in parts) {
+          if (movie.genre.contains(p.trim())) score++;
+        }
+      }
+      if (score > 0) scores[movie] = score;
+    }
+    final sorted = scores.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    _recommendations = sorted.take(10).map((e) => e.key).toList();
+    if (_recommendations.length < 6) {
+      for (final movie in sampleMovies) {
+        if (!_recommendations.contains(movie) && !_favorites.contains(movie.id)) {
+          _recommendations.add(movie);
+        }
+        if (_recommendations.length >= 10) break;
+      }
+    }
   }
 
   String get _userId => authService.currentUser?.id ?? guestService.guestId;
@@ -179,6 +217,11 @@ class _HomeScreenState extends State<HomeScreen> {
           _buildSectionHeader('Continue Watching', () => Navigator.pushNamed(context, '/records')),
           _buildContinueWatching(),
           const SizedBox(height: 24),
+          if (_recommendations.isNotEmpty) ...[
+            _buildSectionHeader('Because You Watched', () => Navigator.pushNamed(context, '/search')),
+            _buildRecommendations(),
+            const SizedBox(height: 24),
+          ],
           _buildSectionHeader('Popular on CinemaFlix', () => Navigator.pushNamed(context, '/search')),
           _buildPopularGrid(),
           const SizedBox(height: 24),
@@ -652,6 +695,103 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ],
                     ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildRecommendations() {
+    return SizedBox(
+      height: 200,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        itemCount: _recommendations.length,
+        itemBuilder: (context, index) {
+          final movie = _recommendations[index];
+          final isFav = _favorites.contains(movie.id);
+          return InteractiveCard(
+            onTap: () => _openMovie(context, movie),
+            child: Container(
+              width: 140,
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [movie.gradientStart, movie.gradientEnd],
+                ),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Stack(
+                    children: [
+                      Container(
+                        width: 64, height: 64,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withAlpha(15),
+                          borderRadius: BorderRadius.circular(32),
+                        ),
+                        child: Icon(Icons.play_circle_outline, color: const Color(0xFFE50914).withAlpha(180), size: 36),
+                      ),
+                      Positioned(
+                        top: 0, right: 0,
+                        child: InteractiveCard(
+                          onTap: () async {
+                            HapticFeedback.lightImpact();
+                            setState(() {
+                              if (isFav) { _favorites.remove(movie.id); }
+                              else { _favorites.add(movie.id); }
+                            });
+                            if (!guestService.isGuest && authService.currentUser != null) {
+                              await databaseService.toggleFavorite(_userId, movie.id,
+                                  title: movie.title, genre: movie.genre, year: movie.year, rating: movie.rating);
+                            }
+                          },
+                          scaleAmount: 0.8,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(color: Colors.black.withAlpha(100), shape: BoxShape.circle),
+                            child: Icon(
+                              isFav ? Icons.favorite : Icons.favorite_border,
+                              color: isFav ? const Color(0xFFE50914) : Colors.white54,
+                              size: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Text(movie.title, textAlign: TextAlign.center, maxLines: 2,
+                      overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+                  ),
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE50914).withAlpha(25),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text('${(index + 1) * 85}% match', style: const TextStyle(color: Color(0xFFE50914), fontSize: 9, fontWeight: FontWeight.w700)),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.star, color: Colors.amber, size: 12),
+                      const SizedBox(width: 3),
+                      Text(movie.rating, style: const TextStyle(color: Colors.amber, fontSize: 11)),
+                    ],
                   ),
                 ],
               ),

@@ -40,6 +40,7 @@ import 'screens/cache_cleaner_screen.dart';
 import 'screens/plugins_screen.dart';
 import 'screens/local_media_screen.dart';
 import 'screens/local_media_player_screen.dart';
+import 'screens/watch_party_screen.dart';
 import 'widgets/app_drawer.dart';
 import 'widgets/offline_banner.dart';
 import 'widgets/notification_alert_overlay.dart';
@@ -160,6 +161,10 @@ class _CinemaFlixAppState extends State<CinemaFlixApp> {
         '/plugins': (_) => const PluginsScreen(),
         '/local-media': (_) => const LocalMediaScreen(),
         '/local-player': (_) => const LocalMediaPlayerScreen(),
+        '/watch-party': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? {};
+          return WatchPartyScreen(movieId: args['movieId'] ?? '', movieTitle: args['movieTitle'] ?? '');
+        },
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/movie-detail') {

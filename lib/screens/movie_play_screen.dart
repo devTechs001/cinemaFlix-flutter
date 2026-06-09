@@ -495,6 +495,13 @@ class _MoviePlayScreenState extends State<MoviePlayScreen>
             _moreOption(Icons.playlist_add, 'Add to Watchlist', 'Save for later', () {
               Navigator.pop(context);
             }),
+            _moreOption(Icons.groups_rounded, 'Watch Party', 'Watch with friends', () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/watch-party', arguments: {
+                'movieId': widget.movie.id,
+                'movieTitle': widget.movie.title,
+              });
+            }),
           ],
         ),
       ),
@@ -706,6 +713,9 @@ class _MoviePlayScreenState extends State<MoviePlayScreen>
 
               if (!_controlsVisible && _isPlaying && !_isLocked && !_isOffline)
                 _buildEdgeGestureAreas(),
+
+              if (_isInitialized && _controlsVisible && !_isLocked && !_isOffline)
+                _buildSkipBadges(),
             ],
           ),
         ),
@@ -846,6 +856,9 @@ class _MoviePlayScreenState extends State<MoviePlayScreen>
           left: 0, top: 0, bottom: 0,
           child: GestureDetector(
             onTap: _toggleControls,
+            onVerticalDragUpdate: (details) {
+              HapticFeedback.selectionClick();
+            },
             child: Container(
               width: 60,
               color: Colors.transparent,
@@ -863,6 +876,9 @@ class _MoviePlayScreenState extends State<MoviePlayScreen>
           right: 0, top: 0, bottom: 0,
           child: GestureDetector(
             onTap: _toggleControls,
+            onVerticalDragUpdate: (details) {
+              HapticFeedback.selectionClick();
+            },
             child: Container(
               width: 60,
               color: Colors.transparent,
@@ -877,6 +893,50 @@ class _MoviePlayScreenState extends State<MoviePlayScreen>
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildSkipBadges() {
+    return Positioned(
+      top: 90,
+      right: 16,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          _skipBadge(Icons.skip_next_rounded, 'Skip Intro', () {
+            _videoController?.seekTo(const Duration(seconds: 90));
+            HapticFeedback.lightImpact();
+          }),
+          const SizedBox(height: 8),
+          _skipBadge(Icons.flag_outlined, 'Skip Credits', () {
+            final d = _videoController?.value.duration ?? Duration.zero;
+            _videoController?.seekTo(d - const Duration(seconds: 60));
+            HapticFeedback.lightImpact();
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _skipBadge(IconData icon, String label, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.black.withAlpha(200),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white24),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: Colors.white, size: 18),
+            const SizedBox(width: 6),
+            Text(label, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
     );
   }
 
