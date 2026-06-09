@@ -10,7 +10,10 @@ class ShortsScreen extends StatefulWidget {
   State<ShortsScreen> createState() => _ShortsScreenState();
 }
 
-class _ShortsScreenState extends State<ShortsScreen> with TickerProviderStateMixin {
+class _ShortsScreenState extends State<ShortsScreen> with TickerProviderStateMixin, AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   final PageController _pageController = PageController();
   int _currentPage = 0;
   final Set<String> _liked = {};
@@ -255,6 +258,7 @@ class _ShortsScreenState extends State<ShortsScreen> with TickerProviderStateMix
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     return Scaffold(
       backgroundColor: const Color(0xFF141414),
@@ -539,7 +543,12 @@ class _ShortsScreenState extends State<ShortsScreen> with TickerProviderStateMix
         _navItem(Icons.home_filled, 'Home', false, () => _navigateTo('/main')),
         _navItem(Icons.search, 'Explore', false, () => _navigateTo('/explore')),
         _uploadNavButton(),
-        _navItem(Icons.favorite_outline, 'Dating', false, () => _navigateTo('/dating')),
+        _navItem(Icons.mail_outline, 'Inbox', false, () {
+          HapticFeedback.lightImpact();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Inbox coming soon'), backgroundColor: Color(0xFFE50914), behavior: SnackBarBehavior.floating),
+          );
+        }),
         _navItem(Icons.person, 'Profile', false, () => _navigateTo('/main')),
       ],
     );

@@ -48,6 +48,7 @@ class AppDrawer extends StatelessWidget {
                   _drawerItem(Icons.card_giftcard_rounded, 'Gifting', () => Navigator.pushNamed(context, '/gifting')),
                   _drawerItem(Icons.lock_outline, 'Vault', () => Navigator.pushNamed(context, '/vault')),
                   _sectionTitle('Social'),
+                  _drawerItem(Icons.favorite_rounded, 'Dating', () => Navigator.pushNamed(context, '/dating')),
                   _drawerItem(Icons.notifications_rounded, 'Notifications', () => Navigator.pushNamed(context, '/notifications'), badge: '3'),
                   _drawerItem(Icons.group_rounded, 'Contacts', () {
                     HapticFeedback.lightImpact();

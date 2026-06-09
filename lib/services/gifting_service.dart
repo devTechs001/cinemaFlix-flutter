@@ -82,6 +82,21 @@ class GiftingService extends ChangeNotifier {
     const GiftItem(id: 'g28', name: 'Gift Card 25', description: 'Store credit for any purchase', priceUSD: 25.00, icon: '💳', category: 'Gift Cards', isPopular: true, diamondCost: 250, pointCost: 2500),
     const GiftItem(id: 'g29', name: 'Gift Card 50', description: 'Store credit for any purchase', priceUSD: 50.00, icon: '💳', category: 'Gift Cards', diamondCost: 500, pointCost: 5000),
     const GiftItem(id: 'g30', name: 'Gift Card 100', description: 'Store credit - the ultimate gift', priceUSD: 100.00, icon: '💎', category: 'Gift Cards', diamondCost: 1000, pointCost: 10000),
+    const GiftItem(id: 'g31', name: 'VIP Movie Date', description: '2 tickets + dinner voucher for a movie date', priceUSD: 39.99, icon: '💑', isPopular: true, category: 'Premium Plans', diamondCost: 400, pointCost: 4000),
+    const GiftItem(id: 'g32', name: 'CinemaFlix Merch Box', description: 'Limited edition merch bundle (hat + tee + poster)', priceUSD: 49.99, icon: '🧢', category: 'Limited Edition', diamondCost: 500, pointCost: 5000),
+    const GiftItem(id: 'g33', name: 'Personalized Video Message', description: 'Get a custom video message from your fave creator', priceUSD: 14.99, icon: '🎙️', category: 'Social', diamondCost: 150, pointCost: 1500),
+    const GiftItem(id: 'g34', name: 'Yearbook Shoutout', description: 'Your name featured in the CinemaFlix yearbook', priceUSD: 7.99, icon: '📖', category: 'Social', diamondCost: 80, pointCost: 800),
+    const GiftItem(id: 'g35', name: 'VIP Badge', description: 'Exclusive VIP badge for 90 days with gold trim', priceUSD: 5.99, icon: '🏆', category: 'Social', diamondCost: 60, pointCost: 600),
+    const GiftItem(id: 'g36', name: 'Private Watch Party', description: 'Host a private screening for up to 10 friends', priceUSD: 19.99, icon: '🎉', isPopular: true, category: 'Movie Passes', diamondCost: 200, pointCost: 2000),
+    const GiftItem(id: 'g37', name: 'Ad-Free Forever', description: 'Lifetime ad-free viewing experience', priceUSD: 49.99, icon: '🚫', category: 'Streaming', diamondCost: 500, pointCost: 5000),
+    const GiftItem(id: 'g38', name: 'Diamond Royale Pack', description: 'Get 10000 diamonds in a single purchase', priceUSD: 49.99, icon: '👑', category: 'Diamonds', diamondCost: 0, pointCost: 10000),
+    const GiftItem(id: 'g39', name: 'Creator Collab Pass', description: 'Get access to collab with creators on the platform', priceUSD: 24.99, icon: '🤝', category: 'Creator Tools', diamondCost: 250, pointCost: 2500),
+    const GiftItem(id: 'g40', name: 'Analytics Pro', description: 'Unlock advanced analytics for your creator channel', priceUSD: 14.99, icon: '📊', category: 'Creator Tools', diamondCost: 150, pointCost: 1500),
+    const GiftItem(id: 'g41', name: 'Priority Support', description: '24/7 priority customer support for 1 year', priceUSD: 29.99, icon: '🎧', category: 'Premium Plans', diamondCost: 300, pointCost: 3000),
+    const GiftItem(id: 'g42', name: 'Soundtrack Bundle', description: 'Download 10 original movie soundtracks', priceUSD: 12.99, icon: '🎵', category: 'Virtual Items', diamondCost: 130, pointCost: 1300),
+    const GiftItem(id: 'g43', name: 'Movie Quiz Pass', description: 'Unlock all premium movie trivia quizzes', priceUSD: 3.99, icon: '🧩', category: 'Virtual Items', diamondCost: 40, pointCost: 400),
+    const GiftItem(id: 'g44', name: 'Early Access Pass', description: 'Watch new releases 48 hours before everyone', priceUSD: 9.99, icon: '⏱️', isPopular: true, category: 'Streaming', diamondCost: 100, pointCost: 1000),
+    const GiftItem(id: 'g45', name: '4K Ultra Bundle', description: 'Unlimited 4K UHD streaming for 6 months', priceUSD: 34.99, icon: '📺', category: 'Streaming', diamondCost: 350, pointCost: 3500),
   ];
 
   List<GiftItem> get availableGifts => _availableGifts;
