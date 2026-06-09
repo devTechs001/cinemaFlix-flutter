@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'services/supabase_service.dart';
 import 'services/theme_service.dart';
+import 'services/globals.dart';
 import 'screens/splash_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/auth_screen.dart';
 import 'screens/home_screen.dart';
-import 'screens/chat_screen.dart';
 import 'screens/live_screen.dart';
 import 'screens/shorts_screen.dart';
+import 'screens/profile_screen.dart';
 import 'screens/notifications_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/dev_panel_screen.dart';
@@ -34,7 +35,9 @@ import 'screens/creator_analytics_screen.dart';
 import 'screens/creator_earnings_screen.dart';
 import 'screens/upload_content_screen.dart';
 import 'screens/connected_devices_screen.dart';
+import 'screens/cache_cleaner_screen.dart';
 import 'widgets/app_drawer.dart';
+import 'widgets/offline_banner.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -101,6 +104,7 @@ class CinemaFlixApp extends StatelessWidget {
         '/creator-earnings': (_) => const CreatorEarningsScreen(),
         '/creator-upload': (_) => const UploadContentScreen(),
         '/devices': (_) => const ConnectedDevicesScreen(),
+        '/cache-cleaner': (_) => const CacheCleanerScreen(),
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/movie-detail') {
@@ -164,7 +168,7 @@ class _MainShellState extends State<MainShell> {
     SocialFeedScreen(),
     ShortsScreen(),
     LiveScreen(),
-    ChatScreen(),
+    ProfileScreen(),
   ];
 
   @override
@@ -172,9 +176,12 @@ class _MainShellState extends State<MainShell> {
     return Scaffold(
       key: _scaffoldKey,
       drawer: const AppDrawer(),
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
+      body: OfflineBanner(
+        connectivityService: connectivityService,
+        child: IndexedStack(
+          index: _currentIndex,
+          children: _screens,
+        ),
       ),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
@@ -192,7 +199,7 @@ class _MainShellState extends State<MainShell> {
             const BottomNavigationBarItem(icon: Icon(Icons.dynamic_feed_outlined), activeIcon: Icon(Icons.dynamic_feed), label: 'Feed'),
             const BottomNavigationBarItem(icon: Icon(Icons.video_library_outlined), activeIcon: Icon(Icons.video_library), label: 'Shorts'),
             const BottomNavigationBarItem(icon: Icon(Icons.live_tv_outlined), activeIcon: Icon(Icons.live_tv), label: 'Live'),
-            const BottomNavigationBarItem(icon: Icon(Icons.chat_outlined), activeIcon: Icon(Icons.chat), label: 'Chat'),
+            const BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Profile'),
           ],
         ),
       ),

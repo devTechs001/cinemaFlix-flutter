@@ -58,18 +58,22 @@ class AppDrawer extends StatelessWidget {
                   _sectionTitle('Settings'),
                   _drawerItem(Icons.settings_rounded, 'Settings', () => Navigator.pushNamed(context, '/settings')),
                   _drawerItem(Icons.palette_rounded, 'Themes', () => Navigator.pushNamed(context, '/themes')),
-                  if (authService.currentUser?.isAdmin ?? false)
-                    _drawerItem(Icons.admin_panel_settings_rounded, 'Dev Panel', () => Navigator.pushNamed(context, '/dev-panel')),
                   _sectionTitle('Account'),
                   _drawerItem(Icons.person_rounded, 'Profile', () => _navigate(context, '/main', extra: 4)),
-                  _drawerItem(Icons.logout_rounded, 'Sign Out', () async {
-                    HapticFeedback.heavyImpact();
-                    final currentContext = context;
-                    Navigator.pop(currentContext);
-                    await authService.signOut();
-                    if (!currentContext.mounted) return;
-                    Navigator.pushReplacementNamed(currentContext, '/auth');
-                  }, isDanger: true),
+                  if (authService.currentUser == null) ...[
+                    _drawerItem(Icons.login_rounded, 'Sign In / Register', () => Navigator.pushReplacementNamed(context, '/auth')),
+                  ] else ...[
+                    if (authService.currentUser!.isAdmin)
+                      _drawerItem(Icons.admin_panel_settings_rounded, 'Dev Panel', () => Navigator.pushNamed(context, '/dev-panel')),
+                    _drawerItem(Icons.logout_rounded, 'Sign Out', () async {
+                      HapticFeedback.heavyImpact();
+                      final currentContext = context;
+                      Navigator.pop(currentContext);
+                      await authService.signOut();
+                      if (!currentContext.mounted) return;
+                      Navigator.pushReplacementNamed(currentContext, '/auth');
+                    }, isDanger: true),
+                  ],
                 ],
               ),
             ),
@@ -94,7 +98,29 @@ class AppDrawer extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text('CinemaFlix', style: TextStyle(color: Color(0xFFE50914), fontWeight: FontWeight.bold, fontSize: 18)),
-              Text('v1.0 • Premium', style: TextStyle(color: Colors.white38, fontSize: 11)),
+              ListenableBuilder(
+                listenable: connectivityService,
+                builder: (context, _) {
+                  final online = connectivityService.isOnline;
+                  return Row(
+                    children: [
+                      Container(
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: online ? const Color(0xFF43A047) : Colors.redAccent,
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        online ? 'Online' : 'Offline',
+                        style: TextStyle(color: Colors.white38, fontSize: 11),
+                      ),
+                    ],
+                  );
+                },
+              ),
             ],
           ),
           const Spacer(),

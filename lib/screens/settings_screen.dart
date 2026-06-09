@@ -34,7 +34,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _downloadQuality = 'HD';
   String _contentLanguage = 'English';
   double _cacheSize = 1.2;
-  bool _isClearingCache = false;
 
   String _version = '1.0.0';
   String _buildNumber = '1';
@@ -335,33 +334,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _cacheTile() {
     return InteractiveCard(
-      onTap: _isClearingCache ? null : _clearCache,
+      onTap: () {
+        HapticFeedback.lightImpact();
+        Navigator.pushNamed(context, '/cache-cleaner');
+      },
       child: ListTile(
-        leading: Icon(_isClearingCache ? Icons.cleaning_services : Icons.storage, color: Colors.white54, size: 22),
-        title: Text(_isClearingCache ? 'Clearing cache...' : 'Clear Cache', style: const TextStyle(color: Colors.white, fontSize: 15)),
-        subtitle: Text(_isClearingCache ? '${(_cacheSize * 100).toInt()}%' : '${_cacheSize.toStringAsFixed(1)} GB', style: const TextStyle(color: Colors.white38, fontSize: 12)),
-        trailing: _isClearingCache
-            ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(value: _cacheSize, strokeWidth: 2, color: const Color(0xFFE50914)))
-            : const Icon(Icons.chevron_right, color: Colors.white24, size: 20),
+        leading: const Icon(Icons.cleaning_services, color: Colors.white54, size: 22),
+        title: const Text('Clear Cache', style: TextStyle(color: Colors.white, fontSize: 15)),
+        subtitle: Text('${_cacheSize.toStringAsFixed(1)} GB \u2022 Tap to manage', style: const TextStyle(color: Colors.white38, fontSize: 12)),
+        trailing: const Icon(Icons.chevron_right, color: Colors.white24, size: 20),
       ),
     );
-  }
-
-  Future<void> _clearCache() async {
-    setState(() => _isClearingCache = true);
-    for (var i = 0; i <= 100; i += 10) {
-      await Future.delayed(const Duration(milliseconds: 100));
-      if (mounted) setState(() => _cacheSize = 1.2 - (1.2 * i / 100));
-    }
-    if (mounted) {
-      setState(() {
-        _isClearingCache = false;
-        _cacheSize = 0.0;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cache cleared!'), backgroundColor: Color(0xFF43A047), behavior: SnackBarBehavior.floating),
-      );
-    }
   }
 
   Widget _section(String title) {
