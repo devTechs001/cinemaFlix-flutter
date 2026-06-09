@@ -188,6 +188,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _infoTile('Build', _buildNumber),
             _infoTile('Platform', Theme.of(context).platform.name.toUpperCase()),
             _settingTile(Icons.devices, 'Connected Devices', 'Manage devices & sync', () => Navigator.pushNamed(context, '/devices')),
+            _settingTile(Icons.extension, 'Plugins & Integrations', 'Connect third-party apps', () => Navigator.pushNamed(context, '/plugins')),
             if (authService.currentUser?.isAdmin ?? false)
               _settingTile(Icons.code, 'Developer Options', 'Advanced settings', () => Navigator.pushNamed(context, '/dev-panel')),
             _dangerTile(Icons.delete_forever, 'Delete Account', 'Permanently remove all data', _showDeleteAccountDialog),

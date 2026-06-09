@@ -36,6 +36,7 @@ import 'screens/creator_earnings_screen.dart';
 import 'screens/upload_content_screen.dart';
 import 'screens/connected_devices_screen.dart';
 import 'screens/cache_cleaner_screen.dart';
+import 'screens/plugins_screen.dart';
 import 'widgets/app_drawer.dart';
 import 'widgets/offline_banner.dart';
 
@@ -105,6 +106,7 @@ class CinemaFlixApp extends StatelessWidget {
         '/creator-upload': (_) => const UploadContentScreen(),
         '/devices': (_) => const ConnectedDevicesScreen(),
         '/cache-cleaner': (_) => const CacheCleanerScreen(),
+        '/plugins': (_) => const PluginsScreen(),
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/movie-detail') {
