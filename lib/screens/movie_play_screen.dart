@@ -5,6 +5,7 @@ import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
 import '../models/sample_movies.dart';
 import '../services/globals.dart';
+import '../services/download_service.dart';
 
 class MoviePlayScreen extends StatefulWidget {
   final SampleMovie movie;
@@ -431,6 +432,114 @@ class _MoviePlayScreenState extends State<MoviePlayScreen>
     );
   }
 
+  void _showMoreMenu() {
+    HapticFeedback.mediumImpact();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1F1F1F),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40, height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Container(
+                  width: 40, height: 40,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE50914).withAlpha(20),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.more_horiz, color: Color(0xFFE50914), size: 22),
+                ),
+                const SizedBox(width: 12),
+                const Text('More Options', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+              ],
+            ),
+            const SizedBox(height: 20),
+            _moreOption(Icons.download_rounded, 'Download Movie', 'Save for offline viewing', () {
+              downloadService.startDownload(
+                widget.movie.id.toString(),
+                widget.movie.title,
+                widget.movie.genre,
+                widget.movie.year,
+                widget.movie.rating,
+              );
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Download started'),
+                  backgroundColor: Color(0xFFE50914),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }),
+            _moreOption(Icons.download_for_offline, 'Downloads', 'View your downloads', () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/downloads');
+            }),
+            _moreOption(Icons.share_outlined, 'Share', 'Share this movie', () {
+              Navigator.pop(context);
+            }),
+            _moreOption(Icons.playlist_add, 'Add to Watchlist', 'Save for later', () {
+              Navigator.pop(context);
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _moreOption(IconData icon, String title, String subtitle, VoidCallback onTap) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white.withAlpha(8),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white12),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 36, height: 36,
+                decoration: BoxDecoration(
+                  color: Colors.white.withAlpha(15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: Colors.white70, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
+                    Text(subtitle, style: TextStyle(color: Colors.white.withAlpha(100), fontSize: 11)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     connectivityService.removeListener(_onConnectivityChanged);
@@ -708,6 +817,20 @@ class _MoviePlayScreenState extends State<MoviePlayScreen>
                       ],
                     ),
                   ),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.black.withAlpha(80),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.more_vert,
+                        color: Colors.white, size: 22),
+                    onPressed: () {
+                      HapticFeedback.mediumImpact();
+                      _showMoreMenu();
+                    },
+                  ),
+                ),
               ],
             ),
           ),
@@ -883,6 +1006,29 @@ class _MoviePlayScreenState extends State<MoviePlayScreen>
                       label: '${_playbackSpeed}x',
                       active: _playbackSpeed != 1.0,
                       onTap: _showSpeedSheet,
+                    ),
+                    const SizedBox(width: 8),
+                    _boosterButton(
+                      icon: Icons.download_rounded,
+                      label: 'Download',
+                      active: false,
+                      onTap: () {
+                        HapticFeedback.mediumImpact();
+                        downloadService.startDownload(
+                          widget.movie.id.toString(),
+                          widget.movie.title,
+                          widget.movie.genre,
+                          widget.movie.year,
+                          widget.movie.rating,
+                        );
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Download started'),
+                            backgroundColor: Color(0xFFE50914),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      },
                     ),
                     const SizedBox(width: 8),
                     _boosterButton(
