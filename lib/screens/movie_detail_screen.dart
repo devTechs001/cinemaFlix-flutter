@@ -335,7 +335,26 @@ class _MovieDetailScreenState extends State<MovieDetailScreen>
                     ],
                   ),
                   const SizedBox(height: 12),
-                  ..._comments.asMap().entries.map((e) => _buildCommentCard(e.value, e.key)),
+                  if (_comments.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      child: Center(
+                        child: Text('No reviews yet. Be the first!', style: TextStyle(color: Colors.white.withAlpha(80), fontSize: 14)),
+                      ),
+                    )
+                  else
+                    SizedBox(
+                      height: 320,
+                      child: Scrollbar(
+                        child: ListView.separated(
+                          physics: const BouncingScrollPhysics(),
+                          padding: EdgeInsets.zero,
+                          itemCount: _comments.length,
+                          separatorBuilder: (_, _) => const Divider(color: Color(0xFF2A2A2A), height: 1, indent: 60),
+                          itemBuilder: (context, index) => _buildCommentCard(_comments[index], index),
+                        ),
+                      ),
+                    ),
                   const SizedBox(height: 24),
                   _buildMoreLikeThis(),
                   const SizedBox(height: 40),
