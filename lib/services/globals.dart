@@ -4,8 +4,9 @@ import 'realtime_service.dart';
 import 'guest_service.dart';
 import 'notification_service.dart';
 import 'dev_service.dart';
-
 import 'update_service.dart';
+import 'connectivity_service.dart';
+import 'cache_service.dart';
 
 final authService = AuthService();
 final databaseService = DatabaseService();
@@ -14,3 +15,5 @@ final guestService = GuestService();
 final notificationService = NotificationService();
 final devService = DevService();
 final updateService = UpdateService();
+final connectivityService = ConnectivityService();
+final cacheService = CacheService();

@@ -12,7 +12,7 @@ class RecoverScreen extends StatefulWidget {
 }
 
 class _RecoverScreenState extends State<RecoverScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   final _emailController = TextEditingController();
   bool _sent = false;
   bool _isValid = true;
