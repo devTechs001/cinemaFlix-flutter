@@ -1,14 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ThemeService extends ChangeNotifier {
   int _activeIndex = 0;
+  static const _prefsKey = 'theme_index';
 
   int get activeIndex => _activeIndex;
   ThemeData get activeTheme => themes[_activeIndex];
 
-  void setTheme(int index) {
+  Future<void> initialize() async {
+    final prefs = await SharedPreferences.getInstance();
+    _activeIndex = prefs.getInt(_prefsKey) ?? 0;
+    notifyListeners();
+  }
+
+  Future<void> setTheme(int index) async {
     _activeIndex = index;
     notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_prefsKey, index);
   }
 
   static final List<ThemeData> themes = [

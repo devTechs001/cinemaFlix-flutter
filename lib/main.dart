@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'services/supabase_service.dart';
 import 'services/theme_service.dart';
 import 'services/globals.dart';
+import 'services/storage_service.dart';
 import 'screens/splash_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/auth_screen.dart';
@@ -37,8 +38,11 @@ import 'screens/upload_content_screen.dart';
 import 'screens/connected_devices_screen.dart';
 import 'screens/cache_cleaner_screen.dart';
 import 'screens/plugins_screen.dart';
+import 'screens/local_media_screen.dart';
+import 'screens/local_media_player_screen.dart';
 import 'widgets/app_drawer.dart';
 import 'widgets/offline_banner.dart';
+import 'widgets/notification_alert_overlay.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -48,11 +52,58 @@ void main() async {
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
   ]);
+  await themeService.initialize();
+  storageService.checkStorage();
   runApp(const CinemaFlixApp());
 }
 
-class CinemaFlixApp extends StatelessWidget {
+class CinemaFlixApp extends StatefulWidget {
   const CinemaFlixApp({super.key});
+
+  @override
+  State<CinemaFlixApp> createState() => _CinemaFlixAppState();
+}
+
+class _CinemaFlixAppState extends State<CinemaFlixApp> {
+  bool _wasOnline = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _wasOnline = connectivityService.isOnline;
+    connectivityService.addListener(_onConnectivityChanged);
+    storageService.addListener(_onStorageChanged);
+  }
+
+  @override
+  void dispose() {
+    connectivityService.removeListener(_onConnectivityChanged);
+    storageService.removeListener(_onStorageChanged);
+    super.dispose();
+  }
+
+  void _onConnectivityChanged() {
+    final online = connectivityService.isOnline;
+    if (online != _wasOnline) {
+      _wasOnline = online;
+      if (online) {
+        notificationService.showAlert(
+          title: 'Back Online',
+          body: 'Connection restored (${connectivityService.strengthLabel})',
+          icon: '📶',
+          color: const Color(0xFF10B981),
+        );
+      } else {
+        notificationService.showConnectivityAlert(false, '');
+      }
+    }
+  }
+
+  void _onStorageChanged() {
+    if (storageService.checkAlertNeeded()) {
+      notificationService.showStorageAlert(storageService.info!.alertLevel);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -66,7 +117,7 @@ class CinemaFlixApp extends StatelessWidget {
       builder: (context, child) {
         return ScrollConfiguration(
           behavior: _NoScrollbarBehavior(),
-          child: child!,
+          child: NotificationAlertOverlay(child: child!),
         );
       },
       initialRoute: '/splash',
@@ -107,6 +158,8 @@ class CinemaFlixApp extends StatelessWidget {
         '/devices': (_) => const ConnectedDevicesScreen(),
         '/cache-cleaner': (_) => const CacheCleanerScreen(),
         '/plugins': (_) => const PluginsScreen(),
+        '/local-media': (_) => const LocalMediaScreen(),
+        '/local-player': (_) => const LocalMediaPlayerScreen(),
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/movie-detail') {
