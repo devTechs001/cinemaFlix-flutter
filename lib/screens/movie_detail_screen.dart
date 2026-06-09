@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 import '../services/globals.dart';
 import '../models/sample_movies.dart';
 import '../models/review_model.dart';
@@ -15,12 +16,17 @@ class MovieDetailScreen extends StatefulWidget {
   State<MovieDetailScreen> createState() => _MovieDetailScreenState();
 }
 
-class _MovieDetailScreenState extends State<MovieDetailScreen> {
+class _MovieDetailScreenState extends State<MovieDetailScreen>
+    with TickerProviderStateMixin {
   final _commentController = TextEditingController();
   final List<Map<String, dynamic>> _comments = [];
   double _userRating = 0;
   bool _isFavorited = false;
   bool _inWatchlist = false;
+  late AnimationController _starsController;
+  late AnimationController _parallaxController;
+  late ScrollController _scrollController;
+  double _parallaxOffset = 0;
 
   String get _userId => authService.currentUser?.id ?? '';
 
@@ -29,6 +35,33 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     super.initState();
     _comments.addAll(_sampleComments);
     _loadStates();
+
+    _starsController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+
+    _parallaxController = AnimationController(
+      vsync: this,
+      value: 0,
+      upperBound: 1,
+    );
+
+    _scrollController = ScrollController()
+      ..addListener(() {
+        setState(() {
+          _parallaxOffset = (_scrollController.offset / 360).clamp(0, 1);
+        });
+      });
+  }
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    _starsController.dispose();
+    _parallaxController.dispose();
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadStates() async {
@@ -52,12 +85,6 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     {'user': 'Alex Turner', 'avatar': 'A', 'comment': 'I watched it twice already. Each time I notice something new. Brilliant filmmaking.', 'rating': 4, 'time': '2d ago', 'likes': 12},
     {'user': 'Rachel Kim', 'avatar': 'R', 'comment': 'Good movie but the pacing was a bit slow in the middle. The ending made up for it though.', 'rating': 3, 'time': '3d ago', 'likes': 7},
   ];
-
-  @override
-  void dispose() {
-    _commentController.dispose();
-    super.dispose();
-  }
 
   Future<void> _addComment() async {
     final text = _commentController.text.trim();
@@ -93,6 +120,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       } catch (_) {}
     }
 
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Review added!'), duration: Duration(seconds: 1)),
     );
@@ -103,6 +131,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF141414),
       body: CustomScrollView(
+        controller: _scrollController,
         physics: const BouncingScrollPhysics(),
         slivers: [
           SliverAppBar(
@@ -113,49 +142,85 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
               icon: const Icon(Icons.arrow_back, color: Colors.white),
               onPressed: () => Navigator.pop(context),
             ),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.share_outlined, color: Colors.white),
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  Share.share(
+                    'Check out "${widget.movie.title}" on CinemaFlix! ★ ${widget.movie.rating}',
+                  );
+                },
+              ),
+            ],
             flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      widget.movie.gradientStart,
-                      widget.movie.gradientEnd,
-                      const Color(0xFF141414),
-                    ],
-                  ),
-                ),
-                child: Stack(
-                  children: [
-                    Center(
-                      child: Icon(Icons.movie_filter_outlined, color: Colors.white.withAlpha(30), size: 120),
-                    ),
-                    Positioned(
-                      bottom: 40, left: 20, right: 20,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+              background: Stack(
+                children: [
+                  Transform.translate(
+                    offset: Offset(0, -_parallaxOffset * 60),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            widget.movie.gradientStart,
+                            widget.movie.gradientEnd,
+                            const Color(0xFF141414),
+                          ],
+                        ),
+                      ),
+                      child: Stack(
                         children: [
-                          Text(widget.movie.title, style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white)),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              _badge(widget.movie.rating, const Color(0xFFE50914)),
-                              const SizedBox(width: 10),
-                              Text(widget.movie.year, style: const TextStyle(color: Colors.white54)),
-                              const SizedBox(width: 10),
-                              const Icon(Icons.circle, size: 4, color: Colors.white38),
-                              const SizedBox(width: 10),
-                              Text(widget.movie.duration, style: const TextStyle(color: Colors.white54)),
-                            ],
+                          Center(
+                            child: Icon(Icons.movie_filter_outlined, color: Colors.white.withAlpha(30), size: 120),
                           ),
-                          const SizedBox(height: 6),
-                          Text(widget.movie.genre, style: const TextStyle(color: Color(0xFFE50914), fontSize: 13)),
+                          Positioned(
+                            bottom: 40, left: 20, right: 20,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(widget.movie.title, style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white)),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    _badge(widget.movie.rating, const Color(0xFFE50914)),
+                                    const SizedBox(width: 10),
+                                    Text(widget.movie.year, style: const TextStyle(color: Colors.white54)),
+                                    const SizedBox(width: 10),
+                                    const Icon(Icons.circle, size: 4, color: Colors.white38),
+                                    const SizedBox(width: 10),
+                                    Text(widget.movie.duration, style: const TextStyle(color: Colors.white54)),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Text(widget.movie.genre, style: const TextStyle(color: Color(0xFFE50914), fontSize: 13)),
+                              ],
+                            ),
+                          ),
                         ],
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      height: 40,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            const Color(0xFF141414),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -199,6 +264,30 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                         ),
                       ),
                       const SizedBox(width: 12),
+                      InteractiveCard(
+                        onTap: () {
+                          HapticFeedback.mediumImpact();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Trailer coming soon!'), duration: Duration(seconds: 1)),
+                          );
+                        },
+                        child: Container(
+                          height: 50,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.white24),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.play_circle_outline, color: Colors.white, size: 20),
+                              SizedBox(width: 6),
+                              Text('Trailer', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
                       _actionButton(Icons.bookmark_border, Icons.bookmark, _inWatchlist, () async {
                         HapticFeedback.lightImpact();
                         setState(() => _inWatchlist = !_inWatchlist);
@@ -227,6 +316,8 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                   const SizedBox(height: 8),
                   _infoRow('Cast', widget.movie.cast),
                   const SizedBox(height: 24),
+                  _buildUserRatingBarChart(),
+                  const SizedBox(height: 24),
                   const Divider(color: Color(0xFF2A2A2A)),
                   const SizedBox(height: 16),
                   _buildRatingSection(),
@@ -254,6 +345,55 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     );
   }
 
+  Widget _buildUserRatingBarChart() {
+    final ratings = [12, 28, 45, 68, 92];
+    final labels = ['1★', '2★', '3★', '4★', '5★'];
+    final maxVal = ratings.reduce((a, b) => a > b ? a : b).toDouble();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('User Ratings', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+        const SizedBox(height: 12),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: List.generate(5, (i) {
+            final height = maxVal > 0 ? (ratings[i] / maxVal) * 80 : 0.0;
+            return Expanded(
+              child: Column(
+                children: [
+                  Text('${ratings[i]}', style: const TextStyle(color: Colors.white38, fontSize: 10)),
+                  const SizedBox(height: 4),
+                  Container(
+                    height: 80,
+                    alignment: Alignment.bottomCenter,
+                    child: Container(
+                      width: 20,
+                      height: height,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(4),
+                        gradient: LinearGradient(
+                          begin: Alignment.bottomCenter,
+                          end: Alignment.topCenter,
+                          colors: [
+                            const Color(0xFFE50914).withAlpha(180),
+                            const Color(0xFFE50914),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(labels[i], style: const TextStyle(color: Colors.white38, fontSize: 10)),
+                ],
+              ),
+            );
+          }),
+        ),
+      ],
+    );
+  }
+
   Widget _actionButton(IconData outlined, IconData filled, bool isActive, VoidCallback onTap) {
     return InteractiveCard(
       onTap: onTap,
@@ -275,25 +415,44 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       children: [
         const Text('Rate This Movie', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
         const SizedBox(height: 8),
-        Row(
-          children: List.generate(5, (i) {
-            final star = i + 1;
-            return InteractiveCard(
-              onTap: () {
-                HapticFeedback.lightImpact();
-                setState(() => _userRating = _userRating == star ? 0 : star.toDouble());
-              },
-              scaleAmount: 0.85,
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                child: Icon(
-                  star <= _userRating ? Icons.star : Icons.star_border,
-                  color: star <= _userRating ? Colors.amber : Colors.white24,
-                  size: 36,
+        GestureDetector(
+          onTap: () {
+            _starsController.reset();
+            _starsController.forward();
+          },
+          child: Row(
+            children: List.generate(5, (i) {
+              final star = i + 1;
+              return InteractiveCard(
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  setState(() => _userRating = _userRating == star ? 0 : star.toDouble());
+                  _starsController.reset();
+                  _starsController.forward();
+                },
+                scaleAmount: 0.85,
+                child: AnimatedBuilder(
+                  animation: _starsController,
+                  builder: (context, _) {
+                    final delay = i * 0.15;
+                    final animValue = ((_starsController.value - delay) / (1 - delay)).clamp(0.0, 1.0);
+                    final scaleAnim = Tween<double>(begin: 0.5, end: 1).transform(animValue);
+                    return Transform.scale(
+                      scale: _userRating >= star ? scaleAnim : 1,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        child: Icon(
+                          star <= _userRating ? Icons.star : Icons.star_border,
+                          color: star <= _userRating ? Colors.amber : Colors.white24,
+                          size: 36,
+                        ),
+                      ),
+                    );
+                  },
                 ),
-              ),
-            );
-          }),
+              );
+            }),
+          ),
         ),
       ],
     );
@@ -406,7 +565,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
         const Text('More Like This', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
         const SizedBox(height: 12),
         SizedBox(
-          height: 160,
+          height: 180,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: sampleMovies.length,
@@ -426,7 +585,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                   );
                 },
                 child: Container(
-                  width: 120,
+                  width: 140,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(colors: [related.gradientStart, related.gradientEnd]),
@@ -435,12 +594,29 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.movie_outlined, color: const Color(0xFFE50914).withAlpha(120), size: 32),
-                      const SizedBox(height: 8),
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE50914).withAlpha(30),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(Icons.movie_outlined, color: const Color(0xFFE50914).withAlpha(180), size: 24),
+                      ),
+                      const SizedBox(height: 10),
                       Text(related.title, textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12)),
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+                      const SizedBox(height: 6),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.star, color: Colors.amber, size: 14),
+                          const SizedBox(width: 4),
+                          Text(related.rating, style: const TextStyle(color: Colors.amber, fontSize: 12, fontWeight: FontWeight.w600)),
+                        ],
+                      ),
                       const SizedBox(height: 4),
-                      Text('★ ${related.rating}', style: const TextStyle(color: Colors.amber, fontSize: 11)),
+                      Text(related.genre.split('/')[0].trim(), style: const TextStyle(color: Colors.white38, fontSize: 10)),
                     ],
                   ),
                 ),

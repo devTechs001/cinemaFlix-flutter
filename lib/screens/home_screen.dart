@@ -17,6 +17,17 @@ class _HomeScreenState extends State<HomeScreen> {
   Set<String> _favorites = {};
   Set<String> _watchlist = {};
 
+  final List<Map<String, dynamic>> _stories = [
+    {'name': 'Your Story', 'isUser': true, 'color': const Color(0xFFE50914)},
+    {'name': 'Alex R.', 'color': const Color(0xFF1E88E5), 'live': true},
+    {'name': 'Sarah J.', 'color': const Color(0xFF7B1FA2)},
+    {'name': 'Mike C.', 'color': const Color(0xFF43A047), 'live': true},
+    {'name': 'Emma W.', 'color': const Color(0xFFFF6F00)},
+    {'name': 'MovieBot', 'color': const Color(0xFFE91E63), 'watched': true},
+    {'name': 'Fan Club', 'color': const Color(0xFF00ACC1), 'watched': true},
+    {'name': 'Cinephile', 'color': const Color(0xFF5E35B1)},
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -158,6 +169,8 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _buildStoryBar(),
+          const SizedBox(height: 12),
           _buildFeaturedSection(),
           const SizedBox(height: 24),
           _buildSectionHeader('Trending Now', () => Navigator.pushNamed(context, '/search')),
@@ -702,5 +715,354 @@ class _HomeScreenState extends State<HomeScreen> {
         },
       ),
     );
+  }
+
+  Widget _buildStoryBar() {
+    return SizedBox(
+      height: 100,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        itemCount: _stories.length,
+        itemBuilder: (context, index) {
+          final story = _stories[index];
+          final name = story['name'] as String;
+          final color = story['color'] as Color;
+          final isUser = story['isUser'] as bool? ?? false;
+          final isLive = story['live'] as bool? ?? false;
+          final isWatched = story['watched'] as bool? ?? false;
+
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            child: GestureDetector(
+              onTap: () => _openStoryViewer(index),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Stack(
+                    children: [
+                      Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isWatched ? Colors.grey : const Color(0xFFE50914),
+                            width: 2.5,
+                          ),
+                        ),
+                        child: Container(
+                          margin: const EdgeInsets.all(3),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(
+                              colors: [color, color.withAlpha(150)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                          ),
+                          child: Center(
+                            child: isUser
+                                ? const Icon(Icons.person, color: Colors.white, size: 28)
+                                : Text(
+                                    name.split(' ').map((e) => e[0]).take(2).join(),
+                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                                  ),
+                          ),
+                        ),
+                      ),
+                      if (isUser)
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            width: 22,
+                            height: 22,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFE50914),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.add, color: Colors.white, size: 16),
+                          ),
+                        ),
+                      if (isLive)
+                        Positioned(
+                          bottom: 0,
+                          left: 0,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE50914),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text('LIVE', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  SizedBox(
+                    width: 64,
+                    child: Text(
+                      name,
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: Colors.white.withAlpha(180), fontSize: 11),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _openStoryViewer(int index) {
+    HapticFeedback.mediumImpact();
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => _StoryViewerScreen(
+          stories: _stories,
+          initialIndex: index,
+        ),
+      ),
+    );
+  }
+}
+
+class _StoryViewerScreen extends StatefulWidget {
+  final List<Map<String, dynamic>> stories;
+  final int initialIndex;
+
+  const _StoryViewerScreen({required this.stories, required this.initialIndex});
+
+  @override
+  State<_StoryViewerScreen> createState() => _StoryViewerScreenState();
+}
+
+class _StoryViewerScreenState extends State<_StoryViewerScreen> with TickerProviderStateMixin {
+  late int _currentIndex;
+  late AnimationController _progressController;
+  late AnimationController _slideController;
+  int _currentSegment = 0;
+  int _slideDirection = 0;
+
+  static const int _segmentCount = 5;
+  static const Duration _segmentDuration = Duration(milliseconds: 600);
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    _progressController = AnimationController(vsync: this, duration: _segmentDuration);
+    _slideController = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
+    _startProgress();
+  }
+
+  @override
+  void dispose() {
+    _progressController.dispose();
+    _slideController.dispose();
+    super.dispose();
+  }
+
+  void _startProgress() {
+    _progressController.reset();
+    _progressController.forward().then((_) {
+      if (_currentSegment < _segmentCount - 1) {
+        setState(() => _currentSegment++);
+        _startProgress();
+      } else {
+        _advanceToNextStory();
+      }
+    });
+  }
+
+  void _advanceToNextStory() {
+    if (_currentIndex < widget.stories.length - 1) {
+      _progressController.stop();
+      _currentSegment = 0;
+      setState(() {
+        _currentIndex++;
+        _slideDirection = 1;
+      });
+      _slideController.forward(from: 0.0).then((_) {
+        _slideDirection = 0;
+        _startProgress();
+      });
+    } else {
+      Navigator.pop(context);
+    }
+  }
+
+  void _goToPreviousStory() {
+    if (_currentIndex > 0) {
+      _progressController.stop();
+      _currentSegment = 0;
+      setState(() {
+        _currentIndex--;
+        _slideDirection = -1;
+      });
+      _slideController.forward(from: 0.0).then((_) {
+        _slideDirection = 0;
+        _startProgress();
+      });
+    }
+  }
+
+  void _handleTapUp(TapUpDetails details) {
+    if (_slideController.isAnimating) return;
+    final width = MediaQuery.of(context).size.width;
+    if (details.localPosition.dx < width / 2) {
+      _goToPreviousStory();
+    } else {
+      _advanceToNextStory();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final story = widget.stories[_currentIndex];
+    final color = story['color'] as Color;
+    final name = story['name'] as String;
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: GestureDetector(
+        onTapUp: _handleTapUp,
+        onLongPressStart: (_) => _progressController.stop(),
+        onLongPressEnd: (_) => _progressController.forward(),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [color, color.withAlpha(100), Colors.black],
+            ),
+          ),
+          child: SafeArea(
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(left: 12, right: 12, top: 8),
+                  child: _buildProgressBars(),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            colors: [color, color.withAlpha(150)],
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            name.split(' ').map((e) => e[0]).take(2).join(),
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        name,
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14),
+                      ),
+                      const Spacer(),
+                      InteractiveCard(
+                        onTap: () => Navigator.pop(context),
+                        scaleAmount: 0.85,
+                        child: const Icon(Icons.close, color: Colors.white, size: 22),
+                      ),
+                    ],
+                  ),
+                ),
+                const Spacer(),
+                AnimatedBuilder(
+                  animation: _slideController,
+                  builder: (context, child) {
+                    final offset = _slideDirection == 0
+                        ? 0.0
+                        : _slideDirection * (1.0 - _slideController.value) * MediaQuery.of(context).size.width;
+                    return Transform.translate(
+                      offset: Offset(offset, 0),
+                      child: child,
+                    );
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Text(
+                      _storyContent,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ),
+                const Spacer(),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProgressBars() {
+    return Row(
+      children: List.generate(_segmentCount, (i) {
+        final isFilled = i < _currentSegment;
+        final isCurrent = i == _currentSegment;
+        return Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(2),
+              child: Container(
+                height: 3,
+                color: Colors.white.withAlpha(50),
+                child: isCurrent
+                    ? AnimatedBuilder(
+                        animation: _progressController,
+                        builder: (context, _) {
+                          return FractionallySizedBox(
+                            alignment: Alignment.centerLeft,
+                            widthFactor: _progressController.value,
+                            child: Container(color: Colors.white),
+                          );
+                        },
+                      )
+                    : (isFilled ? Container(color: Colors.white) : null),
+              ),
+            ),
+          ),
+        );
+      }),
+    );
+  }
+
+  String get _storyContent {
+    final contents = [
+      'Just watched an amazing movie!',
+      'Behind the scenes of my latest project...',
+      'Movie night recommendations?',
+      'Check out this new release!',
+      'Throwback to this classic...',
+      'Can\'t believe this scene!',
+      'Weekend marathon lineup',
+      'What\'s your favorite genre?',
+    ];
+    return contents[_currentIndex % contents.length];
   }
 }

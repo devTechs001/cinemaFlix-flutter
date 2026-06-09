@@ -45,7 +45,7 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
     try {
       // Dev Admin Special Logic
-      if (email == 'devTechs842@gmail.com' && password == 'Admin1234') {
+      if (email.toLowerCase() == 'devtechs842@gmail.com' && password == 'pass123') {
         try {
           await _supabase.auth.signInWithPassword(email: email, password: password);
         } catch (e) {

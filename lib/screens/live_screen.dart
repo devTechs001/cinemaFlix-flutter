@@ -14,7 +14,6 @@ class _LiveScreenState extends State<LiveScreen> {
   final _chatController = TextEditingController();
   final _scrollController = ScrollController();
   int _viewerCount = 1284;
-  final Set<String> _reactions = {};
   String _currentRoom = 'Sci-Fi Night';
   bool _showRoomDetail = false;
   String _selectedCategory = 'All';
@@ -62,15 +61,149 @@ class _LiveScreenState extends State<LiveScreen> {
     _chatController.clear();
   }
 
-  void _addReaction(String emoji) {
+  void _showGoLiveDialog() {
     HapticFeedback.lightImpact();
-    setState(() {
-      if (_reactions.contains(emoji)) {
-        _reactions.remove(emoji);
-      } else {
-        _reactions.add(emoji);
-      }
-    });
+    final titleController = TextEditingController(text: 'My Live Stream');
+    final movieController = TextEditingController();
+    String selectedCategory = 'Movies';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF1F1F1F),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+            left: 16, right: 16, top: 16,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 32, height: 4,
+                  decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Container(
+                    width: 10, height: 10,
+                    decoration: const BoxDecoration(color: Color(0xFFE50914), shape: BoxShape.circle),
+                    child: const Center(child: SizedBox(width: 5, height: 5, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text('Go Live', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                ],
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: titleController,
+                decoration: InputDecoration(
+                  labelText: 'Stream Title',
+                  labelStyle: const TextStyle(color: Colors.white38),
+                  hintText: 'Enter a title for your stream',
+                  hintStyle: const TextStyle(color: Colors.white24),
+                  filled: true,
+                  fillColor: const Color(0xFF2A2A2A),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+                style: const TextStyle(color: Colors.white),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: movieController,
+                decoration: InputDecoration(
+                  labelText: 'Movie / Topic',
+                  labelStyle: const TextStyle(color: Colors.white38),
+                  hintText: 'What are you watching?',
+                  hintStyle: const TextStyle(color: Colors.white24),
+                  filled: true,
+                  fillColor: const Color(0xFF2A2A2A),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+                style: const TextStyle(color: Colors.white),
+              ),
+              const SizedBox(height: 16),
+              const Text('Category', style: TextStyle(color: Colors.white54, fontSize: 13)),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                children: ['Movies', 'Gaming', 'Music', 'Chat', 'Education', 'Sports'].map((cat) {
+                  final isSelected = cat == selectedCategory;
+                  return InteractiveCard(
+                    onTap: () => setDialogState(() => selectedCategory = cat),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isSelected ? const Color(0xFFE50914) : const Color(0xFF2A2A2A),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(cat, style: TextStyle(
+                        color: isSelected ? Colors.white : Colors.white54,
+                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                        fontSize: 13,
+                      )),
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    if (titleController.text.trim().isEmpty) return;
+                    HapticFeedback.mediumImpact();
+                    Navigator.pop(ctx);
+                    final newRoom = {
+                      'name': titleController.text.trim(),
+                      'host': 'You',
+                      'viewers': 0,
+                      'movie': movieController.text.trim().isNotEmpty ? movieController.text.trim() : 'Live Stream',
+                      'color': const Color(0xFFE50914),
+                      'active': true,
+                      'tags': ['New'],
+                    };
+                    setState(() {
+                      _liveRooms.insert(0, newRoom);
+                      _selectedCategory = 'All';
+                    });
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('🔴 You are live!'),
+                        backgroundColor: Color(0xFFE50914),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.videocam, color: Colors.white),
+                  label: const Text('Start Stream', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFE50914),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -106,12 +239,7 @@ class _LiveScreenState extends State<LiveScreen> {
         ),
         actions: [
           InteractiveCard(
-            onTap: () {
-              HapticFeedback.lightImpact();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Go Live coming soon'), duration: Duration(seconds: 1)),
-              );
-            },
+            onTap: () => _showGoLiveDialog(),
             scaleAmount: 0.88,
             child: const Padding(padding: EdgeInsets.all(8), child: Icon(Icons.video_call_outlined, color: Colors.white54)),
           ),

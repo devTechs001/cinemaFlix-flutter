@@ -10,7 +10,6 @@ import 'screens/chat_screen.dart';
 import 'screens/live_screen.dart';
 import 'screens/shorts_screen.dart';
 import 'screens/notifications_screen.dart';
-import 'screens/profile_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/dev_panel_screen.dart';
 import 'screens/gifting_screen.dart';
@@ -22,6 +21,19 @@ import 'screens/explore_screen.dart';
 import 'models/sample_movies.dart';
 import 'screens/movie_detail_screen.dart';
 import 'screens/social_feed_screen.dart';
+import 'screens/dating_screen.dart';
+import 'screens/install_host_screen.dart';
+import 'screens/maintenance_screen.dart';
+import 'screens/vault_screen.dart';
+import 'screens/wallet_screen.dart';
+import 'screens/email_verification_screen.dart';
+import 'screens/password_reset_screen.dart';
+import 'screens/creator_hub_screen.dart';
+import 'screens/creator_content_screen.dart';
+import 'screens/creator_analytics_screen.dart';
+import 'screens/creator_earnings_screen.dart';
+import 'screens/upload_content_screen.dart';
+import 'screens/connected_devices_screen.dart';
 import 'widgets/app_drawer.dart';
 
 void main() async {
@@ -73,6 +85,22 @@ class CinemaFlixApp extends StatelessWidget {
         '/records': (_) => const RecordsScreen(),
         '/recover': (_) => const RecoverScreen(),
         '/themes': (_) => const ThemesScreen(),
+        '/dating': (_) => const DatingScreen(),
+        '/install': (_) => const InstallHostScreen(),
+        '/maintenance': (_) => const MaintenanceScreen(),
+        '/vault': (_) => const VaultScreen(),
+        '/wallet': (_) => const WalletScreen(),
+        '/email-verification': (context) {
+          final email = ModalRoute.of(context)?.settings.arguments as String? ?? '';
+          return EmailVerificationScreen(email: email);
+        },
+        '/password-reset': (_) => const PasswordResetScreen(),
+        '/creator-hub': (_) => const CreatorHubScreen(),
+        '/creator-content': (_) => const CreatorContentScreen(),
+        '/creator-analytics': (_) => const CreatorAnalyticsScreen(),
+        '/creator-earnings': (_) => const CreatorEarningsScreen(),
+        '/creator-upload': (_) => const UploadContentScreen(),
+        '/devices': (_) => const ConnectedDevicesScreen(),
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/movie-detail') {

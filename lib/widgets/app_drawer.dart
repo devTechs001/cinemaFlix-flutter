@@ -40,9 +40,15 @@ class AppDrawer extends StatelessWidget {
                       const SnackBar(content: Text('Downloads: 3 movies offline'), duration: Duration(seconds: 1)),
                     );
                   }),
+                  _sectionTitle('Creator'),
+                  _drawerItem(Icons.videocam_rounded, 'Creator Hub', () => Navigator.pushNamed(context, '/creator-hub')),
+                  _drawerItem(Icons.add_circle_outline, 'Upload', () => Navigator.pushNamed(context, '/creator-upload')),
+                  _sectionTitle('Finance'),
+                  _drawerItem(Icons.account_balance_wallet_rounded, 'Wallet', () => Navigator.pushNamed(context, '/wallet')),
+                  _drawerItem(Icons.card_giftcard_rounded, 'Gifting', () => Navigator.pushNamed(context, '/gifting')),
+                  _drawerItem(Icons.lock_outline, 'Vault', () => Navigator.pushNamed(context, '/vault')),
                   _sectionTitle('Social'),
                   _drawerItem(Icons.notifications_rounded, 'Notifications', () => Navigator.pushNamed(context, '/notifications'), badge: '3'),
-                  _drawerItem(Icons.card_giftcard_rounded, 'Gifting', () => Navigator.pushNamed(context, '/gifting')),
                   _drawerItem(Icons.group_rounded, 'Contacts', () {
                     HapticFeedback.lightImpact();
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -58,9 +64,11 @@ class AppDrawer extends StatelessWidget {
                   _drawerItem(Icons.person_rounded, 'Profile', () => _navigate(context, '/main', extra: 4)),
                   _drawerItem(Icons.logout_rounded, 'Sign Out', () async {
                     HapticFeedback.heavyImpact();
-                    Navigator.pop(context);
+                    final currentContext = context;
+                    Navigator.pop(currentContext);
                     await authService.signOut();
-                    Navigator.pushReplacementNamed(context, '/auth');
+                    if (!currentContext.mounted) return;
+                    Navigator.pushReplacementNamed(currentContext, '/auth');
                   }, isDanger: true),
                 ],
               ),

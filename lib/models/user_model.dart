@@ -13,7 +13,7 @@ class UserModel {
     required this.createdAt,
   });
 
-  bool get isAdmin => email == 'devTechs842@gmail.com';
+  bool get isAdmin => email.toLowerCase() == 'devtechs842@gmail.com';
 
   factory UserModel.fromMap(Map<String, dynamic> map) {
     return UserModel(

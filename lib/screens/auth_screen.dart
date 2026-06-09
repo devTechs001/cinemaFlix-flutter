@@ -41,6 +41,10 @@ class _AuthScreenState extends State<AuthScreen>
   }
 
   Future<void> _submit() async {
+    if (devService.maintenanceMode) {
+      _showError('CinemaFlix is under maintenance. Please try again later.');
+      return;
+    }
     if (_isSignUp && _usernameController.text.trim().isEmpty) {
       _showError('Please enter a username');
       return;
@@ -206,6 +210,10 @@ class _AuthScreenState extends State<AuthScreen>
                             Center(
                               child: InteractiveCard(
                                 onTap: () {
+                                  if (devService.maintenanceMode) {
+                                    _showError('Under maintenance. Please try again later.');
+                                    return;
+                                  }
                                   guestService.startGuestSession();
                                   Navigator.pushReplacementNamed(context, '/main');
                                 },
