@@ -1,10 +1,14 @@
+import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 import 'package:cinemaflix/services/globals.dart';
+import 'package:cinemaflix/services/api_config.dart';
 import 'package:cinemaflix/models/chat_message_model.dart';
 import 'package:cinemaflix/services/contacts_service.dart';
+import 'package:cinemaflix/services/realtime_messaging_service.dart';
 import 'package:cinemaflix/widgets/interactive_card.dart';
 
 class _ChatRoom {
@@ -227,6 +231,16 @@ class _ChatScreenState extends State<ChatScreen>
       _roomMessages.putIfAbsent(_currentRoom!.id, () => []);
       _roomMessages[_currentRoom!.id]!.add(message);
       _messageStatuses[msgId] = 'sent';
+      realtimeMessagingService.addRoomMessage(
+        _currentRoom!.id,
+        RealtimeMessage(
+          id: msgId,
+          senderId: message.userId,
+          senderName: message.username,
+          text: message.content,
+          timestamp: message.createdAt,
+        ),
+      );
       _messageController.clear();
       _scrollToBottom();
       return;
@@ -287,6 +301,116 @@ class _ChatScreenState extends State<ChatScreen>
         ),
       );
     }
+  }
+
+  void _startCall(String userName, {required bool audioOnly}) {
+    HapticFeedback.mediumImpact();
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1F1F1F),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        content: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircleAvatar(
+                radius: 40,
+                backgroundColor: const Color(0xFFE50914).withAlpha(30),
+                child: Icon(
+                  audioOnly ? Icons.call : Icons.videocam,
+                  color: const Color(0xFFE50914),
+                  size: 36,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Calling $userName...',
+                style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                audioOnly ? 'Voice call' : 'Video call',
+                style: const TextStyle(color: Colors.white54, fontSize: 14),
+              ),
+              const SizedBox(height: 32),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  InteractiveCard(
+                    onTap: () => Navigator.pop(ctx),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFE50914),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.call_end, color: Colors.white, size: 28),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  InteractiveCard(
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('${audioOnly ? "Voice" : "Video"} call with $userName started'),
+                          backgroundColor: const Color(0xFF43A047),
+                          behavior: SnackBarBehavior.floating,
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: audioOnly ? const Color(0xFF43A047) : const Color(0xFFE50914),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        audioOnly ? Icons.call : Icons.videocam,
+                        color: Colors.white,
+                        size: 28,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              InteractiveCard(
+                onTap: () {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Call switched to speaker'),
+                      backgroundColor: Color(0xFF1F1F1F),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withAlpha(10),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.volume_up, color: Colors.white54, size: 18),
+                      SizedBox(width: 6),
+                      Text('Speaker', style: TextStyle(color: Colors.white54, fontSize: 13)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _showAttachmentSheet() {
@@ -378,6 +502,16 @@ class _ChatScreenState extends State<ChatScreen>
       _roomMessages.putIfAbsent(_currentRoom!.id, () => []);
       _roomMessages[_currentRoom!.id]!.add(message);
       _messageStatuses[msgId] = 'sent';
+      realtimeMessagingService.addRoomMessage(
+        _currentRoom!.id,
+        RealtimeMessage(
+          id: msgId,
+          senderId: message.userId,
+          senderName: message.username,
+          text: message.content,
+          timestamp: message.createdAt,
+        ),
+      );
       _scrollToBottom();
       return;
     }
@@ -942,6 +1076,24 @@ class _ChatScreenState extends State<ChatScreen>
         ),
       ),
       actions: [
+        if (!isGroup) ...[
+          InteractiveCard(
+            onTap: () => _startCall(user['name'] as String, audioOnly: true),
+            scaleAmount: 0.88,
+            child: const Padding(
+              padding: EdgeInsets.all(8),
+              child: Icon(Icons.call, color: Color(0xFF43A047)),
+            ),
+          ),
+          InteractiveCard(
+            onTap: () => _startCall(user['name'] as String, audioOnly: false),
+            scaleAmount: 0.88,
+            child: const Padding(
+              padding: EdgeInsets.all(8),
+              child: Icon(Icons.videocam, color: Color(0xFFE50914)),
+            ),
+          ),
+        ],
         InteractiveCard(
           onTap: () {
             HapticFeedback.lightImpact();
@@ -1071,7 +1223,7 @@ class _ChatScreenState extends State<ChatScreen>
     final isTyping = _typingUsers.contains(user['id']);
 
     return InteractiveCard(
-      onTap: () => _showUserProfile(user),
+      onTap: () => setState(() => _selectedChatUser = user),
       child: ListTile(
         leading: Stack(
           children: [
@@ -1368,9 +1520,14 @@ class _ChatScreenState extends State<ChatScreen>
         children: [
           if (!isMe) ...[
             GestureDetector(
-              onTap: () => _showUserProfile(
-                  _chatUsers.firstWhere((u) => u['id'] == msg.userId,
-                      orElse: () => user)),
+              onTap: () {
+                final chatUser = _chatUsers.firstWhere((u) => u['id'] == msg.userId, orElse: () => user);
+                if (chatUser['id'] != '1' && chatUser['id'] != 'ai_bot') {
+                  Navigator.pushNamed(context, '/user-profile', arguments: msg.userId);
+                } else {
+                  _showUserProfile(chatUser);
+                }
+              },
               child: CircleAvatar(
                 radius: 16,
                 backgroundColor:
@@ -1649,16 +1806,25 @@ class _ChatScreenState extends State<ChatScreen>
           itemBuilder: (_, i) {
             final room = _chatRooms[i];
             return InteractiveCard(
-              onTap: () {
+              onTap: () async {
                 HapticFeedback.mediumImpact();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Joined ${room.name} - starting chat...'),
-                    backgroundColor: room.gradient.last,
-                    duration: const Duration(seconds: 2),
-                  ),
-                );
-                setState(() => _currentRoom = room);
+                try {
+                  final response = await http.post(
+                    Uri.parse(ApiConfig.apiPath('/chat/rooms/join')),
+                    headers: {'Content-Type': 'application/json', if (authService.currentUser?.id != null) 'x-user-id': authService.currentUser!.id},
+                    body: jsonEncode({'room_id': room.id}),
+                  );
+                  // Join the backend WS gateway so room traffic relays live.
+                  realtimeMessagingService.connect();
+                  realtimeMessagingService.joinRoom(room.id);
+                  if (response.statusCode == 200) {
+                    setState(() => _currentRoom = room);
+                  }
+                } catch (_) {
+                  realtimeMessagingService.connect();
+                  realtimeMessagingService.joinRoom(room.id);
+                  setState(() => _currentRoom = room);
+                }
               },
               scaleAmount: 0.92,
               child: Container(
@@ -1758,7 +1924,18 @@ class _ChatScreenState extends State<ChatScreen>
 
   Widget _buildRoomChatView() {
     final room = _currentRoom!;
-    final messages = _roomMessages[room.id] ?? [];
+    final persisted = realtimeMessagingService.getMessages(room.id);
+    final local = _roomMessages[room.id] ?? [];
+    final all = <ChatMessageModel>[];
+    final seen = <String>{};
+    for (final msg in local) { all.add(msg); seen.add(msg.id); }
+    for (final msg in persisted) {
+      if (!seen.contains(msg.id)) {
+        all.add(ChatMessageModel(id: msg.id, userId: msg.senderId, username: msg.senderName, content: msg.text, createdAt: msg.timestamp));
+        seen.add(msg.id);
+      }
+    }
+    final messages = all;
     return Column(
       children: [
         _buildRoomHeader(room),

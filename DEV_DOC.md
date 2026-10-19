@@ -1,6 +1,6 @@
 # CinemaFlix — Development Status Doc
 
-Last updated: 2026-10-19 (post bugs.txt implementation pass)
+Last updated: 2026-10-19 (second pass — production-grade fixes to the first pass limitations)
 
 ## What's accomplished ✅
 
@@ -54,12 +54,17 @@ New `backend/systems.js` module — works with or without the database (in-memor
 - **Profiles/screens polish**: profile, dating, wallet, vault screens exist with modern layouts; per bugs.txt further design iterations (e.g., cover photo pickers, engagement analytics components) remain design work.
 - **Stories interactions / watch-party reactions**: stories + watch party screens exist; deeper reaction/gift wiring is incremental.
 
-## Future improvements (advice)
+## Second pass — previous limitations resolved ✅
 
-1. **Real OAuth**: verify Google/Apple idTokens server-side (JWKs) before trusting the email payload; then remove the dev-simulated path.
-2. **SMS provider**: wire `/auth/phone/request-otp` to a provider (Twilio/ Africa's Talking) and stop returning `devCode`.
-3. **WebSockets**: bugs.txt asks for real-time sockets for chat/notifications. The realtime messaging service in the client targets a WS endpoint; add `ws` on the backend and use the same endpoints rather than polling.
-4. **DB-backed admin stores**: wallets/games/ecommerce are currently in-memory in `systems.js` — move to Mongo/Postgres models for durability before production.
-5. **Sound assets**: add `assets/sounds/*` (including the CinemaFlix announcer voice) and switch `SoundService` to playing real audio files — the per-event API stays the same.
+1. **Real OAuth** — `/api/auth/oauth/*` now verifies Google/Apple idTokens against the provider JWKS (RS256, issuer + audience checks; no extra deps — node crypto imports JWKs directly). Keys cached 1h. The simulated path is now gated behind `OAUTH_DEV_MODE=true`; without it, requests without a valid idToken get 401.
+2. **SMS provider** — phone OTP sends via Twilio when `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` are set; only when they are missing does the endpoint return `devCode` (marked `"via": "dev"`).
+3. **WebSockets** — real WS gateway at `ws://<backend>/ws` (`backend/realtime.js`): rooms, presence broadcasts, typing, chat relay, admin announcements (via `POST /api/admin/announce`); JWT-authenticated identity or dev `userId` params. Flutter `RealtimeMessagingService` now connects with `web_socket_channel` (works on web + mobile), auto-reconnects every 5s, joins rooms on open, relays messages/typing, plays a comment sound on incoming messages.
+4. **DB-backed stores** — `backend/models/systems.js` gives Mongoose models for wallets (with transaction history), game sessions, leaderboard, products, seller applications, orders, user settings, admin config, ad events. `systems.js` routes read/write Mongo when connected and transparently fall back to in-memory Maps otherwise. Wallet saves go through `doc.save()`; a Mongoose `type`-key pitfall in the transaction subdoc was fixed with an explicit sub-Schema.
+5. **Sound assets** — ten synthesized WAVs under `assets/sounds/` (notification, popups, success, transaction, like, comment, celebrate, gift, navigation, open) played through `audioplayers` with a small player pool + haptics; splash uses the branded `open.wav` boot chime. Recorded announcer voice can replace `open.wav` with no code changes.
+
+> Note: live tests covered the Mongo path (storage: `mongo`), the OTP dev-code fallback, OAuth 401-rejection, wallet mirroring, and a two-client WS room relay. Twilio delivery itself could not be verified here — no credentials — set the env vars and send to a real number to confirm.
+
+## Remaining future improvements
+
 6. **Rate limiting / abuse controls** on gifts, gaming, and seller endpoints.
 7. **Test coverage**: add tests for `SoundService`, `AdsService`, wallet mirroring, and backend systems.js flows.

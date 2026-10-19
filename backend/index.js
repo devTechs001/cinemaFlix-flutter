@@ -1,4 +1,5 @@
 const express = require('express');
+const http = require('http');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
@@ -27,7 +28,10 @@ app.use(express.json());
 app.use(authMiddleware);
 
 connectDB();
-registerSystemRoutes(app);
+// Bridge object handed to the system routes now; populated with the real
+// broadcast function once the WS server attaches at listen() time.
+const realtimeBridge = { broadcastNotification: () => {} };
+registerSystemRoutes(app, realtimeBridge);
 
 // ---------- AUTH ----------
 
@@ -628,7 +632,13 @@ app.get('/', (req, res) => {
   });
 });
 
-app.listen(port, '0.0.0.0', () => {
+const server = http.createServer(app);
+const realtime = require('./realtime').attachRealtime(server);
+realtimeBridge.broadcastNotification = realtime.broadcastNotification;
+
+server.listen(port, '0.0.0.0', () => {
   console.log(`CinemaFlix Backend running on http://0.0.0.0:${port}`);
+  console.log(`CinemaFlix Realtime WS available on ws://0.0.0.0:${port}/ws`);
+  realtime.broadcastNotification({ title: 'CinemaFlix', body: 'Realtime service (re)started' });
   if (!fs.existsSync(VIDEOS_DIR)) fs.mkdirSync(VIDEOS_DIR, { recursive: true });
 });

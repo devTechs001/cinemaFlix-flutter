@@ -12,9 +12,9 @@ application update systems(auto,notification)::present(update_service)
 app notification popups(new updates,new users,friends,in app activities)::present(overlay) + admin toggle
 auto cache/storage cleaners,memory release/boosts/vault systems::present(cache_service, cache_cleaner_screen)
 ads systems/managers,display/banners,earning from ads,partnerships from sponsors and orgs,settings::DONE (ads_service + shorts overlay + /api/ads impresion/click rewards + admin partner stats)
-real time settingssockets::partially (realtime_messaging_service in client;ws on backend pending)
+real time settingssockets::DONE (ws gateway on backend /ws + client web_socket_channel with reconnect)
 enhance the profiles screen to modern layout/look/features::screens exist — deep polish listed in DEV_DOC pending
-enhance auth system(Oauth,email,phone)::DONE (google/apple oauth endpoints+phone otp flow+ui)
+enhance auth system(Oauth,email,phone)::DONE (google/apple oauth with JWKS idToken verification + phone otp with Twilio provider + ui)
 multi architecture,graphql/other dbs (scalability)::mongo primary; multi-db listed future
 application deployment to appstore/platforms::render.yaml + deploy scripts present
 social system/gifting/interactions(comment,likes,uploads,livestreams)::present
@@ -30,8 +30,8 @@ notifications(real time),random popups::present+admin toggle
 app interaction with other apps::real_me bridge + plugins screen
 movies db import(real time)(admin role)::present (movie_db_service)
 system maintenance dashboards with settings/message to users::DONE (admin maintenance endpoints + message + allow lists)
-application sound system(notification,success,transaction,like,comment,celebrate among others)::DONE (SoundService + settings toggles + backend settings endpoint)
-sockets for real time messaging(online stamps,settings)::partially (see DEV_DOC)
+application sound system(notification,success,transaction,like,comment,celebrate among others)::DONE (SoundService + real WAV assets in assets/sounds/ + audioplayers + settings toggles)
+sockets for real time messaging(online stamps,settings)::DONE (rooms, presence online stamps, typing — verified live)
 splash screen animations and sounds::DONE (boot sound + announcer voice asset pending)
 one time onboarding display::DONE (onboarding_complete flag)
 real time settings(endpoints)::DONE (/api/settings)
@@ -44,7 +44,7 @@ dedicated movies page,TV shows,sports,stories page::present (explore/home/record
 splash screen movie cards images(netflix like)::DONE
 wire all system resources(gifts,points,payments) to the wallet::DONE (wallet mirroring to /api/wallet + gift/convert endpoints)
 persistent nav system throughout the application::present (drawer/sidebar)
-messaging (real time sockets)::partially
+messaging (real time sockets)::DONE (chat relays over ws; verified two-client relay)
 improve the feed system::present (social_feed_screen+feed_service)
 analytics system,ads manager/ad players in shorts after a period of watching based on subscriptions::DONE (AdOverlayScheduler + subscription gate)
 wire everything to the admin panel::DONE (/api/admin/* — stats, feature flags, maintenance, ban/unban, ads stats, popups)

@@ -1,3 +1,4 @@
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -5,10 +6,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// transaction, like, comment, celebrate...) with per-event toggles persisted
 /// in local settings, backed by the /api/settings/:userId sounds endpoint.
 ///
-/// The platform SystemSound set only exposes a click for now; when sound
-/// assets (including the CinemaFlix announcer voice) are added under
-/// assets/sounds/, this service will switch to playing them automatically —
-/// the per-event API (play(SoundEvent.x)) and settings stay identical.
+/// Real synthesized WAV assets live under assets/sounds/ and are mapped
+/// one-to-one to events. To brand the app further, drop a recorded announcer
+/// voice at assets/sounds/open.wav (the splash boot sound) — the API and
+/// settings stay identical.
 class SoundService {
   SoundService._();
   static final SoundService instance = SoundService._();
@@ -21,6 +22,25 @@ class SoundService {
   };
   bool _hapticsEnabled = true;
   bool _initialized = false;
+
+  /// Small pool of players so overlapping short sounds don't cut each other.
+  final List<AudioPlayer> _players = [];
+  int _nextPlayer = 0;
+
+  static const Map<SoundEvent, String> _assets = {
+    SoundEvent.notification: 'notification',
+    SoundEvent.popups: 'popups',
+    SoundEvent.success: 'success',
+    SoundEvent.transaction: 'transaction',
+    SoundEvent.like: 'like',
+    SoundEvent.comment: 'comment',
+    SoundEvent.celebrate: 'celebrate',
+    SoundEvent.gift: 'gift',
+    SoundEvent.navigation: 'navigation',
+  };
+
+  /// Splash/boot chime played from main.dart at startup.
+  static const String bootAsset = 'open';
 
   Map<SoundEvent, bool> get enabled => Map.unmodifiable(_enabled);
   bool get hapticsEnabled => _hapticsEnabled;
@@ -60,34 +80,62 @@ class SoundService {
 
   void setHapticsEnabled(bool value) => _hapticsEnabled = value;
 
-  /// Play the sound for [event]. Safe to call from anywhere; silently no-ops
-  /// when the event is disabled by the user's settings.
-  Future<void> play(SoundEvent event) async {
-    if (!_enabled[event]!) return;
+  void _haptic(SoundEvent event) {
+    if (!_hapticsEnabled) return;
     switch (event) {
       case SoundEvent.celebrate:
       case SoundEvent.success:
+      case SoundEvent.transaction:
+      case SoundEvent.gift:
         HapticFeedback.mediumImpact();
-        await SystemSound.play(SystemSoundType.alert);
         break;
       case SoundEvent.notification:
       case SoundEvent.popups:
         HapticFeedback.lightImpact();
-        await SystemSound.play(SystemSoundType.alert);
-        break;
-      case SoundEvent.transaction:
-      case SoundEvent.gift:
-        HapticFeedback.mediumImpact();
-        await SystemSound.play(SystemSoundType.click);
         break;
       case SoundEvent.like:
       case SoundEvent.comment:
-        HapticFeedback.selectionClick();
-        break;
       case SoundEvent.navigation:
         HapticFeedback.selectionClick();
         break;
     }
+  }
+
+  /// Play an asset by [assetName] (file assets/sounds/<assetName>.wav).
+  Future<void> playAsset(String assetName) async {
+    try {
+      final player = _players.isNotEmpty
+          ? _players[_nextPlayer++ % _players.length]
+          : null;
+      final p = player ?? await _createPlayer();
+      await p.stop();
+      await p.play(AssetSource('sounds/$assetName.wav'));
+    } catch (e) {
+      // Asset playback unavailable (older platform/web restrictions) — fall
+      // through to the platform click so feedback is never fully lost.
+      try {
+        await SystemSound.play(SystemSoundType.click);
+      } catch (_) {}
+    }
+  }
+
+  Future<AudioPlayer> _createPlayer() async {
+    final p = AudioPlayer();
+    _players.add(p);
+    return p;
+  }
+
+  /// Play the sound for [event]. Safe to call from anywhere; silently no-ops
+  /// when the event is disabled by the user's settings.
+  Future<void> play(SoundEvent event) async {
+    if (!_enabled[event]!) return;
+    _haptic(event);
+    final asset = _assets[event];
+    if (asset != null) {
+      await playAsset(asset);
+      return;
+    }
+    await SystemSound.play(SystemSoundType.click);
   }
 }
 

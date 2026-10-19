@@ -30,7 +30,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
-    soundService.initialize().then((_) => soundService.play(SoundEvent.notification));
+    soundService.initialize().then((_) => soundService.playAsset(SoundService.bootAsset));
 
     for (int i = 0; i < 20; i++) {
       _particles.add(_Particle(
