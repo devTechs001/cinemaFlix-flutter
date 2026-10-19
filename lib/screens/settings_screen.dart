@@ -6,6 +6,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import '../widgets/interactive_card.dart';
 import '../services/media_service.dart';
 import '../services/globals.dart';
+import '../services/sound_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -42,6 +43,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void initState() {
     super.initState();
     _loadPackageInfo();
+    soundService.initialize();
   }
 
   Future<void> _loadPackageInfo() async {
@@ -56,6 +58,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } catch (e) {
       debugPrint('Error loading package info: $e');
     }
+  }
+
+  Widget _soundToggleRow(SoundEvent event, String label) {
+    return SwitchListTile(
+      secondary: const Icon(Icons.volume_down_outlined, color: Colors.white38, size: 20),
+      title: Text(label, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+      value: soundService.enabled[event] ?? true,
+      onChanged: (v) {
+        soundService.setEventEnabled(event, v);
+        if (v) soundService.play(event);
+        setState(() {});
+      },
+      activeTrackColor: const Color(0xFFE50914),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+    );
   }
 
   @override
@@ -157,6 +174,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SnackBar(content: Text('Live stream settings'), duration: Duration(seconds: 1)),
               );
             }),
+          ]),
+          const SizedBox(height: 20),
+          _section('Sounds'),
+          _card(children: [
+            SwitchListTile(
+              secondary: const Icon(Icons.volume_up_outlined, color: Colors.white54),
+              title: const Text('All system sounds', style: TextStyle(color: Colors.white, fontSize: 14)),
+              value: soundService.enabled.values.every((v) => v),
+              onChanged: (v) {
+                HapticFeedback.lightImpact();
+                soundService.setAllEnabled(v);
+                setState(() {});
+              },
+              activeTrackColor: const Color(0xFFE50914),
+            ),
+            _soundToggleRow(SoundEvent.transaction, 'Transactions & purchases'),
+            _soundToggleRow(SoundEvent.gift, 'Gifts sent & received'),
+            _soundToggleRow(SoundEvent.like, 'Likes'),
+            _soundToggleRow(SoundEvent.comment, 'Comments'),
+            _soundToggleRow(SoundEvent.notification, 'Notifications'),
+            _soundToggleRow(SoundEvent.popups, 'Popup reminders'),
           ]),
           const SizedBox(height: 20),
           _section('Accessibility'),

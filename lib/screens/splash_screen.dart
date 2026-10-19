@@ -1,6 +1,10 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/globals.dart';
+import '../services/sound_service.dart';
+import '../models/sample_movies.dart';
 import '../widgets/app_logo.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -26,6 +30,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
+    soundService.initialize().then((_) => soundService.play(SoundEvent.notification));
 
     for (int i = 0; i < 20; i++) {
       _particles.add(_Particle(
@@ -79,9 +84,12 @@ class _SplashScreenState extends State<SplashScreen>
     if (!mounted) return;
     if (devService.maintenanceMode) {
       Navigator.pushReplacementNamed(context, '/maintenance');
-    } else {
-      Navigator.pushReplacementNamed(context, '/onboarding');
+      return;
     }
+    // Show the preference onboarding only ONCE (one-time onboarding display).
+    final prefs = await SharedPreferences.getInstance();
+    final seenOnboarding = prefs.getBool('onboarding_complete') ?? false;
+    Navigator.pushReplacementNamed(context, seenOnboarding ? '/main' : '/onboarding');
   }
 
   @override
@@ -164,6 +172,78 @@ class _SplashScreenState extends State<SplashScreen>
                         fontSize: 14,
                         letterSpacing: 4,
                         fontWeight: FontWeight.w300,
+                      ),
+                    ),
+                  ),
+                ),
+                // Netflix-style featured movie cards strip
+                Positioned(
+                  bottom: MediaQuery.of(context).size.height * 0.14,
+                  left: 0,
+                  right: 0,
+                  child: FadeTransition(
+                    opacity: _subtitleFade,
+                    child: SizedBox(
+                      height: 120,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: sampleMovies.take(6).length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 10),
+                        itemBuilder: (context, i) {
+                          final movie = sampleMovies[i];
+                          return ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Stack(
+                              children: [
+                                CachedNetworkImage(
+                                  imageUrl: movie.effectivePosterUrl,
+                                  width: 84,
+                                  height: 120,
+                                  fit: BoxFit.cover,
+                                  errorWidget: (_, __, ___) => Container(
+                                    width: 84,
+                                    height: 120,
+                                    color: const Color(0xFF2A2A2A),
+                                    child: const Icon(Icons.movie, color: Colors.white24),
+                                  ),
+                                ),
+                                Positioned(
+                                  bottom: 0,
+                                  left: 0,
+                                  right: 0,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topCenter,
+                                        end: Alignment.bottomCenter,
+                                        colors: [Colors.transparent, Colors.black.withValues(alpha: 0.85)],
+                                      ),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          movie.title,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600),
+                                        ),
+                                        Text(
+                                          '★ ${movie.rating}',
+                                          style: const TextStyle(color: Color(0xFFE50914), fontSize: 9),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                       ),
                     ),
                   ),

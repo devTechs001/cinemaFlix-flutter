@@ -1,4 +1,5 @@
 import 'auth_service.dart';
+import 'sound_service.dart';
 import 'database_service.dart';
 import 'realtime_service.dart';
 import 'guest_service.dart';
@@ -7,8 +8,12 @@ import 'dev_service.dart';
 import 'update_service.dart';
 import 'connectivity_service.dart';
 import 'cache_service.dart';
+import 'sync_service.dart';
+import 'feed_service.dart';
+import 'social_service.dart';
 
 final authService = AuthService();
+final soundService = SoundService();
 final databaseService = DatabaseService();
 final realtimeService = RealtimeService();
 final guestService = GuestService();
@@ -17,3 +22,6 @@ final devService = DevService();
 final updateService = UpdateService();
 final connectivityService = ConnectivityService();
 final cacheService = CacheService();
+final syncService = SyncService();
+final feedService = FeedService();
+final socialService = SocialService();

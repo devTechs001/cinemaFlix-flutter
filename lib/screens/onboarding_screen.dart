@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/interactive_card.dart';
+import '../services/globals.dart';
+import '../services/sound_service.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -48,6 +51,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     ),
   ];
 
+  Future<void> _finishOnboarding() async {
+    HapticFeedback.mediumImpact();
+    soundService.play(SoundEvent.success);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('onboarding_complete', true);
+    if (!mounted) return;
+    Navigator.pushReplacementNamed(context, '/main');
+  }
+
   @override
   void dispose() {
     _controller.dispose();
@@ -67,7 +79,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: InteractiveCard(
-                    onTap: () => Navigator.pushReplacementNamed(context, '/main'),
+                    onTap: () => _finishOnboarding(),
                     scaleAmount: 0.92,
                     child: const Padding(
                       padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -180,7 +192,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         curve: Curves.easeInOut,
                       );
                     } else {
-                      Navigator.pushReplacementNamed(context, '/main');
+                      _finishOnboarding();
                     }
                   },
                   style: ElevatedButton.styleFrom(
