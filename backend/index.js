@@ -8,6 +8,7 @@ require('dotenv').config();
 const { connectDB, getIsConnected } = require('./db');
 const { generateToken, authMiddleware, requireAuth } = require('./auth');
 const { registerSystemRoutes } = require('./systems');
+const { registerAuthVerifyRoute } = require('./auth_verify');
 
 const User = require('./models/User');
 const Post = require('./models/Post');
@@ -32,6 +33,7 @@ connectDB();
 // broadcast function once the WS server attaches at listen() time.
 const realtimeBridge = { broadcastNotification: () => {} };
 registerSystemRoutes(app, realtimeBridge);
+registerAuthVerifyRoute(app);
 
 // ---------- AUTH ----------
 
@@ -53,7 +55,13 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/token', async (req, res) => {
+  // Alias kept for real_me companion app compatibility.
+  req.body.email = req.body.email || req.body.username;
+  return internalLogin(req, res);
+});
+
+const internalLogin = async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
@@ -66,7 +74,7 @@ app.post('/api/auth/login', async (req, res) => {
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
-});
+};
 
 // ---------- USERS ----------
 

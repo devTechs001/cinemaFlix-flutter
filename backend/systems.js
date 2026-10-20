@@ -27,6 +27,8 @@ const memory = {
   settings: new Map(),
   otps: new Map(),
   liveTokens: new Map(),
+  liveRooms: new Map(),
+  liveRequests: new Map(),
   usersIndex: new Map(),
   leaderboard: [],
 };
@@ -313,14 +315,13 @@ function sendSms(phone, text) {
     req.write(payload);
     req.end();
   });
-}
-
-// ---------- LIVE tokens (real_me interop) ----------
-function issueLiveToken(callId, role) {
-  const token = `dev_${role}_${crypto.randomBytes(16).toString('hex')}`;
-  memory.liveTokens.set(callId, { token, role, at: new Date().toISOString() });
-  return token;
-}
+}  // ---------- LIVE tokens (real_me interop) ----------
+  function issueLiveToken(callId, role) {
+    const token = `dev_${role}_${crypto.randomBytes(16).toString('hex')}`;
+    const prev = memory.liveTokens.get(callId) || {};
+    memory.liveTokens.set(callId, { ...prev, token, role, at: new Date().toISOString() });
+    return token;
+  }
 
 function requireAdmin(req) {
   return (req.headers['x-admin-code'] || req.query.adminCode) === ADMIN_CODE;
@@ -748,23 +749,206 @@ function registerSystemRoutes(app, realtime) {
   });
 
   // ---- LIVE (real_me interop) ----
+  // Rooms registry keeps rich metadata (host, title, status, counters) and
+  // powers the join-request/approval flow + creator insights. Requests follow
+  // the same dual-storage pattern; live stays memory-first like liveTokens.
+  function liveRoom(callId) {
+    return memory.liveRooms.get(callId) || null;
+  }
+
+  function activeLiveRooms() {
+    return [...memory.liveRooms.values()].filter((r) => r.status === 'live');
+  }
+
+  function liveRoomJSON(r) {
+    if (!r) return null;
+    return {
+      callId: r.callId,
+      title: r.title,
+      hostId: r.hostId,
+      hostName: r.hostName,
+      status: r.status,
+      requiresApproval: !!r.requiresApproval,
+      viewers: r.viewers || 0,
+      reactions: r.reactions || 0,
+      gifts: r.gifts || 0,
+      startedAt: r.startedAt,
+      endedAt: r.endedAt || null,
+    };
+  }
+
   app.post('/api/live/create', async (req, res) => {
     if (!req.userId) return res.status(401).json({ error: 'Auth required' });
-    const { title } = req.body || {};
+    const { title, requires_approval: requiresApprovalBody } = req.body || {};
     const callId = `live_${crypto.randomUUID().slice(0, 10)}`;
+    const room = {
+      callId,
+      hostId: req.userId,
+      hostName: req.userName || req.headers['x-user-name'] || 'Host',
+      title: title || 'Untitled live',
+      status: 'live',
+      requiresApproval: requiresApprovalBody === true || req.headers['x-requires-approval'] === 'true',
+      viewers: 0,
+      reactions: 0,
+      gifts: 0,
+      startedAt: new Date().toISOString(),
+      endedAt: null,
+    };
+    memory.liveRooms.set(callId, room);
     const token = issueLiveToken(callId, 'host');
-    res.status(201).json({ callId, hostToken: token, backends: ['realme-bridge', 'native'], title: title || 'Untitled live' });
+    res.status(201).json({
+      callId, hostToken: token,
+      token, call_id: callId, call_type: 'live-stream',
+      backends: ['realme-bridge', 'native'], title: room.title,
+      requiresApproval: room.requiresApproval,
+    });
   });
 
-  app.post('/api/live/viewer/token', async (req, res) => {
-    const { callId } = req.body || {};
+  const roomListHandler = async (req, res) => {
+    res.json({ rooms: activeLiveRooms().map(liveRoomJSON) });
+  };
+  app.get('/api/live/rooms', roomListHandler);
+  app.get('/api/live/list', roomListHandler);
+
+  app.get('/api/live/rooms/:callId', async (req, res) => {
+    const room = liveRoom(req.params.callId);
+    if (!room) return res.status(404).json({ error: 'Live room not found' });
+    res.json({ room: liveRoomJSON(room) });
+  });
+
+  // Host toggles whether viewers must request approval to enter.
+  app.put('/api/live/rooms/:callId/approval', async (req, res) => {
+    const room = liveRoom(req.params.callId);
+    if (!room) return res.status(404).json({ error: 'Live room not found' });
+    if (room.hostId && req.userId && room.hostId !== req.userId) return res.status(403).json({ error: 'Only the room owner can change approval settings' });
+    if (req.body?.requiresApproval !== undefined) room.requiresApproval = !!req.body.requiresApproval;
+    res.json({ room: liveRoomJSON(room) });
+  });
+
+  app.post('/api/live/rooms/:callId/join-request', async (req, res) => {
+    const room = liveRoom(req.params.callId);
+    if (!room) return res.status(404).json({ error: 'Live room not found' });
+    if (room.status !== 'live') return res.status(409).json({ error: 'Room is not live anymore' });
+    if (!room.requiresApproval) return res.status(200).json({ approved: true, message: 'Room is open — join directly' });
+    const viewerId = req.userId || req.headers['x-user-id'] || req.body?.userId || `guest_${crypto.randomUUID().slice(0, 8)}`;
+    const viewerName = req.body?.userName || req.headers['x-user-name'] || 'Viewer';
+    // Idempotent: reuse the viewer's pending request if one exists.
+    const existing = [...memory.liveRequests.values()].find(
+      (r) => r.callId === room.callId && r.userId === viewerId && r.status === 'pending',
+    );
+    if (existing) return res.json({ requestId: existing.id, status: 'pending', message: 'Join request already pending' });
+    const request = {
+      id: `r_${crypto.randomUUID().slice(0, 10)}`,
+      callId: room.callId,
+      userId: viewerId,
+      userName: viewerName,
+      status: 'pending',
+      at: new Date().toISOString(),
+    };
+    memory.liveRequests.set(request.id, request);
+    notify({ title: 'New join request', body: `${viewerName} wants to join "${room.title}"` });
+    res.status(202).json({ requestId: request.id, status: 'pending' });
+  });
+
+  app.get('/api/live/rooms/:callId/requests', async (req, res) => {
+    const room = liveRoom(req.params.callId);
+    if (!room) return res.status(404).json({ error: 'Live room not found' });
+    if (room.hostId && req.userId && room.hostId !== req.userId) return res.status(403).json({ error: 'Only the room owner can view join requests' });
+    const statusFilter = req.query.status;
+    const all = [...memory.liveRequests.values()].filter(
+      (r) => r.callId === room.callId && (!statusFilter || r.status === statusFilter),
+    );
+    res.json({ requests: all });
+  });
+
+  const decideJoinRequest = (decision) => async (req, res) => {
+    const request = memory.liveRequests.get(req.params.requestId);
+    if (!request) return res.status(404).json({ error: 'Join request not found' });
+    if (request.status !== 'pending') return res.status(409).json({ error: `Request already ${request.status}` });
+    const room = liveRoom(request.callId);
+    if (room?.hostId && req.userId && room.hostId !== req.userId) return res.status(403).json({ error: 'Only the room owner can decide join requests' });
+    request.status = decision;
+    request.decidedAt = new Date().toISOString();
+    let viewerToken;
+    if (decision === 'approved') {
+      viewerToken = issueLiveToken(request.callId, 'viewer');
+      notify({ title: 'Join approved', body: `You were approved to join "${room?.title || 'a live room'}"` });
+    }
+    res.json({ request, ...(viewerToken ? { viewerToken } : {}) });
+  };
+  app.put('/api/live/requests/:requestId/approve', decideJoinRequest('approved'));
+  app.put('/api/live/requests/:requestId/reject', decideJoinRequest('rejected'));
+
+  const viewerTokenHandler = async (req, res) => {
+    const body = req.body || {};
+    const callId = body.callId ?? body.call_id ?? body.id;
+    const viewerId = req.userId || body.userId || `guest_${crypto.randomUUID().slice(0, 8)}`;
+    const room = liveRoom(callId);
     if (!memory.liveTokens.has(callId)) return res.status(404).json({ error: 'Live room not found' });
+    if (room && room.status !== 'live') return res.status(409).json({ error: 'Room is not live anymore' });
+    if (room && room.requiresApproval) {
+      const approvedReq = [...memory.liveRequests.values()].find(
+        (r) => r.callId === callId && r.userId === viewerId && r.status === 'approved',
+      );
+      if (!approvedReq) return res.status(403).json({ error: 'Approval required — send a join request first' });
+    }
+    if (room) room.viewers = (room.viewers || 0) + 1;
     const token = issueLiveToken(callId, 'viewer');
-    res.json({ callId, viewerToken: token });
-  });
+    res.json({ callId, viewerToken: token, token, call_type: 'live-stream' });
+  };
+  app.post('/api/live/viewer/token', viewerTokenHandler);
+  app.post('/api/live/join', viewerTokenHandler);
 
-  app.get('/api/live/rooms', async (req, res) => {
-    res.json({ rooms: [...memory.liveTokens.entries()].map(([callId, v]) => ({ callId, role: v.role, startedAt: v.at })) });
+  const endLiveHandler = async (req, res) => {
+    const callId = req.params.callId || req.body?.callId || req.body?.call_id;
+    const room = liveRoom(callId);
+    if (!room && !memory.liveTokens.has(callId)) return res.status(404).json({ error: 'Live room not found' });
+    if (room) {
+      if (room.hostId && req.userId && room.hostId !== req.userId) return res.status(403).json({ error: 'Only the room owner can end the room' });
+      room.status = 'ended';
+      room.endedAt = new Date().toISOString();
+      notify({ title: 'Live ended', body: `"${room.title}" has ended` });
+    } else {
+      memory.liveTokens.delete(callId);
+    }
+    res.json({ ok: true, room: liveRoomJSON(room) });
+  };
+  app.post('/api/live/end', endLiveHandler);
+  app.post('/api/live/rooms/:callId/end', endLiveHandler);
+
+  // ---- CREATOR INSIGHTS (analytics wired to the wallet) ----
+  app.get('/api/creator/insights', async (req, res) => {
+    const hostId = req.query.userId || req.userId || req.headers['x-user-id'];
+    if (!hostId) return res.status(400).json({ error: 'userId required' });
+    const rooms = [...memory.liveRooms.values()].filter((r) => r.hostId === hostId);
+    const totals = rooms.reduce(
+      (acc, r) => ({
+        rooms: acc.rooms + 1,
+        viewers: acc.viewers + (r.viewers || 0),
+        reactions: acc.reactions + (r.reactions || 0),
+        gifts: acc.gifts + (r.gifts || 0),
+      }),
+      { rooms: 0, viewers: 0, reactions: 0, gifts: 0 },
+    );
+    const durationMs = rooms.reduce((acc, r) => {
+      const start = Date.parse(r.startedAt || r.createdAt || new Date());
+      const end = r.endedAt ? Date.parse(r.endedAt) : Date.now();
+      return acc + Math.max(0, end - start);
+    }, 0);
+    const wallet = await walletDoc(hostId);
+    const topRooms = rooms
+      .sort((a, b) => (b.viewers || 0) - (a.viewers || 0))
+      .slice(0, 5)
+      .map(liveRoomJSON);
+    res.json({
+      hostId,
+      ...totals,
+      liveRooms: rooms.filter((r) => r.status === 'live').length,
+      avgViewersPerRoom: totals.rooms ? +(totals.viewers / totals.rooms).toFixed(1) : 0,
+      totalMinutes: Math.round(durationMs / 60000),
+      wallet: walletJSON(wallet),
+      topRooms,
+    });
   });
 
   // ---- NOTIFICATION POPUP TOGGLES (admin) + ability to push instantly ----

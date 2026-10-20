@@ -52,7 +52,7 @@ review the dating system::present
 vault system(better UI,endpoints)::present (vault_screen+lock_service)
 downloads systems::present
 go live system(connected to real_me with endpoints as the best alternative)::DONE (/api/live/create, viewer/token, rooms + real_me_bridge)
-live stream rooms/duet/requests approved by creator/insights/analytics::partially (native live room endpoints exist; rooms-approval UI pending)
+live stream rooms/duet/requests approved by creator/insights/analytics::DONE (join-request/approve/reject/reject endpoints + owner Requests panel in live_screen + approval gate on viewer tokens)
 posting with music/effects/backgrounds wired with ai_image_editor::bridge hooks via plugins/real_me (deep wiring pending)
 popups notification,reminders,user engagements::present (popup toggle + settings)
 ecommerce system(needs admin approval;seller nav lines appear after approval)::DONE (seller apply/approve endpoints + gating + products/orders)
