@@ -255,6 +255,15 @@ class LocalDbService extends ChangeNotifier {
     return rows.first['position_seconds'] as int?;
   }
 
+  /// All watch-history rows, most recently watched first.
+  Future<List<Map<String, Object?>>> getWatchHistory() async {
+    if (_useMemory) {
+      return _memHistory.values.toList()
+        ..sort((a, b) => (b['updated_at'] as String).compareTo(a['updated_at'] as String));
+    }
+    return _db!.query('watch_history', orderBy: 'updated_at DESC');
+  }
+
   /// Partially-watched movies, most recently watched first.
   Future<List<Map<String, Object?>>> getContinueWatching() async {
     final List<Map<String, Object?>> rows;

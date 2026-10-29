@@ -30,6 +30,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void initState() {
     super.initState();
     _loadPackageInfo();
+    _loadSettings();
   }
 
   Future<void> _loadPackageInfo() async {
@@ -46,6 +47,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  /// Restores persisted toggles from SQLite (settings table).
+  Future<void> _loadSettings() async {
+    final hd = await localDbService.getBoolSetting('hd_streaming');
+    final autoPlay = await localDbService.getBoolSetting('auto_play');
+    final subtitles = await localDbService.getBoolSetting('subtitles');
+    final wifi = await localDbService.getBoolSetting('download_on_wifi');
+    final smart = await localDbService.getBoolSetting('smart_downloads');
+    final notif = await localDbService.getBoolSetting('push_notifications');
+    if (!mounted) return;
+    setState(() {
+      _hdStreaming = hd ?? _hdStreaming;
+      _autoPlay = autoPlay ?? _autoPlay;
+      _subtitles = subtitles ?? _subtitles;
+      _downloadOnWifi = wifi ?? _downloadOnWifi;
+      _smartDownloads = smart ?? _smartDownloads;
+      _notificationsEnabled = notif ?? _notificationsEnabled;
+    });
+  }
+
+  void _saveBool(String key, bool value) {
+    localDbService.setBoolSetting(key, value);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -59,7 +83,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _section('Account'),
           _card(
             children: [
-              _settingTile(Icons.person, 'Profile Settings', 'Manage your account', () => Navigator.pushNamed(context, '/main')),
+              _settingTile(Icons.person, 'Profile Settings', 'Manage your account', () => Navigator.pushNamed(context, '/profile')),
               _settingTile(Icons.lock_outline, 'Privacy & Security', 'Password, data', () => Navigator.pushNamed(context, '/recover')),
               _settingTile(Icons.email_outlined, 'Email Preferences', 'Notifications, updates', () {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -87,17 +111,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _section('Playback'),
           _card(
             children: [
-              _toggleTile(Icons.hd, 'HD Streaming', _hdStreaming, (v) => setState(() => _hdStreaming = v)),
-              _toggleTile(Icons.play_circle_outline, 'Auto-Play Trailers', _autoPlay, (v) => setState(() => _autoPlay = v)),
-              _toggleTile(Icons.subtitles, 'Subtitles', _subtitles, (v) => setState(() => _subtitles = v)),
+              _toggleTile(Icons.hd, 'HD Streaming', _hdStreaming, (v) { setState(() => _hdStreaming = v); _saveBool('hd_streaming', v); }),
+              _toggleTile(Icons.play_circle_outline, 'Auto-Play Trailers', _autoPlay, (v) { setState(() => _autoPlay = v); _saveBool('auto_play', v); }),
+              _toggleTile(Icons.subtitles, 'Subtitles', _subtitles, (v) { setState(() => _subtitles = v); _saveBool('subtitles', v); }),
             ],
           ),
           const SizedBox(height: 20),
           _section('Downloads'),
           _card(
             children: [
-              _toggleTile(Icons.wifi, 'Download on Wi-Fi Only', _downloadOnWifi, (v) => setState(() => _downloadOnWifi = v)),
-              _toggleTile(Icons.auto_awesome, 'Smart Downloads', _smartDownloads, (v) => setState(() => _smartDownloads = v)),
+              _toggleTile(Icons.wifi, 'Download on Wi-Fi Only', _downloadOnWifi, (v) { setState(() => _downloadOnWifi = v); _saveBool('download_on_wifi', v); }),
+              _toggleTile(Icons.auto_awesome, 'Smart Downloads', _smartDownloads, (v) { setState(() => _smartDownloads = v); _saveBool('smart_downloads', v); }),
               _settingTile(Icons.download_outlined, 'Manage Downloads', '3 movies downloaded', () {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Downloads management'), duration: Duration(seconds: 1)),
@@ -109,7 +133,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _section('Notifications'),
           _card(
             children: [
-              _toggleTile(Icons.notifications_outlined, 'Push Notifications', _notificationsEnabled, (v) => setState(() => _notificationsEnabled = v)),
+              _toggleTile(Icons.notifications_outlined, 'Push Notifications', _notificationsEnabled, (v) { setState(() => _notificationsEnabled = v); _saveBool('push_notifications', v); }),
               _settingTile(Icons.movie_outlined, 'Movie Alerts', 'New releases, trending', () {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Movie alerts settings'), duration: Duration(seconds: 1)),

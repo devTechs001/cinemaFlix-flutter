@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:uuid/uuid.dart';
 import '../services/globals.dart';
 import '../models/sample_movies.dart';
 import '../models/review_model.dart';
@@ -29,10 +30,12 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     super.initState();
     _comments.addAll(_sampleComments);
     _loadStates();
+    _loadReviews();
   }
 
   Future<void> _loadStates() async {
-    if (authService.currentUser == null) return;
+    // No auth gate: DatabaseService is local-first, so guests load
+    // their SQLite favorites/watchlist here too.
     try {
       final allFavs = await databaseService.getFavorites(_userId);
       final watch = await databaseService.isInWatchlist(_userId, widget.movie.id);
@@ -43,6 +46,35 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
         });
       }
     } catch (_) {}
+  }
+
+  /// Loads real reviews from Supabase and shows them above the sample
+  /// ones (samples stay as placeholders until there is real content).
+  Future<void> _loadReviews() async {
+    try {
+      final reviews = await databaseService.getMovieReviews(widget.movie.id);
+      if (reviews.isEmpty || !mounted) return;
+      setState(() {
+        _comments.insertAll(0, reviews.map((r) => <String, dynamic>{
+              'user': r.username ?? 'Cinema Fan',
+              'avatar': (r.username == null || r.username!.isEmpty)
+                  ? 'C'
+                  : r.username![0].toUpperCase(),
+              'comment': r.content,
+              'rating': r.rating.round(),
+              'time': _relativeTime(r.createdAt),
+              'likes': 0,
+            }));
+      });
+    } catch (_) {}
+  }
+
+  String _relativeTime(DateTime time) {
+    final diff = DateTime.now().difference(time);
+    if (diff.inMinutes < 1) return 'just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    return '${diff.inDays}d ago';
   }
 
   final List<Map<String, dynamic>> _sampleComments = const [
@@ -76,16 +108,17 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       _comments.insert(0, newReview);
     });
     _commentController.clear();
+    final rating = _userRating;
     _userRating = 0;
 
     if (authService.currentUser != null) {
       try {
         await databaseService.addReview(
           ReviewModel(
-            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            id: const Uuid().v4(),
             userId: _userId,
             movieId: widget.movie.id,
-            rating: _userRating,
+            rating: rating,
             content: text,
             createdAt: DateTime.now(),
           ),
@@ -202,7 +235,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                       _actionButton(Icons.bookmark_border, Icons.bookmark, _inWatchlist, () async {
                         HapticFeedback.lightImpact();
                         setState(() => _inWatchlist = !_inWatchlist);
-                        if (authService.currentUser != null) {
+                        { // local-first: SQLite for guests, Supabase sync when signed in
                           await databaseService.toggleWatchlist(_userId, widget.movie.id,
                             title: widget.movie.title, genre: widget.movie.genre, year: widget.movie.year, rating: widget.movie.rating);
                         }
@@ -211,7 +244,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                       _actionButton(Icons.favorite_border, Icons.favorite, _isFavorited, () async {
                         HapticFeedback.lightImpact();
                         setState(() => _isFavorited = !_isFavorited);
-                        if (authService.currentUser != null) {
+                        { // local-first: SQLite for guests, Supabase sync when signed in
                           await databaseService.toggleFavorite(_userId, widget.movie.id,
                             title: widget.movie.title, genre: widget.movie.genre, year: widget.movie.year, rating: widget.movie.rating);
                         }
