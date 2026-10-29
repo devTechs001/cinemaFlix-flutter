@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
 import '../models/sample_movies.dart';
+import '../services/globals.dart';
 
 class MoviePlayScreen extends StatefulWidget {
   final SampleMovie movie;
@@ -16,6 +18,7 @@ class MoviePlayScreen extends StatefulWidget {
 class _MoviePlayScreenState extends State<MoviePlayScreen> {
   VideoPlayerController? _videoController;
   ChewieController? _chewieController;
+  Timer? _progressTimer;
   bool _isInitialized = false;
   bool _hasError = false;
 
@@ -27,6 +30,7 @@ class _MoviePlayScreenState extends State<MoviePlayScreen> {
 
   Future<void> _initPlayer() async {
     // Clean up any previous attempt (e.g. when retrying after an error).
+    _progressTimer?.cancel();
     _chewieController?.dispose();
     _chewieController = null;
     await _videoController?.dispose();
@@ -41,6 +45,12 @@ class _MoviePlayScreenState extends State<MoviePlayScreen> {
       _videoController =
           VideoPlayerController.networkUrl(Uri.parse(widget.movie.videoUrl!));
       await _videoController!.initialize();
+
+      // Resume where the user left off (SQLite watch_history).
+      final resumeAt = await localDbService.getResumePosition(widget.movie.id);
+      if (resumeAt != null && resumeAt > 5) {
+        await _videoController!.seekTo(Duration(seconds: resumeAt));
+      }
 
       _chewieController = ChewieController(
         videoPlayerController: _videoController!,
@@ -71,9 +81,32 @@ class _MoviePlayScreenState extends State<MoviePlayScreen> {
         ),
       );
 
+      _progressTimer =
+          Timer.periodic(const Duration(seconds: 5), (_) => _saveProgress());
+
       if (mounted) setState(() => _isInitialized = true);
     } catch (_) {
       if (mounted) setState(() => _hasError = true);
+    }
+  }
+
+  void _saveProgress() {
+    final controller = _videoController;
+    if (controller == null || !controller.value.isInitialized) return;
+    final duration = controller.value.duration.inSeconds;
+    if (duration <= 0) return;
+    final position = controller.value.position.inSeconds;
+    final progress = position / duration;
+    localDbService.saveWatchProgress(
+      widget.movie.id,
+      title: widget.movie.title,
+      progress: progress,
+      positionSeconds: position,
+      durationSeconds: duration,
+    );
+    final userId = authService.currentUser?.id;
+    if (userId != null) {
+      databaseService.updateWatchProgress(userId, widget.movie.id, progress);
     }
   }
 
@@ -87,6 +120,8 @@ class _MoviePlayScreenState extends State<MoviePlayScreen> {
 
   @override
   void dispose() {
+    _saveProgress();
+    _progressTimer?.cancel();
     _chewieController?.dispose();
     _videoController?.dispose();
     super.dispose();

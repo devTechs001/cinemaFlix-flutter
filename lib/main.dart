@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'services/globals.dart';
 import 'services/supabase_service.dart';
 import 'services/theme_service.dart';
 import 'screens/splash_screen.dart';
@@ -36,6 +37,8 @@ void main() async {
     runApp(ConfigErrorApp(message: SupabaseService().initError));
     return;
   }
+  await localDbService.initialize();
+  await themeService.loadPersistedTheme();
   runApp(const CinemaFlixApp());
 }
 

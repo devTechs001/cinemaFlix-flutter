@@ -9,6 +9,7 @@ A premium movie streaming and social app built with Flutter and Supabase.
 - **Dev Admin:** Secure access for admins.
 - **Update System:** In-app update notifications.
 - **Gifting:** Send digital gifts during live streams.
+- **Offline-first:** Favorites, watchlist, Continue Watching (resume playback) and theme persist on-device in SQLite — works offline and for guests; signed-in data also syncs to Supabase.
 
 ## Development
 ### Deployment

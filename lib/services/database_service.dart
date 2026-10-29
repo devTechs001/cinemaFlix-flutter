@@ -1,17 +1,45 @@
 import 'package:flutter/foundation.dart';
 import '../models/movie_model.dart';
 import '../models/review_model.dart';
+import 'local_db_service.dart';
 import 'supabase_service.dart';
 
+/// Favorites/watchlist are **local-first**: every write goes to the
+/// on-device SQLite database ([LocalDbService]) so they work offline
+/// and for guests, and is then mirrored to Supabase when a user is
+/// signed in. Reads prefer Supabase (refreshing the local cache) and
+/// fall back to SQLite on any error.
 class DatabaseService extends ChangeNotifier {
   final SupabaseService _supabase = SupabaseService();
+  final LocalDbService _local = LocalDbService();
 
-  Future<void> toggleWatchlist(String userId, String movieId, {required String title, String? genre, String? year, String? rating, String? posterUrl}) async {
-    final items = await _supabase.table('watchlist').select().eq('user_id', userId).eq('movie_id', movieId) as List;
+  bool get _isAuthed =>
+      _supabase.isInitialized && _supabase.auth.currentUser != null;
+
+  MovieModel _fromRow(Map<String, dynamic> map) {
+    // The movie's identity is `movie_id`, not the row's own `id` —
+    // map it in so callers can compare against catalogue ids.
+    return MovieModel.fromMap({
+      ...map,
+      'id': (map['movie_id'] ?? map['id']).toString(),
+    });
+  }
+
+  Future<void> _remoteToggle(
+    String table,
+    String userId,
+    String movieId, {
+    required String title,
+    String? genre,
+    String? year,
+    String? rating,
+    String? posterUrl,
+  }) async {
+    final items = await _supabase.table(table).select().eq('user_id', userId).eq('movie_id', movieId) as List;
     if (items.isNotEmpty) {
-      await _supabase.table('watchlist').delete().eq('user_id', userId).eq('movie_id', movieId);
+      await _supabase.table(table).delete().eq('user_id', userId).eq('movie_id', movieId);
     } else {
-      await _supabase.table('watchlist').insert({
+      await _supabase.table(table).insert({
         'user_id': userId,
         'movie_id': movieId,
         'title': title,
@@ -20,51 +48,76 @@ class DatabaseService extends ChangeNotifier {
         'rating': rating,
         'poster_url': posterUrl,
       });
+    }
+  }
+
+  Future<void> toggleWatchlist(String userId, String movieId, {required String title, String? genre, String? year, String? rating, String? posterUrl}) async {
+    await _local.toggleWatchlist(movieId, title: title, genre: genre, year: year, rating: rating, posterUrl: posterUrl);
+    if (_isAuthed) {
+      try {
+        await _remoteToggle('watchlist', userId, movieId, title: title, genre: genre, year: year, rating: rating, posterUrl: posterUrl);
+      } catch (e) {
+        debugPrint('Watchlist sync failed (kept locally): $e');
+      }
     }
     notifyListeners();
   }
 
   Future<List<MovieModel>> getWatchlist(String userId) async {
-    final response = await _supabase.table('watchlist').select().eq('user_id', userId);
-    final data = response as List;
-    // The movie's identity is `movie_id`, not the row's own `id` —
-    // map it in so callers can compare against catalogue ids.
-    return data.map((e) {
-      final map = e as Map<String, dynamic>;
-      return MovieModel.fromMap({...map, 'id': (map['movie_id'] ?? map['id']).toString()});
-    }).toList();
+    if (_isAuthed) {
+      try {
+        final response = await _supabase.table('watchlist').select().eq('user_id', userId);
+        final movies = (response as List)
+            .map((e) => _fromRow(e as Map<String, dynamic>))
+            .toList();
+        await _local.replaceWatchlist(movies);
+        return movies;
+      } catch (e) {
+        debugPrint('Watchlist fetch failed, using local copy: $e');
+      }
+    }
+    return _local.getWatchlist();
   }
 
   Future<bool> isInWatchlist(String userId, String movieId) async {
-    final response = await _supabase.table('watchlist').select().eq('user_id', userId).eq('movie_id', movieId);
-    return (response as List).isNotEmpty;
+    if (await _local.isInWatchlist(movieId)) return true;
+    if (_isAuthed) {
+      try {
+        final response = await _supabase.table('watchlist').select().eq('user_id', userId).eq('movie_id', movieId);
+        return (response as List).isNotEmpty;
+      } catch (_) {
+        return false;
+      }
+    }
+    return false;
   }
 
   Future<void> toggleFavorite(String userId, String movieId, {required String title, String? genre, String? year, String? rating, String? posterUrl}) async {
-    final items = await _supabase.table('favorites').select().eq('user_id', userId).eq('movie_id', movieId) as List;
-    if (items.isNotEmpty) {
-      await _supabase.table('favorites').delete().eq('user_id', userId).eq('movie_id', movieId);
-    } else {
-      await _supabase.table('favorites').insert({
-        'user_id': userId,
-        'movie_id': movieId,
-        'title': title,
-        'genre': genre,
-        'year': year,
-        'rating': rating,
-        'poster_url': posterUrl,
-      });
+    await _local.toggleFavorite(movieId, title: title, genre: genre, year: year, rating: rating, posterUrl: posterUrl);
+    if (_isAuthed) {
+      try {
+        await _remoteToggle('favorites', userId, movieId, title: title, genre: genre, year: year, rating: rating, posterUrl: posterUrl);
+      } catch (e) {
+        debugPrint('Favorites sync failed (kept locally): $e');
+      }
     }
     notifyListeners();
   }
 
   Future<List<MovieModel>> getFavorites(String userId) async {
-    final response = await _supabase.table('favorites').select().eq('user_id', userId);
-    final data = response as List;
-    return data.map((e) {
-      final map = e as Map<String, dynamic>;
-      return MovieModel.fromMap({...map, 'id': (map['movie_id'] ?? map['id']).toString()});
-    }).toList();
+    if (_isAuthed) {
+      try {
+        final response = await _supabase.table('favorites').select().eq('user_id', userId);
+        final movies = (response as List)
+            .map((e) => _fromRow(e as Map<String, dynamic>))
+            .toList();
+        await _local.replaceFavorites(movies);
+        return movies;
+      } catch (e) {
+        debugPrint('Favorites fetch failed, using local copy: $e');
+      }
+    }
+    return _local.getFavorites();
   }
 
   Future<void> addReview(ReviewModel review) async {
@@ -87,12 +140,18 @@ class DatabaseService extends ChangeNotifier {
   }
 
   Future<void> updateWatchProgress(String userId, String movieId, double progress) async {
-    await _supabase.table('watch_history').upsert({
-      'user_id': userId,
-      'movie_id': movieId,
-      'progress': progress,
-      'watched_at': DateTime.now().toIso8601String(),
-    });
+    if (_isAuthed) {
+      try {
+        await _supabase.table('watch_history').upsert({
+          'user_id': userId,
+          'movie_id': movieId,
+          'progress': progress,
+          'watched_at': DateTime.now().toIso8601String(),
+        });
+      } catch (e) {
+        debugPrint('Watch progress sync failed (kept locally): $e');
+      }
+    }
     notifyListeners();
   }
 }

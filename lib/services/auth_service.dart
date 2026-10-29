@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/user_model.dart';
+import 'local_db_service.dart';
 import 'supabase_service.dart';
 
 class AuthService extends ChangeNotifier {
@@ -87,6 +88,7 @@ class AuthService extends ChangeNotifier {
 
   Future<void> signOut() async {
     await _supabase.auth.signOut();
+    await LocalDbService().clearUserData();
     _currentUser = null;
     notifyListeners();
   }

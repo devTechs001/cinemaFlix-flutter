@@ -144,7 +144,7 @@ class _SearchScreenState extends State<SearchScreen> {
                               _watchlist.add(movie.id);
                             }
                           });
-                          if (!guestService.isGuest && authService.currentUser != null) {
+                          { // local-first: SQLite works for guests; Supabase syncs when signed in
                             await databaseService.toggleWatchlist(_userId, movie.id,
                               title: movie.title, genre: movie.genre, year: movie.year, rating: movie.rating);
                           }

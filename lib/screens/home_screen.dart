@@ -26,17 +26,15 @@ class _HomeScreenState extends State<HomeScreen> {
   String get _userId => authService.currentUser?.id ?? guestService.guestId;
 
   Future<void> _loadData() async {
-    if (guestService.isGuest || authService.currentUser == null) {
-      await Future.delayed(const Duration(milliseconds: 1000));
-    } else {
-      try {
-        final favs = await databaseService.getFavorites(_userId);
-        final watch = await databaseService.getWatchlist(_userId);
-        _favorites = favs.map((m) => m.id).toSet();
-        _watchlist = watch.map((m) => m.id).toSet();
-      } catch (_) {}
-      await Future.delayed(const Duration(milliseconds: 500));
-    }
+    try {
+      // Local-first: SQLite data for guests/offline, Supabase data
+      // (cached into SQLite) when signed in.
+      final favs = await databaseService.getFavorites(_userId);
+      final watch = await databaseService.getWatchlist(_userId);
+      _favorites = favs.map((m) => m.id).toSet();
+      _watchlist = watch.map((m) => m.id).toSet();
+    } catch (_) {}
+    await Future.delayed(const Duration(milliseconds: 500));
     if (mounted) setState(() => _initialLoading = false);
   }
 
@@ -226,7 +224,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 _favorites.add(movie.id);
                               }
                             });
-                            if (!guestService.isGuest && authService.currentUser != null) {
+                            { // local-first: SQLite works for guests; Supabase syncs when signed in
                               await databaseService.toggleFavorite(_userId, movie.id,
                                 title: movie.title, genre: movie.genre, year: movie.year, rating: movie.rating);
                             }
@@ -253,7 +251,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 _watchlist.add(movie.id);
                               }
                             });
-                            if (!guestService.isGuest && authService.currentUser != null) {
+                            { // local-first: SQLite works for guests; Supabase syncs when signed in
                               await databaseService.toggleWatchlist(_userId, movie.id,
                                 title: movie.title, genre: movie.genre, year: movie.year, rating: movie.rating);
                             }
@@ -453,7 +451,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 _favorites.add(movie.id);
                               }
                             });
-                            if (!guestService.isGuest && authService.currentUser != null) {
+                            { // local-first: SQLite works for guests; Supabase syncs when signed in
                               await databaseService.toggleFavorite(_userId, movie.id,
                                 title: movie.title, genre: movie.genre, year: movie.year, rating: movie.rating);
                             }

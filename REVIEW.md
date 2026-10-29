@@ -100,3 +100,12 @@ Verified statically only (no Flutter SDK in the review sandbox — run `flutter 
 - [x] Release signing via `android/key.properties` (template added, debug fallback for local runs); `wget-log` deleted; `.gitignore` covers `.env`.
 - [ ] **Manual:** rotate admin password; choose final `applicationId` (requires moving `MainActivity.kt` package); create upload keystore + `key.properties`; run `flutter pub get` + `flutter analyze` (new dep: `shared_preferences`).
 - [ ] P1/P2 items above remain open (real catalogue, persistence of theme/settings, SQL+RLS in repo, tests/CI, theme tokens, accessibility).
+
+### 2026-10-29 — P0 merged + SQLite added
+
+- [x] P0 work committed and merged to `main` via PR #1.
+- [x] **SQLite local storage** (`lib/services/local_db_service.dart`, sqflite): tables `favorites`, `watchlist`, `watch_history`, `settings`. Favorites/watchlist are now local-first (offline + guests), mirrored to Supabase when signed in; reads fall back to SQLite on error. In-memory fallback on web (sqflite has no web support).
+- [x] Theme choice persisted in SQLite (`settings.theme_index`) and restored at startup.
+- [x] Watch progress wired: player saves position every 5s + on exit, resumes on reopen; signed-in progress also syncs via `DatabaseService.updateWatchProgress`.
+- [x] Sign-out clears local user data.
+- [ ] Still open: run `flutter pub get && flutter analyze` locally (new deps: `sqflite`, `path`); Settings screen toggles not yet persisted (use `LocalDbService.setBoolSetting`); real catalogue/posters, Supabase SQL+RLS, tests/CI (P1/P2).
