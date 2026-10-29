@@ -1,3 +1,5 @@
+import 'dart:ui' show PointerDeviceKind;
+import 'theme/app_tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'services/globals.dart';
@@ -20,7 +22,7 @@ import 'screens/recover_screen.dart';
 import 'screens/themes_screen.dart';
 import 'screens/search_screen.dart';
 import 'screens/explore_screen.dart';
-import 'models/sample_movies.dart';
+import 'models/movie_catalogue.dart';
 import 'screens/movie_detail_screen.dart';
 import 'screens/social_feed_screen.dart';
 import 'widgets/app_drawer.dart';
@@ -39,6 +41,7 @@ void main() async {
   }
   await localDbService.initialize();
   await themeService.loadPersistedTheme();
+  movieService.load(); // bundled catalogue shows instantly; remote swaps in when ready
   runApp(const CinemaFlixApp());
 }
 
@@ -53,14 +56,14 @@ class ConfigErrorApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: Scaffold(
-        backgroundColor: const Color(0xFF141414),
+        backgroundColor: const AppColors.background,
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(32),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.error_outline, color: Color(0xFFE50914), size: 56),
+                const Icon(Icons.error_outline, color: AppColors.brand, size: 56),
                 const SizedBox(height: 16),
                 const Text(
                   'Configuration error',
@@ -129,7 +132,7 @@ class CinemaFlixApp extends StatelessWidget {
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/movie-detail') {
-          final movie = settings.arguments as SampleMovie;
+          final movie = settings.arguments as Movie;
           return PageRouteBuilder(
             pageBuilder: (context, anim1, anim2) => MovieDetailScreen(movie: movie),
             transitionsBuilder: (context, anim, secondaryAnimation, child) =>
@@ -155,6 +158,15 @@ class CinemaFlixApp extends StatelessWidget {
 }
 
 class _NoScrollbarBehavior extends ScrollBehavior {
+  // Desktop: allow dragging scrollables with mouse/trackpad too.
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.trackpad,
+        PointerDeviceKind.stylus,
+      };
+
   @override
   Widget buildScrollbar(BuildContext context, Widget child, ScrollableDetails details) {
     return child;
@@ -192,35 +204,61 @@ class _MainShellState extends State<MainShell> {
     ChatScreen(),
   ];
 
+  void _onTabSelected(int index) {
+    HapticFeedback.selectionClick();
+    setState(() => _currentIndex = index);
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Desktop/tablet: side NavigationRail. Phones: bottom navigation bar.
+    final wide = MediaQuery.of(context).size.width >= 900;
+    final content = IndexedStack(
+      index: _currentIndex,
+      children: _screens,
+    );
     return Scaffold(
       key: _scaffoldKey,
       drawer: const AppDrawer(),
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
-      ),
-      bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          border: Border(top: BorderSide(color: Color(0xFF2A2A2A), width: 0.5)),
-        ),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: (index) {
-            HapticFeedback.selectionClick();
-            setState(() => _currentIndex = index);
-          },
-          type: BottomNavigationBarType.fixed,
-          items: [
-            const BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Home'),
-            const BottomNavigationBarItem(icon: Icon(Icons.dynamic_feed_outlined), activeIcon: Icon(Icons.dynamic_feed), label: 'Feed'),
-            const BottomNavigationBarItem(icon: Icon(Icons.video_library_outlined), activeIcon: Icon(Icons.video_library), label: 'Shorts'),
-            const BottomNavigationBarItem(icon: Icon(Icons.live_tv_outlined), activeIcon: Icon(Icons.live_tv), label: 'Live'),
-            const BottomNavigationBarItem(icon: Icon(Icons.chat_outlined), activeIcon: Icon(Icons.chat), label: 'Chat'),
-          ],
-        ),
-      ),
+      body: wide
+          ? Row(
+              children: [
+                NavigationRail(
+                  selectedIndex: _currentIndex,
+                  onDestinationSelected: _onTabSelected,
+                  labelType: NavigationRailLabelType.all,
+                  destinations: const [
+                    NavigationRailDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: Text('Home')),
+                    NavigationRailDestination(icon: Icon(Icons.dynamic_feed_outlined), selectedIcon: Icon(Icons.dynamic_feed), label: Text('Feed')),
+                    NavigationRailDestination(icon: Icon(Icons.video_library_outlined), selectedIcon: Icon(Icons.video_library), label: Text('Shorts')),
+                    NavigationRailDestination(icon: Icon(Icons.live_tv_outlined), selectedIcon: Icon(Icons.live_tv), label: Text('Live')),
+                    NavigationRailDestination(icon: Icon(Icons.chat_outlined), selectedIcon: Icon(Icons.chat), label: Text('Chat')),
+                  ],
+                ),
+                const VerticalDivider(width: 1, thickness: 1, color: AppColors.surfaceVariant),
+                Expanded(child: content),
+              ],
+            )
+          : content,
+      bottomNavigationBar: wide
+          ? null
+          : Container(
+              decoration: const BoxDecoration(
+                border: Border(top: BorderSide(color: AppColors.surfaceVariant, width: 0.5)),
+              ),
+              child: BottomNavigationBar(
+                currentIndex: _currentIndex,
+                onTap: _onTabSelected,
+                type: BottomNavigationBarType.fixed,
+                items: const [
+                  BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Home'),
+                  BottomNavigationBarItem(icon: Icon(Icons.dynamic_feed_outlined), activeIcon: Icon(Icons.dynamic_feed), label: 'Feed'),
+                  BottomNavigationBarItem(icon: Icon(Icons.video_library_outlined), activeIcon: Icon(Icons.video_library), label: 'Shorts'),
+                  BottomNavigationBarItem(icon: Icon(Icons.live_tv_outlined), activeIcon: Icon(Icons.live_tv), label: 'Live'),
+                  BottomNavigationBarItem(icon: Icon(Icons.chat_outlined), activeIcon: Icon(Icons.chat), label: 'Chat'),
+                ],
+              ),
+            ),
     );
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_tokens.dart';
 import 'package:flutter/services.dart';
 import '../widgets/interactive_card.dart';
 import '../services/globals.dart';
@@ -62,10 +63,10 @@ class _DevPanelScreenState extends State<DevPanelScreen> {
             Container(
               width: 80, height: 80,
               decoration: BoxDecoration(
-                color: const Color(0xFF2A2A2A),
+                color: const AppColors.surfaceVariant,
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: const Icon(Icons.admin_panel_settings, color: Color(0xFFE50914), size: 44),
+              child: const Icon(Icons.admin_panel_settings, color: AppColors.brand, size: 44),
             ),
             const SizedBox(height: 24),
             const Text('Developer Access', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
@@ -87,7 +88,7 @@ class _DevPanelScreenState extends State<DevPanelScreen> {
                     _devService.activateDevMode();
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFE50914),
+                    backgroundColor: const AppColors.brand,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     padding: const EdgeInsets.symmetric(vertical: 14),
@@ -101,7 +102,7 @@ class _DevPanelScreenState extends State<DevPanelScreen> {
                 child: ElevatedButton(
                   onPressed: () => Navigator.pushReplacementNamed(context, '/auth'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2A2A2A),
+                    backgroundColor: const AppColors.surfaceVariant,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     padding: const EdgeInsets.symmetric(vertical: 14),
@@ -123,15 +124,15 @@ class _DevPanelScreenState extends State<DevPanelScreen> {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: const Color(0xFFE50914).withAlpha(20),
+            color: const AppColors.brand.withAlpha(20),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFE50914).withAlpha(40)),
+            border: Border.all(color: const AppColors.brand.withAlpha(40)),
           ),
           child: const Row(
             children: [
-              Icon(Icons.warning_amber, color: Color(0xFFE50914), size: 20),
+              Icon(Icons.warning_amber, color: AppColors.brand, size: 20),
               SizedBox(width: 12),
-              Expanded(child: Text('Developer mode active. Use with caution.', style: TextStyle(color: Color(0xFFE50914), fontSize: 13))),
+              Expanded(child: Text('Developer mode active. Use with caution.', style: TextStyle(color: AppColors.brand, fontSize: 13))),
             ],
           ),
         ),
@@ -182,14 +183,14 @@ class _DevPanelScreenState extends State<DevPanelScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
                     border: i < _devService.eventLog.length - 1
-                        ? const Border(bottom: BorderSide(color: Color(0xFF2A2A2A)))
+                        ? const Border(bottom: BorderSide(color: AppColors.surfaceVariant))
                         : null,
                   ),
                   child: Row(
                     children: [
                       Container(
                         width: 6, height: 6,
-                        decoration: const BoxDecoration(color: Color(0xFFE50914), shape: BoxShape.circle),
+                        decoration: const BoxDecoration(color: AppColors.brand, shape: BoxShape.circle),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
@@ -226,7 +227,7 @@ class _DevPanelScreenState extends State<DevPanelScreen> {
   Widget _card(String title, List<Widget> children) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF1F1F1F),
+        color: const AppColors.surface,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -252,7 +253,7 @@ class _DevPanelScreenState extends State<DevPanelScreen> {
           HapticFeedback.lightImpact();
           onChanged(v);
         },
-        activeTrackColor: const Color(0xFFE50914),
+        activeTrackColor: const AppColors.brand,
       ),
     );
   }

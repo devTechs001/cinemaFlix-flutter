@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_tokens.dart';
 import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
@@ -177,7 +178,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     HapticFeedback.mediumImpact();
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF1F1F1F),
+      backgroundColor: const AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -238,13 +239,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: ListTile(
             leading: Icon(
               update != null ? Icons.system_update_alt : Icons.update,
-              color: update != null ? const Color(0xFFE50914) : Colors.white54,
+              color: update != null ? const AppColors.brand : Colors.white54,
               size: 22,
             ),
             title: Text(
               update != null ? 'Update Available: v${update.version}' : 'Check for Updates',
               style: TextStyle(
-                color: update != null ? const Color(0xFFE50914) : Colors.white,
+                color: update != null ? const AppColors.brand : Colors.white,
                 fontSize: 15,
                 fontWeight: update != null ? FontWeight.bold : FontWeight.normal,
               ),
@@ -269,7 +270,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1F1F1F),
+        backgroundColor: const AppColors.surface,
         title: Text('New Update: v${update.version}', style: const TextStyle(color: Colors.white)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -292,7 +293,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SnackBar(content: Text('Downloading update...'), duration: Duration(seconds: 2)),
               );
             },
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE50914)),
+            style: ElevatedButton.styleFrom(backgroundColor: const AppColors.brand),
             child: const Text('Update Now', style: TextStyle(color: Colors.white)),
           ),
         ],
@@ -310,7 +311,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _card({required List<Widget> children}) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF1F1F1F),
+        color: const AppColors.surface,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(children: children),
@@ -339,14 +340,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
           HapticFeedback.lightImpact();
           onChanged(v);
         },
-        activeTrackColor: const Color(0xFFE50914),
+        activeTrackColor: const AppColors.brand,
       ),
     );
   }
 
   Widget _permissionTile(IconData icon, String title, bool granted, Future<bool> Function() onRequest) {
     return ListTile(
-      leading: Icon(icon, color: granted ? const Color(0xFF43A047) : Colors.white38, size: 22),
+      leading: Icon(icon, color: granted ? const AppColors.success : Colors.white38, size: 22),
       title: Text(title, style: const TextStyle(color: Colors.white, fontSize: 15)),
       trailing: InteractiveCard(
         onTap: () async {
@@ -357,13 +358,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: granted ? const Color(0xFF43A047).withAlpha(30) : const Color(0xFF2A2A2A),
+            color: granted ? const AppColors.success.withAlpha(30) : const AppColors.surfaceVariant,
             borderRadius: BorderRadius.circular(8),
           ),
           child: Text(
             granted ? 'Granted' : 'Allow',
             style: TextStyle(
-              color: granted ? const Color(0xFF43A047) : Colors.white54,
+              color: granted ? const AppColors.success : Colors.white54,
               fontSize: 12,
               fontWeight: FontWeight.w600,
             ),

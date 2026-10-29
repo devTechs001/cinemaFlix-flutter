@@ -1,13 +1,14 @@
 import 'dart:async';
+import '../theme/app_tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
-import '../models/sample_movies.dart';
+import '../models/movie_catalogue.dart';
 import '../services/globals.dart';
 
 class MoviePlayScreen extends StatefulWidget {
-  final SampleMovie movie;
+  final Movie movie;
 
   const MoviePlayScreen({super.key, required this.movie});
 
@@ -58,9 +59,9 @@ class _MoviePlayScreenState extends State<MoviePlayScreen> {
         looping: false,
         showOptions: false,
         materialProgressColors: ChewieProgressColors(
-          playedColor: const Color(0xFFE50914),
+          playedColor: const AppColors.brand,
           bufferedColor: Colors.white24,
-          handleColor: const Color(0xFFE50914),
+          handleColor: const AppColors.brand,
           backgroundColor: Colors.white12,
         ),
         placeholder: Container(
@@ -191,7 +192,7 @@ class _MoviePlayScreenState extends State<MoviePlayScreen> {
       const Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          CircularProgressIndicator(color: Color(0xFFE50914)),
+          CircularProgressIndicator(color: AppColors.brand),
           SizedBox(height: 16),
           Text('Loading video…', style: TextStyle(color: Colors.white54, fontSize: 14)),
         ],
@@ -204,7 +205,7 @@ class _MoviePlayScreenState extends State<MoviePlayScreen> {
       Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.error_outline, color: Color(0xFFE50914), size: 56),
+          const Icon(Icons.error_outline, color: AppColors.brand, size: 56),
           const SizedBox(height: 16),
           Text(
             widget.movie.title,
@@ -222,7 +223,7 @@ class _MoviePlayScreenState extends State<MoviePlayScreen> {
             icon: const Icon(Icons.refresh, size: 18),
             label: const Text('Retry'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFE50914),
+              backgroundColor: const AppColors.brand,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),

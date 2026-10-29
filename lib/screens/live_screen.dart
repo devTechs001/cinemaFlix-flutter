@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_tokens.dart';
 import 'package:flutter/services.dart';
 import '../widgets/interactive_card.dart';
 
@@ -21,9 +22,9 @@ class _LiveScreenState extends State<LiveScreen> {
 
   final List<Map<String, dynamic>> _liveRooms = [
     {'name': 'Sci-Fi Night', 'host': 'MovieBot', 'viewers': 284, 'movie': 'Interstellar', 'color': const Color(0xFF1E88E5), 'active': true, 'tags': ['Trending', 'Popular']},
-    {'name': 'Marvel Marathon', 'host': 'FanClub', 'viewers': 156, 'movie': 'Deadpool 3', 'color': const Color(0xFFE50914), 'active': true, 'tags': ['New']},
+    {'name': 'Marvel Marathon', 'host': 'FanClub', 'viewers': 156, 'movie': 'Deadpool 3', 'color': const AppColors.brand, 'active': true, 'tags': ['New']},
     {'name': 'Classic Cinema', 'host': 'Cinephiles', 'viewers': 89, 'movie': 'Inception', 'color': const Color(0xFF7B1FA2), 'active': true, 'tags': ['Classic']},
-    {'name': 'New Releases', 'host': 'Reviews Hub', 'viewers': 67, 'movie': 'Dune: Part Two', 'color': const Color(0xFF43A047), 'active': false, 'tags': []},
+    {'name': 'New Releases', 'host': 'Reviews Hub', 'viewers': 67, 'movie': 'Dune: Part Two', 'color': const AppColors.success, 'active': false, 'tags': []},
     {'name': 'Action Hour', 'host': 'Alex C.', 'viewers': 42, 'movie': 'The Batman', 'color': const Color(0xFFFF6F00), 'active': false, 'tags': []},
     {'name': 'Horror Night', 'host': 'Spooky Club', 'viewers': 78, 'movie': 'The Others', 'color': const Color(0xFF5E35B1), 'active': true, 'tags': ['Scary']},
     {'name': 'Anime Corner', 'host': 'OtakuHub', 'viewers': 53, 'movie': 'Spirited Away', 'color': const Color(0xFFE91E63), 'active': true, 'tags': ['Anime']},
@@ -83,7 +84,7 @@ class _LiveScreenState extends State<LiveScreen> {
           children: [
             Container(
               width: 10, height: 10,
-              decoration: const BoxDecoration(color: Color(0xFFE50914), shape: BoxShape.circle),
+              decoration: const BoxDecoration(color: AppColors.brand, shape: BoxShape.circle),
               child: const Center(
                 child: SizedBox(width: 4, height: 4, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
               ),
@@ -153,7 +154,7 @@ class _LiveScreenState extends State<LiveScreen> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
-                    color: active ? const Color(0xFFE50914) : const Color(0xFF2A2A2A),
+                    color: active ? const AppColors.brand : const AppColors.surfaceVariant,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(cat, style: TextStyle(
@@ -279,7 +280,7 @@ class _LiveScreenState extends State<LiveScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: const Color(0xFFE50914),
+                color: const AppColors.brand,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: const Row(
@@ -324,11 +325,11 @@ class _LiveScreenState extends State<LiveScreen> {
                     children: [
                       Container(
                         width: 8, height: 8,
-                        decoration: const BoxDecoration(color: Color(0xFFE50914), shape: BoxShape.circle),
+                        decoration: const BoxDecoration(color: AppColors.brand, shape: BoxShape.circle),
                         child: const Center(child: SizedBox(width: 3, height: 3, child: CircularProgressIndicator(strokeWidth: 1.5, color: Colors.white))),
                       ),
                       const SizedBox(width: 8),
-                      const Text('LIVE', style: TextStyle(color: Color(0xFFE50914), fontWeight: FontWeight.bold, fontSize: 12)),
+                      const Text('LIVE', style: TextStyle(color: AppColors.brand, fontWeight: FontWeight.bold, fontSize: 12)),
                       const SizedBox(width: 16),
                       Text('Hosted by ${room['host']}', style: const TextStyle(color: Colors.white38, fontSize: 12)),
                     ],
@@ -339,7 +340,7 @@ class _LiveScreenState extends State<LiveScreen> {
                     children: [
                       _actionChip(Icons.thumb_up, 'Like'),
                       const SizedBox(width: 12),
-                      _actionChip(Icons.card_giftcard, 'Gift', color: const Color(0xFFE50914)),
+                      _actionChip(Icons.card_giftcard, 'Gift', color: const AppColors.brand),
                       const SizedBox(width: 12),
                       _actionChip(Icons.share, 'Share'),
                     ],
@@ -388,7 +389,7 @@ class _LiveScreenState extends State<LiveScreen> {
     return Container(
       height: 240,
       decoration: const BoxDecoration(
-        color: Color(0xFF1A1A1A),
+        color: AppColors.surfaceAlt,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
@@ -397,7 +398,7 @@ class _LiveScreenState extends State<LiveScreen> {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
             child: Row(
               children: [
-                const Icon(Icons.chat, color: Color(0xFFE50914), size: 16),
+                const Icon(Icons.chat, color: AppColors.brand, size: 16),
                 const SizedBox(width: 6),
                 const Text('Live Chat', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
                 const Spacer(),
@@ -405,7 +406,7 @@ class _LiveScreenState extends State<LiveScreen> {
               ],
             ),
           ),
-          const Divider(color: Color(0xFF2A2A2A), height: 1),
+          const Divider(color: AppColors.surfaceVariant, height: 1),
           Expanded(
             child: ListView.builder(
               controller: _scrollController,
@@ -422,7 +423,7 @@ class _LiveScreenState extends State<LiveScreen> {
                       Container(
                         width: 24, height: 24,
                         decoration: BoxDecoration(
-                          color: msg['user'] == 'You' ? const Color(0xFFE50914) : const Color(0xFF2A2A2A),
+                          color: msg['user'] == 'You' ? const AppColors.brand : const AppColors.surfaceVariant,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Center(child: Text((msg['user'] as String)[0],
@@ -435,7 +436,7 @@ class _LiveScreenState extends State<LiveScreen> {
                           children: [
                             Row(
                               children: [
-                                Text(msg['user'], style: const TextStyle(color: Color(0xFFE50914), fontSize: 11, fontWeight: FontWeight.w600)),
+                                Text(msg['user'], style: const TextStyle(color: AppColors.brand, fontSize: 11, fontWeight: FontWeight.w600)),
                                 const SizedBox(width: 4),
                                 Text(msg['time'], style: const TextStyle(color: Colors.white24, fontSize: 9)),
                               ],
@@ -461,7 +462,7 @@ class _LiveScreenState extends State<LiveScreen> {
                       hintText: 'Type a message...',
                       hintStyle: const TextStyle(color: Colors.white24),
                       filled: true,
-                      fillColor: const Color(0xFF2A2A2A),
+                      fillColor: const AppColors.surfaceVariant,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(20),
                         borderSide: BorderSide.none,
@@ -479,7 +480,7 @@ class _LiveScreenState extends State<LiveScreen> {
                   scaleAmount: 0.85,
                   child: Container(
                     width: 40, height: 40,
-                    decoration: const BoxDecoration(color: Color(0xFFE50914), shape: BoxShape.circle),
+                    decoration: const BoxDecoration(color: AppColors.brand, shape: BoxShape.circle),
                     child: const Icon(Icons.send, color: Colors.white, size: 16),
                   ),
                 ),

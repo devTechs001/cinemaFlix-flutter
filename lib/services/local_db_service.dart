@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
-import '../models/movie_model.dart';
+import '../models/movie.dart';
 
 /// On-device SQLite storage (cinemaflix.db).
 ///
@@ -156,7 +156,7 @@ class LocalDbService extends ChangeNotifier {
     return rows.isNotEmpty;
   }
 
-  Future<List<MovieModel>> _getMovies(
+  Future<List<Movie>> _getMovies(
       String table, Map<String, Map<String, Object?>> memory) async {
     final List<Map<String, Object?>> rows;
     if (_useMemory) {
@@ -165,7 +165,7 @@ class LocalDbService extends ChangeNotifier {
       rows = await _db!.query(table, orderBy: 'added_at DESC');
     }
     return rows
-        .map((r) => MovieModel.fromMap({
+        .map((r) => Movie.fromMap({
               ...r,
               'id': (r['movie_id'] ?? '').toString(),
               'title': (r['title'] ?? '').toString(),
@@ -178,7 +178,7 @@ class LocalDbService extends ChangeNotifier {
       _toggle('favorites', _memFavorites, movieId,
           title: title, genre: genre, year: year, rating: rating, posterUrl: posterUrl);
 
-  Future<List<MovieModel>> getFavorites() => _getMovies('favorites', _memFavorites);
+  Future<List<Movie>> getFavorites() => _getMovies('favorites', _memFavorites);
   Future<bool> isFavorite(String movieId) => _contains('favorites', _memFavorites, movieId);
 
   Future<bool> toggleWatchlist(String movieId,
@@ -186,19 +186,19 @@ class LocalDbService extends ChangeNotifier {
       _toggle('watchlist', _memWatchlist, movieId,
           title: title, genre: genre, year: year, rating: rating, posterUrl: posterUrl);
 
-  Future<List<MovieModel>> getWatchlist() => _getMovies('watchlist', _memWatchlist);
+  Future<List<Movie>> getWatchlist() => _getMovies('watchlist', _memWatchlist);
   Future<bool> isInWatchlist(String movieId) => _contains('watchlist', _memWatchlist, movieId);
 
   /// Replaces the local favorites with a fresh copy from the backend.
-  Future<void> replaceFavorites(List<MovieModel> movies) =>
+  Future<void> replaceFavorites(List<Movie> movies) =>
       _replace('favorites', _memFavorites, movies);
 
   /// Replaces the local watchlist with a fresh copy from the backend.
-  Future<void> replaceWatchlist(List<MovieModel> movies) =>
+  Future<void> replaceWatchlist(List<Movie> movies) =>
       _replace('watchlist', _memWatchlist, movies);
 
   Future<void> _replace(
-      String table, Map<String, Map<String, Object?>> memory, List<MovieModel> movies) async {
+      String table, Map<String, Map<String, Object?>> memory, List<Movie> movies) async {
     if (_useMemory) {
       memory.clear();
       for (final m in movies) {

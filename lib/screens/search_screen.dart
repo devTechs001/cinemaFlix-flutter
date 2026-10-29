@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import '../theme/app_tokens.dart';
 import 'package:flutter/services.dart';
 import '../services/globals.dart';
 import '../widgets/interactive_card.dart';
-import '../models/sample_movies.dart';
+import '../widgets/movie_poster.dart';
+import '../models/movie_catalogue.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -13,7 +15,7 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> {
   final _searchController = TextEditingController();
-  List<SampleMovie> _results = [];
+  List<Movie> _results = [];
   bool _isSearching = false;
   final Set<String> _watchlist = {};
 
@@ -31,7 +33,7 @@ class _SearchScreenState extends State<SearchScreen> {
       if (query.isEmpty) {
         _results = [];
       } else {
-        _results = sampleMovies
+        _results = movieService.movies
             .where((m) =>
                 m.title.toLowerCase().contains(query.toLowerCase()) ||
                 m.genre.toLowerCase().contains(query.toLowerCase()))
@@ -40,7 +42,7 @@ class _SearchScreenState extends State<SearchScreen> {
     });
   }
 
-  void _openMovie(BuildContext context, SampleMovie movie) {
+  void _openMovie(BuildContext context, Movie movie) {
     HapticFeedback.mediumImpact();
     Navigator.pushNamed(context, '/movie-detail', arguments: movie);
   }
@@ -75,7 +77,7 @@ class _SearchScreenState extends State<SearchScreen> {
                         child: const Icon(Icons.filter_list, color: Colors.white54),
                       ),
                 filled: true,
-                fillColor: const Color(0xFF2A2A2A),
+                fillColor: const AppColors.surfaceVariant,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
                   borderSide: BorderSide.none,
@@ -108,24 +110,13 @@ class _SearchScreenState extends State<SearchScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 itemCount: _results.length,
                 separatorBuilder: (_, _) => const Divider(
-                    color: Color(0xFF2A2A2A), height: 1, indent: 76),
+                    color: AppColors.surfaceVariant, height: 1, indent: 76),
                 itemBuilder: (context, index) {
                   final movie = _results[index];
                   return InteractiveCard(
                     onTap: () => _openMovie(context, movie),
                     child: ListTile(
-                      leading: Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [movie.gradientStart, movie.gradientEnd],
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(Icons.movie_outlined,
-                            color: Colors.white54, size: 22),
-                      ),
+                      leading: MoviePoster(movie: movie, width: 48, height: 48, borderRadius: BorderRadius.circular(12)),
                       title: Text(movie.title,
                           style:
                               const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
@@ -165,7 +156,7 @@ class _SearchScreenState extends State<SearchScreen> {
                           ),
                           child: Icon(
                             _watchlist.contains(movie.id) ? Icons.bookmark : Icons.bookmark_border,
-                              color: _watchlist.contains(movie.id) ? const Color(0xFFE50914) : Colors.white38, size: 18),
+                              color: _watchlist.contains(movie.id) ? const AppColors.brand : Colors.white38, size: 18),
                         ),
                       ),
                     ),
@@ -193,14 +184,14 @@ class _SearchScreenState extends State<SearchScreen> {
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: sampleMovies.take(6).map((movie) {
+                    children: movieService.movies.take(6).map((movie) {
                       return InteractiveCard(
                         onTap: () => _openMovie(context, movie),
                         child: Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 10),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF2A2A2A),
+                            color: const AppColors.surfaceVariant,
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(color: Colors.white10),
                           ),
@@ -208,7 +199,7 @@ class _SearchScreenState extends State<SearchScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               const Icon(Icons.trending_up,
-                                  color: Color(0xFFE50914), size: 16),
+                                  color: AppColors.brand, size: 16),
                               const SizedBox(width: 6),
                               Text(
                                 movie.title,

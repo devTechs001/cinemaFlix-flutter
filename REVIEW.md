@@ -119,3 +119,14 @@ Verified statically only (no Flutter SDK in the review sandbox — run `flutter 
 - [x] **Reviews load from Supabase** on Movie Detail (`getMovieReviews` wired; samples remain below as placeholders). Fixed rating-always-0 bug (rating was reset before the ReviewModel was built) and switched review ids to `Uuid().v4()` (the `uuid` dep is no longer unused). Detail favorites/watchlist now work for guests via local-first DatabaseService.
 - [x] **Tests + CI**: unit tests (version compare, models), widget smoke tests, GitHub Actions `flutter analyze` + `flutter test` on push/PR (CI creates a dummy `.env` from the example since the real one is git-ignored but declared as an asset).
 - [ ] Still open: real movie catalogue + posters and one unified movie model; theme-token refactor (hardcoded colors) + accessibility; lazy tab init/pagination; more test coverage (services with a fake Supabase).
+
+### 2026-10-29 — Unified catalogue, tokens, accessibility, desktop, realtime
+
+- [x] **One unified `Movie` model** (`lib/models/movie.dart`) replaces SampleMovie + MovieModel; old files deleted. `fromMap` tolerates catalogue rows, Supabase rows and SQLite rows.
+- [x] **Real catalogue**: 20 real movies (`movie_catalogue.dart`) with TMDB-CDN poster images via new `MoviePoster` widget (gradient fallback on load failure/offline), wired into Home (featured/trending/popular/continue), Detail (header + related), Search, Shorts, Social, Profile, Records. Distinct playable sample streams per title (swap for licensed URLs later). Poster CDN paths are best-effort — any miss degrades to gradient artwork, never a broken image icon.
+- [x] **Realtime catalogue**: `MovieService` loads the Supabase `movies` table (schema + 20-row seed appended to `supabase/schema.sql`) and live-updates on Realtime changes (run the new SQL section to enable the table/publication).
+- [x] **Realtime hardened**: chat auto-reconnects after drops; header shows real Online/Connecting state; notifications are driven by real chat activity (fake 30s generator removed); Home notification dot reflects the real unread count; Continue Watching row on Home is real SQLite progress (hidden when empty).
+- [x] **Theme tokens**: `lib/theme/app_tokens.dart` (`AppColors`, spacing, radii); 186 raw color literals migrated. Remaining one-off accent colors are intentional (categories/avatars). Full ColorScheme-driven theming is still future work.
+- [x] **Accessibility**: `InteractiveCard` exposes button semantics (+ optional `semanticLabel`); posters carry image semantics labels.
+- [x] **Desktop UX**: NavigationRail shell ≥900dp, mouse/trackpad drag scrolling, hover click cursors, responsive grids (Home popular, Explore).
+- [ ] Still: run `flutter analyze && flutter test` locally (or enable CI workflow); give the app a TMDB API key + licensed streams when ready; live rooms/social feed content are still demo data on top of real movie metadata.

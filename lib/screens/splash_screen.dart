@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_tokens.dart';
 import '../services/app_prefs.dart';
 import '../services/supabase_service.dart';
 import '../widgets/app_logo.dart';
@@ -59,7 +60,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF141414),
+      backgroundColor: const AppColors.background,
       body: Center(
         child: FadeTransition(
           opacity: _fadeIn,

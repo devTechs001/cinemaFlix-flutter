@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_tokens.dart';
 import 'package:flutter/services.dart';
 import '../services/app_prefs.dart';
 import '../widgets/interactive_card.dart';
@@ -19,7 +20,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       icon: Icons.movie_creation_rounded,
       title: 'Welcome to CinemaFlix',
       description: 'Your ultimate movie companion. Discover, track, discuss, and rate your favorite films all in one place.',
-      color: const Color(0xFFE50914),
+      color: const AppColors.brand,
       detail: 'Installation Complete',
       features: ['8K Streaming Ready', 'Offline Downloads', 'Smart Recommendations'],
     ),
@@ -64,7 +65,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF141414),
+      backgroundColor: const AppColors.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -166,7 +167,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   width: _currentPage == i ? 28 : 8,
                   height: 8,
                   decoration: BoxDecoration(
-                    color: _currentPage == i ? const Color(0xFFE50914) : Colors.white24,
+                    color: _currentPage == i ? const AppColors.brand : Colors.white24,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -191,7 +192,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     }
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFE50914),
+                    backgroundColor: const AppColors.brand,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     elevation: 0,

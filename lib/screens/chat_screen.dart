@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_tokens.dart';
 import 'package:flutter/services.dart';
 import '../services/globals.dart';
 import '../models/chat_message_model.dart';
@@ -46,7 +47,7 @@ class _ChatScreenState extends State<ChatScreen> {
     {'id': '1', 'name': 'MovieBot AI', 'avatar': '🤖', 'color': const Color(0xFF1E88E5), 'lastMsg': 'Recommended 3 movies for you', 'time': '2m', 'unread': 2},
     {'id': '2', 'name': 'Fan Club', 'avatar': '🎬', 'color': const Color(0xFF7B1FA2), 'lastMsg': 'New Dune discussion thread', 'time': '15m', 'unread': 0},
     {'id': '3', 'name': 'Sarah J.', 'avatar': 'S', 'color': const Color(0xFFE91E63), 'lastMsg': 'Have you seen Oppenheimer?', 'time': '1h', 'unread': 1},
-    {'id': '4', 'name': 'Cinephiles', 'avatar': '🎞️', 'color': const Color(0xFF43A047), 'lastMsg': 'Top 10 sci-fi movies 2024', 'time': '3h', 'unread': 0},
+    {'id': '4', 'name': 'Cinephiles', 'avatar': '🎞️', 'color': const AppColors.success, 'lastMsg': 'Top 10 sci-fi movies 2024', 'time': '3h', 'unread': 0},
     {'id': '5', 'name': 'Mike R.', 'avatar': 'M', 'color': const Color(0xFFFF6F00), 'lastMsg': "Let's watch something tonight", 'time': '5h', 'unread': 0},
     {'id': '6', 'name': 'Reviews Hub', 'avatar': '⭐', 'color': const Color(0xFF00ACC1), 'lastMsg': 'New review: Furiosa', 'time': '1d', 'unread': 3},
     {'id': '7', 'name': 'Alex Chen', 'avatar': 'A', 'color': const Color(0xFF5E35B1), 'lastMsg': 'Great recommendation!', 'time': '2d', 'unread': 0},
@@ -74,7 +75,7 @@ class _ChatScreenState extends State<ChatScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Could not send message. Check your connection.'),
-            backgroundColor: Color(0xFFE50914),
+            backgroundColor: AppColors.brand,
           ),
         );
       }
@@ -118,7 +119,7 @@ class _ChatScreenState extends State<ChatScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(granted ? 'Contacts access granted' : 'Contacts access denied'),
-          backgroundColor: granted ? const Color(0xFF43A047) : const Color(0xFFE50914),
+          backgroundColor: granted ? const AppColors.success : const AppColors.brand,
           duration: const Duration(seconds: 2),
         ),
       );
@@ -141,10 +142,20 @@ class _ChatScreenState extends State<ChatScreen> {
             const SizedBox(width: 8),
             Container(
               width: 8, height: 8,
-              decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle),
+              decoration: BoxDecoration(
+                color: realtimeService.isConnected ? Colors.green : Colors.grey,
+                shape: BoxShape.circle,
+              ),
             ),
             const SizedBox(width: 6),
-            const Text('Online', style: TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.w500)),
+            Text(
+              realtimeService.isConnected ? 'Online' : 'Connecting…',
+              style: TextStyle(
+                color: realtimeService.isConnected ? Colors.green : Colors.grey,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ],
         ),
         actions: [
@@ -189,7 +200,7 @@ class _ChatScreenState extends State<ChatScreen> {
             physics: const BouncingScrollPhysics(),
             padding: const EdgeInsets.symmetric(vertical: 4),
             itemCount: _chatUsers.length,
-            separatorBuilder: (_, _) => const Divider(color: Color(0xFF2A2A2A), height: 1, indent: 76),
+            separatorBuilder: (_, _) => const Divider(color: AppColors.surfaceVariant, height: 1, indent: 76),
             itemBuilder: (context, index) {
               final user = _chatUsers[index];
               final isOnline = _onlineUsers.contains(user['id']);
@@ -217,7 +228,7 @@ class _ChatScreenState extends State<ChatScreen> {
                             decoration: BoxDecoration(
                               color: Colors.green,
                               shape: BoxShape.circle,
-                              border: Border.all(color: const Color(0xFF141414), width: 2),
+                              border: Border.all(color: const AppColors.background, width: 2),
                             ),
                           ),
                         ),
@@ -231,7 +242,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFE50914),
+                            color: const AppColors.brand,
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text('${user['unread']}', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
@@ -286,7 +297,7 @@ class _ChatScreenState extends State<ChatScreen> {
                             decoration: BoxDecoration(
                               color: Colors.green,
                               shape: BoxShape.circle,
-                              border: Border.all(color: const Color(0xFF141414), width: 1.5),
+                              border: Border.all(color: const AppColors.background, width: 1.5),
                             ),
                           ),
                         ),
@@ -343,7 +354,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
-                    color: isMe ? const Color(0xFFE50914) : const Color(0xFF2A2A2A),
+                    color: isMe ? const AppColors.brand : const AppColors.surfaceVariant,
                     borderRadius: BorderRadius.only(
                       topLeft: const Radius.circular(18),
                       topRight: const Radius.circular(18),
@@ -357,7 +368,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       if (!isMe)
                         Padding(
                           padding: const EdgeInsets.only(bottom: 4),
-                          child: Text(user['name'] as String, style: const TextStyle(color: Color(0xFFE50914), fontSize: 11, fontWeight: FontWeight.w600)),
+                          child: Text(user['name'] as String, style: const TextStyle(color: AppColors.brand, fontSize: 11, fontWeight: FontWeight.w600)),
                         ),
                       Text(msg.content, style: const TextStyle(color: Colors.white, fontSize: 15)),
                       const SizedBox(height: 4),
@@ -382,8 +393,8 @@ class _ChatScreenState extends State<ChatScreen> {
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
       decoration: const BoxDecoration(
-        color: Color(0xFF1A1A1A),
-        border: Border(top: BorderSide(color: Color(0xFF2A2A2A))),
+        color: AppColors.surfaceAlt,
+        border: Border(top: BorderSide(color: AppColors.surfaceVariant)),
       ),
       child: SafeArea(
         child: Row(
@@ -399,7 +410,7 @@ class _ChatScreenState extends State<ChatScreen> {
               child: Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF2A2A2A),
+                  color: const AppColors.surfaceVariant,
                   borderRadius: BorderRadius.circular(24),
                 ),
                 child: const Icon(Icons.add, color: Colors.white54, size: 20),
@@ -413,7 +424,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   hintText: 'Ask about movies...',
                   hintStyle: const TextStyle(color: Colors.white38),
                   filled: true,
-                  fillColor: const Color(0xFF2A2A2A),
+                  fillColor: const AppColors.surfaceVariant,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(24),
                     borderSide: BorderSide.none,
@@ -433,7 +444,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 width: 48,
                 height: 48,
                 decoration: const BoxDecoration(
-                  color: Color(0xFFE50914),
+                  color: AppColors.brand,
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.send, color: Colors.white, size: 20),

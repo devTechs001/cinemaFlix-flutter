@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_tokens.dart';
 
 class AppLogo extends StatelessWidget {
   final double size;
@@ -19,11 +20,11 @@ class AppLogo extends StatelessWidget {
             gradient: const LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Color(0xFFE50914), Color(0xFFB71C1C)],
+              colors: [AppColors.brand, Color(0xFFB71C1C)],
             ),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFFE50914).withAlpha(80),
+                color: const AppColors.brand.withAlpha(80),
                 blurRadius: size * 0.3,
                 offset: Offset(0, size * 0.1),
               ),
@@ -44,7 +45,7 @@ class AppLogo extends StatelessWidget {
             style: TextStyle(
               fontSize: size * 0.4,
               fontWeight: FontWeight.bold,
-              color: const Color(0xFFE50914),
+              color: const AppColors.brand,
               letterSpacing: 1.2,
             ),
           ),

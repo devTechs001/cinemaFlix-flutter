@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import '../theme/app_tokens.dart';
 import 'package:flutter/services.dart';
 import '../services/globals.dart';
-import '../models/sample_movies.dart';
+import '../models/movie_catalogue.dart';
 import '../widgets/interactive_card.dart';
 import '../widgets/shimmer_loading.dart';
+import '../widgets/movie_poster.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,14 +18,28 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _initialLoading = true;
   Set<String> _favorites = {};
   Set<String> _watchlist = {};
+  List<Map<String, dynamic>> _continueWatching = [];
 
   @override
   void initState() {
     super.initState();
+    movieService.addListener(_onCatalogueChanged);
+    movieService.load();
     _loadData();
   }
 
+  void _onCatalogueChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    movieService.removeListener(_onCatalogueChanged);
+    super.dispose();
+  }
+
   String get _userId => authService.currentUser?.id ?? guestService.guestId;
+  List<Movie> get _movies => movieService.movies;
 
   Future<void> _loadData() async {
     try {
@@ -33,6 +49,19 @@ class _HomeScreenState extends State<HomeScreen> {
       final watch = await databaseService.getWatchlist(_userId);
       _favorites = favs.map((m) => m.id).toSet();
       _watchlist = watch.map((m) => m.id).toSet();
+    } catch (_) {}
+    try {
+      final history = await localDbService.getContinueWatching();
+      _continueWatching = [];
+      for (final row in history) {
+        final m = movieService.byId((row['movie_id'] ?? '').toString());
+        if (m != null) {
+          _continueWatching.add({
+            'movie': m,
+            'progress': (row['progress'] as num?)?.toDouble() ?? 0,
+          });
+        }
+      }
     } catch (_) {}
     await Future.delayed(const Duration(milliseconds: 500));
     if (mounted) setState(() => _initialLoading = false);
@@ -44,7 +73,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (mounted) setState(() {});
   }
 
-  void _openMovie(BuildContext context, SampleMovie movie) {
+  void _openMovie(BuildContext context, Movie movie) {
     HapticFeedback.mediumImpact();
     Navigator.pushNamed(context, '/movie-detail', arguments: movie);
   }
@@ -71,7 +100,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: const Text(
             'CinemaFlix',
             style: TextStyle(
-              color: Color(0xFFE50914),
+              color: AppColors.brand,
               fontWeight: FontWeight.bold,
               fontSize: 24,
             ),
@@ -99,13 +128,21 @@ class _HomeScreenState extends State<HomeScreen> {
               Positioned(
                 right: 6,
                 top: 6,
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFE50914),
-                    shape: BoxShape.circle,
-                  ),
+                child: ListenableBuilder(
+                  listenable: notificationService,
+                  builder: (context, _) {
+                    if (notificationService.unreadCount == 0) {
+                      return const SizedBox.shrink();
+                    }
+                    return Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: AppColors.brand,
+                        shape: BoxShape.circle,
+                      ),
+                    );
+                  },
                 ),
               ),
             ],
@@ -113,7 +150,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       body: RefreshIndicator(
-        color: const Color(0xFFE50914),
+        color: const AppColors.brand,
         onRefresh: _onRefresh,
         child: _initialLoading ? _buildShimmer() : _buildContent(),
       ),
@@ -161,9 +198,11 @@ class _HomeScreenState extends State<HomeScreen> {
           _buildSectionHeader('Trending Now', () => Navigator.pushNamed(context, '/search')),
           _buildTrendingRow(),
           const SizedBox(height: 24),
-          _buildSectionHeader('Continue Watching', () => Navigator.pushNamed(context, '/records')),
-          _buildContinueWatching(),
-          const SizedBox(height: 24),
+          if (_continueWatching.isNotEmpty) ...[
+            _buildSectionHeader('Continue Watching', () => Navigator.pushNamed(context, '/records')),
+            _buildContinueWatching(),
+            const SizedBox(height: 24),
+          ],
           _buildSectionHeader('Popular on CinemaFlix', () => Navigator.pushNamed(context, '/search')),
           _buildPopularGrid(),
           const SizedBox(height: 24),
@@ -176,9 +215,9 @@ class _HomeScreenState extends State<HomeScreen> {
     return SizedBox(
       height: 420,
       child: PageView.builder(
-        itemCount: sampleMovies.length,
+        itemCount: _movies.length,
         itemBuilder: (context, index) {
-          final movie = sampleMovies[index];
+          final movie = _movies[index];
           final isFav = _favorites.contains(movie.id);
           final isWatch = _watchlist.contains(movie.id);
 
@@ -206,6 +245,9 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               child: Stack(
                 children: [
+                  Positioned.fill(
+                    child: MoviePoster(movie: movie, borderRadius: BorderRadius.circular(16), scrim: true),
+                  ),
                   Positioned(
                     top: 16,
                     right: 16,
@@ -285,7 +327,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         const SizedBox(height: 6),
                         Row(
                           children: [
-                            _buildBadge(movie.rating, const Color(0xFFE50914)),
+                            _buildBadge(movie.rating, const AppColors.brand),
                             const SizedBox(width: 12),
                             Text(movie.year, style: const TextStyle(color: Colors.white70)),
                             const SizedBox(width: 12),
@@ -306,7 +348,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 icon: const Icon(Icons.play_arrow, size: 20),
                                 label: const Text('Play'),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFFE50914),
+                                  backgroundColor: const AppColors.brand,
                                   foregroundColor: Colors.white,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(8),
@@ -364,7 +406,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         child: Icon(
           isActive ? filled : outlined,
-          color: isActive ? const Color(0xFFE50914) : Colors.white,
+          color: isActive ? const AppColors.brand : Colors.white,
           size: 22,
         ),
       ),
@@ -388,7 +430,7 @@ class _HomeScreenState extends State<HomeScreen> {
             },
             child: const Text(
               'See All',
-              style: TextStyle(color: Color(0xFFE50914), fontWeight: FontWeight.w500),
+              style: TextStyle(color: AppColors.brand, fontWeight: FontWeight.w500),
             ),
           ),
         ],
@@ -402,9 +444,9 @@ class _HomeScreenState extends State<HomeScreen> {
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12),
-        itemCount: sampleMovies.length,
+        itemCount: _movies.length,
         itemBuilder: (context, index) {
-          final movie = sampleMovies[index];
+          final movie = _movies[index];
           final isFav = _favorites.contains(movie.id);
 
           return InteractiveCard(
@@ -425,19 +467,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Stack(
                     children: [
-                      Container(
-                        width: 64,
-                        height: 64,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withAlpha(15),
-                          borderRadius: BorderRadius.circular(32),
-                        ),
-                        child: Icon(
-                          Icons.play_circle_outline,
-                          color: const Color(0xFFE50914).withAlpha(180),
-                          size: 36,
-                        ),
-                      ),
+                      MoviePoster(movie: movie, width: 84, height: 120, borderRadius: BorderRadius.circular(10)),
                         Positioned(
                         top: 0,
                         right: 0,
@@ -465,7 +495,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             child: Icon(
                               isFav ? Icons.favorite : Icons.favorite_border,
-                              color: isFav ? const Color(0xFFE50914) : Colors.white54,
+                              color: isFav ? const AppColors.brand : Colors.white54,
                               size: 16,
                             ),
                           ),
@@ -508,10 +538,10 @@ class _HomeScreenState extends State<HomeScreen> {
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12),
-        itemCount: sampleMovies.length,
+        itemCount: _continueWatching.length,
         itemBuilder: (context, index) {
-          final movie = sampleMovies[index];
-          final progress = ((index + 1) * 0.15).clamp(0.0, 1.0);
+          final movie = _continueWatching[index]['movie'] as Movie;
+          final progress = (_continueWatching[index]['progress'] as double).clamp(0.0, 1.0);
 
           return InteractiveCard(
             onTap: () => _openMovie(context, movie),
@@ -520,7 +550,7 @@ class _HomeScreenState extends State<HomeScreen> {
               margin: const EdgeInsets.symmetric(horizontal: 4),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(14),
-                color: const Color(0xFF2A2A2A),
+                color: const AppColors.surfaceVariant,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -535,6 +565,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       child: Stack(
                         children: [
+                          Positioned.fill(
+                            child: MoviePoster(movie: movie, borderRadius: const BorderRadius.vertical(top: Radius.circular(14))),
+                          ),
                           Center(
                             child: Icon(Icons.play_circle_outline,
                                 color: Colors.white.withAlpha(160), size: 44),
@@ -547,7 +580,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 HapticFeedback.lightImpact();
                                 showModalBottomSheet(
                                   context: context,
-                                  backgroundColor: const Color(0xFF1F1F1F),
+                                  backgroundColor: const AppColors.surface,
                                   shape: const RoundedRectangleBorder(
                                     borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
                                   ),
@@ -598,7 +631,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           Positioned(
                             bottom: 8,
                             left: 8,
-                            child: _buildBadge(movie.rating, const Color(0xFFE50914)),
+                            child: _buildBadge(movie.rating, const AppColors.brand),
                           ),
                         ],
                       ),
@@ -625,7 +658,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             value: progress,
                             backgroundColor: Colors.white24,
                             valueColor: const AlwaysStoppedAnimation<Color>(
-                                Color(0xFFE50914)),
+                                AppColors.brand),
                             minHeight: 4,
                           ),
                         ),
@@ -653,15 +686,21 @@ class _HomeScreenState extends State<HomeScreen> {
       child: GridView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: MediaQuery.of(context).size.width >= 1100
+              ? 6
+              : MediaQuery.of(context).size.width >= 800
+                  ? 5
+                  : MediaQuery.of(context).size.width >= 560
+                      ? 4
+                      : 3,
           childAspectRatio: 0.7,
           crossAxisSpacing: 8,
           mainAxisSpacing: 8,
         ),
-        itemCount: sampleMovies.length,
+        itemCount: _movies.length,
         itemBuilder: (context, index) {
-          final movie = sampleMovies[index];
+          final movie = _movies[index];
           return InteractiveCard(
             onTap: () => _openMovie(context, movie),
             child: Container(
@@ -673,26 +712,30 @@ class _HomeScreenState extends State<HomeScreen> {
                   colors: [movie.gradientStart, movie.gradientEnd],
                 ),
               ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+              child: Stack(
                 children: [
-                  Icon(Icons.movie_filter_outlined,
-                      color: Colors.white.withAlpha(80), size: 32),
-                  const SizedBox(height: 8),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: Text(
-                      movie.title,
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white70, fontSize: 11),
+                  Positioned.fill(
+                    child: MoviePoster(movie: movie, borderRadius: BorderRadius.circular(12), scrim: true),
+                  ),
+                  Positioned(
+                    left: 6,
+                    right: 6,
+                    bottom: 8,
+                    child: Column(
+                      children: [
+                        Text(
+                          movie.title,
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 2),
+                        Text('★ ${movie.rating}',
+                            style: const TextStyle(color: Colors.amber, fontSize: 10)),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text('★ ${movie.rating}',
-                      style:
-                          const TextStyle(color: Colors.amber, fontSize: 10)),
                 ],
               ),
             ),

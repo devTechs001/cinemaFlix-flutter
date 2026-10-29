@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import '../theme/app_tokens.dart';
 import 'package:flutter/services.dart';
 import '../widgets/interactive_card.dart';
-import '../models/sample_movies.dart';
+import '../widgets/movie_poster.dart';
+import '../models/movie_catalogue.dart';
 
 class ShortsScreen extends StatefulWidget {
   const ShortsScreen({super.key});
@@ -17,14 +19,14 @@ class _ShortsScreenState extends State<ShortsScreen> {
   final Set<String> _bookmarked = {};
 
   final List<_ShortItem> _shorts = [
-    _ShortItem(movie: sampleMovies[0], description: 'The sandworm scene from Dune: Part Two — absolutely breathtaking! #Dune #SciFi', likes: 12453, comments: 847, shares: 2314),
-    _ShortItem(movie: sampleMovies[1], description: 'Oppenheimer\'s Trinity test — one of the most powerful scenes in cinema history. #Oppenheimer #Nolan', likes: 9876, comments: 654, shares: 1876),
-    _ShortItem(movie: sampleMovies[2], description: 'The Batmobile chase through Gotham — pure cinematic excellence! #TheBatman #DC', likes: 7654, comments: 432, shares: 1543),
-    _ShortItem(movie: sampleMovies[4], description: 'Furiosa: The beginning of a legend. George Miller does it again! #Furiosa #MadMax', likes: 5432, comments: 321, shares: 987),
-    _ShortItem(movie: sampleMovies[6], description: 'Interstellar\'s docking scene — still gives us chills. #Interstellar #Nolan', likes: 11234, comments: 789, shares: 2567),
-    _ShortItem(movie: sampleMovies[3], description: 'Deadpool breaks the fourth wall... again! 🤣 #Deadpool #Marvel', likes: 8765, comments: 567, shares: 1987),
-    _ShortItem(movie: sampleMovies[5], description: 'Inception\'s hallway fight — a masterpiece of practical effects. #Inception #Nolan', likes: 6789, comments: 456, shares: 1234),
-    _ShortItem(movie: sampleMovies[7], description: 'Joker\'s stair dance — an iconic moment in film history. #Joker #DC', likes: 9876, comments: 654, shares: 2345),
+    _ShortItem(movie: movieCatalogue[0], description: 'The sandworm scene from Dune: Part Two — absolutely breathtaking! #Dune #SciFi', likes: 12453, comments: 847, shares: 2314),
+    _ShortItem(movie: movieCatalogue[1], description: 'Oppenheimer\'s Trinity test — one of the most powerful scenes in cinema history. #Oppenheimer #Nolan', likes: 9876, comments: 654, shares: 1876),
+    _ShortItem(movie: movieCatalogue[2], description: 'The Batmobile chase through Gotham — pure cinematic excellence! #TheBatman #DC', likes: 7654, comments: 432, shares: 1543),
+    _ShortItem(movie: movieCatalogue[4], description: 'Furiosa: The beginning of a legend. George Miller does it again! #Furiosa #MadMax', likes: 5432, comments: 321, shares: 987),
+    _ShortItem(movie: movieCatalogue[6], description: 'Interstellar\'s docking scene — still gives us chills. #Interstellar #Nolan', likes: 11234, comments: 789, shares: 2567),
+    _ShortItem(movie: movieCatalogue[3], description: 'Deadpool breaks the fourth wall... again! 🤣 #Deadpool #Marvel', likes: 8765, comments: 567, shares: 1987),
+    _ShortItem(movie: movieCatalogue[5], description: 'Inception\'s hallway fight — a masterpiece of practical effects. #Inception #Nolan', likes: 6789, comments: 456, shares: 1234),
+    _ShortItem(movie: movieCatalogue[7], description: 'Joker\'s stair dance — an iconic moment in film history. #Joker #DC', likes: 9876, comments: 654, shares: 2345),
   ];
 
   @override
@@ -65,6 +67,9 @@ class _ShortsScreenState extends State<ShortsScreen> {
                 ),
                 child: Stack(
                   children: [
+                    Positioned.fill(
+                      child: MoviePoster(movie: short.movie, scrim: true),
+                    ),
                     Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -95,7 +100,7 @@ class _ShortsScreenState extends State<ShortsScreen> {
                             children: [
                               CircleAvatar(
                                 radius: 18,
-                                backgroundColor: const Color(0xFFE50914),
+                                backgroundColor: const AppColors.brand,
                                 child: const Icon(Icons.person, color: Colors.white, size: 20),
                               ),
                               const SizedBox(width: 8),
@@ -180,7 +185,7 @@ class _ShortsScreenState extends State<ShortsScreen> {
                             width: _currentPage == i ? 20 : 6,
                             height: 3,
                             decoration: BoxDecoration(
-                              color: _currentPage == i ? const Color(0xFFE50914) : Colors.white30,
+                              color: _currentPage == i ? const AppColors.brand : Colors.white30,
                               borderRadius: BorderRadius.circular(2),
                             ),
                           );
@@ -335,7 +340,7 @@ class _ShortsScreenState extends State<ShortsScreen> {
             ),
             child: Icon(
               active ? filled : outlined,
-              color: active ? const Color(0xFFE50914) : Colors.white,
+              color: active ? const AppColors.brand : Colors.white,
               size: 24,
             ),
           ),
@@ -367,7 +372,7 @@ class _ShortsScreenState extends State<ShortsScreen> {
 }
 
 class _ShortItem {
-  final SampleMovie movie;
+  final Movie movie;
   final String description;
   final int likes;
   final int comments;

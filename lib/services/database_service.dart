@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import '../models/movie_model.dart';
+import '../models/movie.dart';
 import '../models/review_model.dart';
 import 'local_db_service.dart';
 import 'supabase_service.dart';
@@ -16,10 +16,10 @@ class DatabaseService extends ChangeNotifier {
   bool get _isAuthed =>
       _supabase.isInitialized && _supabase.auth.currentUser != null;
 
-  MovieModel _fromRow(Map<String, dynamic> map) {
+  Movie _fromRow(Map<String, dynamic> map) {
     // The movie's identity is `movie_id`, not the row's own `id` —
     // map it in so callers can compare against catalogue ids.
-    return MovieModel.fromMap({
+    return Movie.fromMap({
       ...map,
       'id': (map['movie_id'] ?? map['id']).toString(),
     });
@@ -63,7 +63,7 @@ class DatabaseService extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<List<MovieModel>> getWatchlist(String userId) async {
+  Future<List<Movie>> getWatchlist(String userId) async {
     if (_isAuthed) {
       try {
         final response = await _supabase.table('watchlist').select().eq('user_id', userId);
@@ -104,7 +104,7 @@ class DatabaseService extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<List<MovieModel>> getFavorites(String userId) async {
+  Future<List<Movie>> getFavorites(String userId) async {
     if (_isAuthed) {
       try {
         final response = await _supabase.table('favorites').select().eq('user_id', userId);

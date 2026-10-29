@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import '../theme/app_tokens.dart';
 import 'package:flutter/services.dart';
 import '../widgets/interactive_card.dart';
-import '../models/sample_movies.dart';
+import '../widgets/movie_poster.dart';
+import '../models/movie_catalogue.dart';
 
 class SocialFeedScreen extends StatefulWidget {
   const SocialFeedScreen({super.key});
@@ -17,7 +19,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
       'avatar': 'AR',
       'time': '2h ago',
       'content': 'Just finished watching Dune: Part Two. The visuals are absolutely mind-blowing! 🏜️ Denis Villeneuve is a genius.',
-      'movie': sampleMovies[0],
+      'movie': movieCatalogue[0],
       'likes': 124,
       'comments': 12,
       'liked': false,
@@ -27,7 +29,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
       'avatar': 'SJ',
       'time': '5h ago',
       'content': 'Oppenheimer is definitely the movie of the year. Cillian Murphy\'s performance was hauntingly beautiful.',
-      'movie': sampleMovies[1],
+      'movie': movieCatalogue[1],
       'likes': 89,
       'comments': 5,
       'liked': true,
@@ -37,7 +39,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
       'avatar': 'MR',
       'time': '1d ago',
       'content': 'Who else is excited for Deadpool 3? The trailer looks hilarious! 🤣 Wolverine is back!',
-      'movie': sampleMovies[3],
+      'movie': movieCatalogue[3],
       'likes': 256,
       'comments': 45,
       'liked': false,
@@ -88,7 +90,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
             child: Row(
               children: [
                 CircleAvatar(
-                  backgroundColor: const Color(0xFFE50914),
+                  backgroundColor: const AppColors.brand,
                   child: Text(post['avatar'], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
                 const SizedBox(width: 12),
@@ -127,7 +129,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
                 _actionButton(
                   post['liked'] ? Icons.favorite : Icons.favorite_border,
                   post['likes'].toString(),
-                  post['liked'] ? const Color(0xFFE50914) : Colors.white54,
+                  post['liked'] ? const AppColors.brand : Colors.white54,
                   () {
                     HapticFeedback.lightImpact();
                     setState(() {
@@ -158,7 +160,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
     );
   }
 
-  Widget _buildMovieReference(SampleMovie movie) {
+  Widget _buildMovieReference(Movie movie) {
     return InteractiveCard(
       onTap: () {
         Navigator.pushNamed(context, '/movie-detail', arguments: movie);
@@ -173,17 +175,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
         ),
         child: Row(
           children: [
-            Container(
-              width: 50,
-              height: 70,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                gradient: LinearGradient(
-                  colors: [movie.gradientStart, movie.gradientEnd],
-                ),
-              ),
-              child: const Icon(Icons.movie, color: Colors.white30, size: 24),
-            ),
+            MoviePoster(movie: movie, width: 50, height: 70, borderRadius: BorderRadius.circular(8)),
             const SizedBox(width: 12),
             Expanded(
               child: Column(

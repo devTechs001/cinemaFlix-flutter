@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_tokens.dart';
 import 'package:flutter/services.dart';
 import '../services/globals.dart';
 import '../widgets/loading_animation.dart';
@@ -68,7 +69,7 @@ class _AuthScreenState extends State<AuthScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Account created! Welcome to CinemaFlix.'),
-            backgroundColor: Color(0xFF43A047),
+            backgroundColor: AppColors.success,
             duration: Duration(seconds: 2),
           ),
         );
@@ -92,14 +93,14 @@ class _AuthScreenState extends State<AuthScreen>
     HapticFeedback.heavyImpact();
     _shakeController.forward().then((_) => _shakeController.reverse());
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: const Color(0xFFE50914)),
+      SnackBar(content: Text(msg), backgroundColor: const AppColors.brand),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF141414),
+      backgroundColor: const AppColors.background,
       body: SafeArea(
         child: _isLoading
             ? const CinemaLoading(message: 'Authenticating...')
@@ -123,7 +124,7 @@ class _AuthScreenState extends State<AuthScreen>
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(18),
                                 gradient: const LinearGradient(
-                                  colors: [Color(0xFFE50914), Color(0xFFB71C1C)],
+                                  colors: [AppColors.brand, Color(0xFFB71C1C)],
                                 ),
                               ),
                               child: const Icon(Icons.movie_creation_rounded, color: Colors.white, size: 36),
@@ -135,7 +136,7 @@ class _AuthScreenState extends State<AuthScreen>
                               'CinemaFlix',
                               style: const TextStyle(
                                 fontSize: 32, fontWeight: FontWeight.bold,
-                                color: Color(0xFFE50914), letterSpacing: 1,
+                                color: AppColors.brand, letterSpacing: 1,
                               ),
                             ),
                           ),
@@ -169,7 +170,7 @@ class _AuthScreenState extends State<AuthScreen>
                                   child: Checkbox(
                                     value: _rememberMe,
                                     onChanged: (v) => setState(() => _rememberMe = v ?? true),
-                                    activeColor: const Color(0xFFE50914),
+                                    activeColor: const AppColors.brand,
                                     checkColor: Colors.white,
                                     side: const BorderSide(color: Colors.white24),
                                   ),
@@ -179,7 +180,7 @@ class _AuthScreenState extends State<AuthScreen>
                                 const Spacer(),
                                 InteractiveCard(
                                   onTap: () => Navigator.pushNamed(context, '/recover'),
-                                  child: const Text('Forgot?', style: TextStyle(color: Color(0xFFE50914), fontSize: 13)),
+                                  child: const Text('Forgot?', style: TextStyle(color: AppColors.brand, fontSize: 13)),
                                 ),
                               ],
                             ),
@@ -191,7 +192,7 @@ class _AuthScreenState extends State<AuthScreen>
                             child: ElevatedButton(
                               onPressed: _submit,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFE50914),
+                                backgroundColor: const AppColors.brand,
                                 foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                                 elevation: 0,
@@ -241,7 +242,7 @@ class _AuthScreenState extends State<AuthScreen>
       {bool obscure = false, Widget? suffix, TextInputType? keyboardType}) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF2A2A2A),
+        color: const AppColors.surfaceVariant,
         borderRadius: BorderRadius.circular(14),
       ),
       child: TextField(
