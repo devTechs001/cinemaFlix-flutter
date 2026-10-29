@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
+import '../theme/app_tokens.dart';
 import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
 import '../services/globals.dart';
-import '../models/sample_movies.dart';
+import '../models/movie_catalogue.dart';
 import '../models/review_model.dart';
 import '../widgets/interactive_card.dart';
+import '../widgets/movie_poster.dart';
 import 'movie_play_screen.dart';
 
 class MovieDetailScreen extends StatefulWidget {
-  final SampleMovie movie;
+  final Movie movie;
 
   const MovieDetailScreen({super.key, required this.movie});
 
@@ -134,14 +136,14 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF141414),
+      backgroundColor: const AppColors.background,
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
           SliverAppBar(
             expandedHeight: 360,
             pinned: true,
-            backgroundColor: const Color(0xFF141414),
+            backgroundColor: const AppColors.background,
             leading: IconButton(
               icon: const Icon(Icons.arrow_back, color: Colors.white),
               onPressed: () => Navigator.pop(context),
@@ -155,14 +157,14 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                     colors: [
                       widget.movie.gradientStart,
                       widget.movie.gradientEnd,
-                      const Color(0xFF141414),
+                      const AppColors.background,
                     ],
                   ),
                 ),
                 child: Stack(
                   children: [
-                    Center(
-                      child: Icon(Icons.movie_filter_outlined, color: Colors.white.withAlpha(30), size: 120),
+                    Positioned.fill(
+                      child: MoviePoster(movie: widget.movie, scrim: true),
                     ),
                     Positioned(
                       bottom: 40, left: 20, right: 20,
@@ -173,7 +175,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                           const SizedBox(height: 8),
                           Row(
                             children: [
-                              _badge(widget.movie.rating, const Color(0xFFE50914)),
+                              _badge(widget.movie.rating, const AppColors.brand),
                               const SizedBox(width: 10),
                               Text(widget.movie.year, style: const TextStyle(color: Colors.white54)),
                               const SizedBox(width: 10),
@@ -183,7 +185,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                             ],
                           ),
                           const SizedBox(height: 6),
-                          Text(widget.movie.genre, style: const TextStyle(color: Color(0xFFE50914), fontSize: 13)),
+                          Text(widget.movie.genre, style: const TextStyle(color: AppColors.brand, fontSize: 13)),
                         ],
                       ),
                     ),
@@ -217,7 +219,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                           child: Container(
                             height: 50,
                             decoration: BoxDecoration(
-                              color: const Color(0xFFE50914),
+                              color: const AppColors.brand,
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: const Row(
@@ -260,7 +262,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                   const SizedBox(height: 8),
                   _infoRow('Cast', widget.movie.cast),
                   const SizedBox(height: 24),
-                  const Divider(color: Color(0xFF2A2A2A)),
+                  const Divider(color: AppColors.surfaceVariant),
                   const SizedBox(height: 16),
                   _buildRatingSection(),
                   const SizedBox(height: 20),
@@ -294,10 +296,10 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       child: Container(
         width: 50, height: 50,
         decoration: BoxDecoration(
-          border: Border.all(color: isActive ? const Color(0xFFE50914) : Colors.white24),
+          border: Border.all(color: isActive ? const AppColors.brand : Colors.white24),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Icon(isActive ? filled : outlined, color: isActive ? const Color(0xFFE50914) : Colors.white54),
+        child: Icon(isActive ? filled : outlined, color: isActive ? const AppColors.brand : Colors.white54),
       ),
     );
   }
@@ -336,7 +338,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFF1F1F1F),
+        color: const AppColors.surface,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -360,7 +362,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                 decoration: BoxDecoration(
-                  color: _commentController.text.trim().isEmpty ? Colors.white12 : const Color(0xFFE50914),
+                  color: _commentController.text.trim().isEmpty ? Colors.white12 : const AppColors.brand,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: const Text('Post', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
@@ -377,7 +379,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF1F1F1F),
+        color: const AppColors.surface,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -387,8 +389,8 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
             children: [
               CircleAvatar(
                 radius: 18,
-                backgroundColor: const Color(0xFF2A2A2A),
-                child: Text(comment['avatar'], style: const TextStyle(color: Color(0xFFE50914), fontWeight: FontWeight.bold)),
+                backgroundColor: const AppColors.surfaceVariant,
+                child: Text(comment['avatar'], style: const TextStyle(color: AppColors.brand, fontWeight: FontWeight.bold)),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -442,10 +444,10 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
           height: 160,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            itemCount: sampleMovies.length,
+            itemCount: movieCatalogue.length,
             separatorBuilder: (_, _) => const SizedBox(width: 8),
             itemBuilder: (_, i) {
-              final related = sampleMovies[i];
+              final related = movieCatalogue[i];
               if (related.id == widget.movie.id) return const SizedBox.shrink();
               return InteractiveCard(
                 onTap: () {
@@ -458,22 +460,24 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                     ),
                   );
                 },
-                child: Container(
+                child: SizedBox(
                   width: 120,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(colors: [related.gradientStart, related.gradientEnd]),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  child: Stack(
                     children: [
-                      Icon(Icons.movie_outlined, color: const Color(0xFFE50914).withAlpha(120), size: 32),
-                      const SizedBox(height: 8),
-                      Text(related.title, textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12)),
-                      const SizedBox(height: 4),
-                      Text('★ ${related.rating}', style: const TextStyle(color: Colors.amber, fontSize: 11)),
+                      Positioned.fill(
+                        child: MoviePoster(movie: related, borderRadius: BorderRadius.circular(12), scrim: true),
+                      ),
+                      Positioned(
+                        left: 6, right: 6, bottom: 8,
+                        child: Column(
+                          children: [
+                            Text(related.title, textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12)),
+                            const SizedBox(height: 2),
+                            Text('★ ${related.rating}', style: const TextStyle(color: Colors.amber, fontSize: 11)),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),

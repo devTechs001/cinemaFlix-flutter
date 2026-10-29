@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import '../theme/app_tokens.dart';
 import 'package:flutter/services.dart';
 import '../services/globals.dart';
 import '../widgets/interactive_card.dart';
+import '../widgets/movie_poster.dart';
 import '../widgets/app_logo.dart';
-import '../models/sample_movies.dart';
+import '../models/movie_catalogue.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -89,10 +91,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 CircleAvatar(
                   radius: 52,
-                  backgroundColor: const Color(0xFFE50914).withAlpha(30),
+                  backgroundColor: const AppColors.brand.withAlpha(30),
                   child: CircleAvatar(
                     radius: 48,
-                    backgroundColor: const Color(0xFF2A2A2A),
+                    backgroundColor: const AppColors.surfaceVariant,
                     child: _isEditing
                         ? IconButton(
                             icon: const Icon(Icons.camera_alt, color: Colors.white38, size: 28),
@@ -103,7 +105,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               );
                             },
                           )
-                        : const Icon(Icons.person, size: 48, color: Color(0xFFE50914)),
+                        : const Icon(Icons.person, size: 48, color: AppColors.brand),
                   ),
                 ),
                 Positioned(
@@ -111,9 +113,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(4),
                     decoration: const BoxDecoration(
-                      color: Color(0xFF43A047),
+                      color: AppColors.success,
                       shape: BoxShape.circle,
-                      border: Border.fromBorderSide(BorderSide(color: Color(0xFF141414), width: 2)),
+                      border: Border.fromBorderSide(BorderSide(color: AppColors.background, width: 2)),
                     ),
                     child: const Icon(Icons.check, color: Colors.white, size: 14),
                   ),
@@ -131,9 +133,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   decoration: const InputDecoration(
                     hintText: 'Your name',
                     hintStyle: TextStyle(color: Colors.white38),
-                    border: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFE50914))),
+                    border: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.brand)),
                     enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-                    focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFE50914))),
+                    focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.brand)),
                   ),
                 ),
               )
@@ -155,7 +157,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     hintStyle: TextStyle(color: Colors.white38),
                     border: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
                     enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-                    focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFE50914))),
+                    focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.brand)),
                   ),
                 ),
               )
@@ -167,21 +169,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _buildSectionTitle('Your Activity'),
             const SizedBox(height: 8),
             ...List.generate(
-              sampleMovies.take(3).toList().asMap().entries.length,
+              movieCatalogue.take(3).toList().asMap().entries.length,
               (i) {
-                final entry = sampleMovies.take(3).toList().asMap().entries.elementAt(i);
+                final entry = movieCatalogue.take(3).toList().asMap().entries.elementAt(i);
                 final movie = entry.value;
                 return InteractiveCard(
                   onTap: () => Navigator.pushNamed(context, '/movie-detail', arguments: movie),
                   child: ListTile(
-                    leading: Container(
-                      width: 44, height: 44,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(colors: [movie.gradientStart, movie.gradientEnd]),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(Icons.check_circle_outline, color: Colors.white38, size: 22),
-                    ),
+                    leading: MoviePoster(movie: movie, width: 44, height: 44, borderRadius: BorderRadius.circular(10)),
                     title: Text(movie.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 14)),
                     subtitle: Text('Watched • ★ ${movie.rating}', style: const TextStyle(color: Colors.white38, fontSize: 12)),
                     trailing: Row(
@@ -198,7 +193,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 );
               },
             ),
-            const Divider(color: Color(0xFF2A2A2A), height: 1),
+            const Divider(color: AppColors.surfaceVariant, height: 1),
             const SizedBox(height: 8),
             _buildSectionTitle('Account'),
             _buildMenuTile(Icons.settings_outlined, 'Settings', 'App preferences', () {
@@ -235,7 +230,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               HapticFeedback.mediumImpact();
               Navigator.pushNamed(context, '/dev-panel');
             }),
-            const Divider(color: Color(0xFF2A2A2A), height: 1),
+            const Divider(color: AppColors.surfaceVariant, height: 1),
             _buildMenuTile(Icons.logout, 'Sign Out', '', () {
               HapticFeedback.heavyImpact();
               showDialog(context: context, builder: (_) => _buildSignOutDialog(context));
@@ -257,7 +252,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFF1F1F1F),
+          color: const AppColors.surface,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Row(
@@ -283,7 +278,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildStatItem(IconData icon, String label, String value) {
     return Column(
       children: [
-        Icon(icon, color: const Color(0xFFE50914), size: 20),
+        Icon(icon, color: const AppColors.brand, size: 20),
         const SizedBox(height: 6),
         Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
         const SizedBox(height: 2),
@@ -316,7 +311,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildSettingsDialog(BuildContext context) {
     return Dialog(
-      backgroundColor: const Color(0xFF1F1F1F),
+      backgroundColor: const AppColors.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -335,7 +330,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: ElevatedButton(
                 onPressed: () => Navigator.pop(context),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFE50914),
+                  backgroundColor: const AppColors.brand,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   padding: const EdgeInsets.symmetric(vertical: 12),
@@ -360,7 +355,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Switch(
             value: value,
             onChanged: (_) => HapticFeedback.lightImpact(),
-            activeThumbColor: const Color(0xFFE50914),
+            activeThumbColor: const AppColors.brand,
           ),
         ],
       ),
@@ -369,7 +364,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildSignOutDialog(BuildContext context) {
     return Dialog(
-      backgroundColor: const Color(0xFF1F1F1F),
+      backgroundColor: const AppColors.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
         padding: const EdgeInsets.all(24),

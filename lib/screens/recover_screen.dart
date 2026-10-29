@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_tokens.dart';
 import 'package:flutter/services.dart';
 import '../services/supabase_service.dart';
 import '../widgets/interactive_card.dart';
@@ -35,12 +36,12 @@ class _RecoverScreenState extends State<RecoverScreen> {
               Container(
                 width: 80, height: 80,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF2A2A2A),
+                  color: const AppColors.surfaceVariant,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Icon(
                   _sent ? Icons.check_circle_outline : Icons.lock_outline,
-                  color: _sent ? const Color(0xFF43A047) : const Color(0xFFE50914),
+                  color: _sent ? const AppColors.success : const AppColors.brand,
                   size: 44,
                 ),
               ),
@@ -65,7 +66,7 @@ class _RecoverScreenState extends State<RecoverScreen> {
                     hintStyle: const TextStyle(color: Colors.white38),
                     prefixIcon: const Icon(Icons.email_outlined, color: Colors.white38),
                     filled: true,
-                    fillColor: const Color(0xFF2A2A2A),
+                    fillColor: const AppColors.surfaceVariant,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                       borderSide: BorderSide.none,
@@ -88,13 +89,13 @@ class _RecoverScreenState extends State<RecoverScreen> {
                       } catch (e) {
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error: ${e.toString().replaceAll('Exception: ', '')}'), backgroundColor: const Color(0xFFE50914)),
+                            SnackBar(content: Text('Error: ${e.toString().replaceAll('Exception: ', '')}'), backgroundColor: const AppColors.brand),
                           );
                         }
                       }
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFE50914),
+                      backgroundColor: const AppColors.brand,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
@@ -122,7 +123,7 @@ class _RecoverScreenState extends State<RecoverScreen> {
                       Navigator.pop(context);
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFE50914),
+                      backgroundColor: const AppColors.brand,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),

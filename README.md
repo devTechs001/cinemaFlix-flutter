@@ -3,6 +3,7 @@
 A premium movie streaming and social app built with Flutter and Supabase.
 
 ## Features
+- **Real Catalogue:** 20 movies with poster artwork, live-updatable from the Supabase `movies` table (Realtime), bundled fallback offline.
 - **Live Streaming:** Join movie rooms and chat live.
 - **Shorts:** TikTok-style movie clips and trailers.
 - **Social Feed:** Share your movie thoughts with the community.

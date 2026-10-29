@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import '../theme/app_tokens.dart';
 import 'package:flutter/services.dart';
 import '../widgets/interactive_card.dart';
-import '../models/sample_movies.dart';
+import '../widgets/movie_poster.dart';
+import '../models/movie_catalogue.dart';
 import '../services/globals.dart';
 
 class RecordsScreen extends StatefulWidget {
@@ -23,12 +25,7 @@ class _RecordsScreenState extends State<RecordsScreen> {
     _loadRecords();
   }
 
-  SampleMovie? _byId(String id) {
-    for (final m in sampleMovies) {
-      if (m.id == id) return m;
-    }
-    return null;
-  }
+  Movie? _byId(String id) => movieService.byId(id);
 
   String _fmtDate(Object? iso) {
     final s = iso?.toString() ?? '';
@@ -38,7 +35,7 @@ class _RecordsScreenState extends State<RecordsScreen> {
   /// Builds the activity feed from the on-device SQLite database
   /// (watch history, watchlist, favorites) — real user data, no demo rows.
   /// Movies that aren't in the current catalogue are skipped because the
-  /// list renders [SampleMovie] objects.
+  /// list renders [Movie] objects.
   Future<void> _loadRecords() async {
     final records = <Map<String, dynamic>>[];
     try {
@@ -124,7 +121,7 @@ class _RecordsScreenState extends State<RecordsScreen> {
           ),
           Expanded(
             child: _loading
-                ? const Center(child: CircularProgressIndicator(color: Color(0xFFE50914)))
+                ? const Center(child: CircularProgressIndicator(color: AppColors.brand))
                 : _filtered.isEmpty
                     ? Center(
                         child: Column(
@@ -143,31 +140,24 @@ class _RecordsScreenState extends State<RecordsScreen> {
                         physics: const BouncingScrollPhysics(),
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         itemCount: _filtered.length,
-                        separatorBuilder: (_, _) => const Divider(color: Color(0xFF2A2A2A), height: 1, indent: 72),
+                        separatorBuilder: (_, _) => const Divider(color: AppColors.surfaceVariant, height: 1, indent: 72),
                         itemBuilder: (_, i) {
                           final record = _filtered[i];
-                          final movie = record['movie'] as SampleMovie;
+                          final movie = record['movie'] as Movie;
                           return InteractiveCard(
                             onTap: () => Navigator.pushNamed(context, '/movie-detail', arguments: movie),
                             child: ListTile(
-                              leading: Container(
-                                width: 44, height: 44,
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(colors: [movie.gradientStart, movie.gradientEnd]),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Icon(record['icon'] as IconData, color: Colors.white54, size: 22),
-                              ),
+                              leading: MoviePoster(movie: movie, width: 44, height: 44, borderRadius: BorderRadius.circular(12)),
                               title: Text(movie.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
                               subtitle: Row(
                                 children: [
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                                     decoration: BoxDecoration(
-                                      color: Color(0xFFE50914).withAlpha(30),
+                                      color: AppColors.brand.withAlpha(30),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
-                                    child: Text(record['action'], style: const TextStyle(color: Color(0xFFE50914), fontSize: 10)),
+                                    child: Text(record['action'], style: const TextStyle(color: AppColors.brand, fontSize: 10)),
                                   ),
                                   if ((record['progress'] as String).isNotEmpty) ...[
                                     const SizedBox(width: 8),
@@ -198,7 +188,7 @@ class _RecordsScreenState extends State<RecordsScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
-            color: active ? Color(0xFFE50914) : Color(0xFF2A2A2A),
+            color: active ? AppColors.brand : AppColors.surfaceVariant,
             borderRadius: BorderRadius.circular(20),
           ),
           child: Row(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_tokens.dart';
 
 class CinemaLoading extends StatefulWidget {
   final String? message;
@@ -59,10 +60,10 @@ class _CinemaLoadingState extends State<CinemaLoading>
                       borderRadius: BorderRadius.circular(widget.size * 0.22),
                       gradient: const SweepGradient(
                         colors: [
-                          Color(0xFFE50914),
+                          AppColors.brand,
                           Color(0xFF7B1FA2),
                           Color(0xFF1E88E5),
-                          Color(0xFFE50914),
+                          AppColors.brand,
                         ],
                       ),
                     ),
@@ -71,10 +72,10 @@ class _CinemaLoadingState extends State<CinemaLoading>
                         width: widget.size * 0.7,
                         height: widget.size * 0.7,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF141414),
+                          color: const AppColors.background,
                           borderRadius: BorderRadius.circular(widget.size * 0.15),
                         ),
-                        child: const Icon(Icons.movie_creation_rounded, color: Color(0xFFE50914)),
+                        child: const Icon(Icons.movie_creation_rounded, color: AppColors.brand),
                       ),
                     ),
                   ),

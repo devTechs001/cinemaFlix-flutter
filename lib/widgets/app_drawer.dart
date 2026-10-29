@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_tokens.dart';
 import 'package:flutter/services.dart';
 import '../services/globals.dart';
 import 'app_logo.dart';
@@ -12,7 +13,7 @@ class AppDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Drawer(
-      backgroundColor: const Color(0xFF141414),
+      backgroundColor: const AppColors.background,
       width: MediaQuery.of(context).size.width * 0.78,
       child: SafeArea(
         child: Column(
@@ -76,7 +77,7 @@ class AppDrawer extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Color(0xFF2A2A2A))),
+        border: Border(bottom: BorderSide(color: AppColors.surfaceVariant)),
       ),
       child: Row(
         children: [
@@ -85,7 +86,7 @@ class AppDrawer extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('CinemaFlix', style: TextStyle(color: Color(0xFFE50914), fontWeight: FontWeight.bold, fontSize: 18)),
+              const Text('CinemaFlix', style: TextStyle(color: AppColors.brand, fontWeight: FontWeight.bold, fontSize: 18)),
               Text('v1.0 • Premium', style: TextStyle(color: Colors.white38, fontSize: 11)),
             ],
           ),
@@ -145,7 +146,7 @@ class AppDrawer extends StatelessWidget {
               ? Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE50914),
+                    color: const AppColors.brand,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(badge, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
@@ -160,7 +161,7 @@ class AppDrawer extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: Color(0xFF2A2A2A))),
+        border: Border(top: BorderSide(color: AppColors.surfaceVariant)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
