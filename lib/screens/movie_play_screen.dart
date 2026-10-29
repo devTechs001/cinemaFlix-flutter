@@ -17,6 +17,7 @@ class _MoviePlayScreenState extends State<MoviePlayScreen> {
   VideoPlayerController? _videoController;
   ChewieController? _chewieController;
   bool _isInitialized = false;
+  bool _hasError = false;
 
   @override
   void initState() {
@@ -25,50 +26,69 @@ class _MoviePlayScreenState extends State<MoviePlayScreen> {
   }
 
   Future<void> _initPlayer() async {
+    // Clean up any previous attempt (e.g. when retrying after an error).
+    _chewieController?.dispose();
+    _chewieController = null;
+    await _videoController?.dispose();
+    _videoController = null;
+
     if (widget.movie.videoUrl == null) {
       if (mounted) setState(() => _isInitialized = true);
       return;
     }
 
-    _videoController = VideoPlayerController.networkUrl(Uri.parse(widget.movie.videoUrl!));
-    await _videoController!.initialize();
+    try {
+      _videoController =
+          VideoPlayerController.networkUrl(Uri.parse(widget.movie.videoUrl!));
+      await _videoController!.initialize();
 
-    _chewieController = ChewieController(
-      videoPlayerController: _videoController!,
-      autoPlay: false,
-      looping: false,
-      showOptions: false,
-      materialProgressColors: ChewieProgressColors(
-        playedColor: const Color(0xFFE50914),
-        bufferedColor: Colors.white24,
-        handleColor: const Color(0xFFE50914),
-        backgroundColor: Colors.white12,
-      ),
-      placeholder: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              widget.movie.gradientStart,
-              widget.movie.gradientEnd,
-              Colors.black,
-            ],
+      _chewieController = ChewieController(
+        videoPlayerController: _videoController!,
+        autoPlay: false,
+        looping: false,
+        showOptions: false,
+        materialProgressColors: ChewieProgressColors(
+          playedColor: const Color(0xFFE50914),
+          bufferedColor: Colors.white24,
+          handleColor: const Color(0xFFE50914),
+          backgroundColor: Colors.white12,
+        ),
+        placeholder: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                widget.movie.gradientStart,
+                widget.movie.gradientEnd,
+                Colors.black,
+              ],
+            ),
+          ),
+          child: Center(
+            child: Icon(Icons.movie_filter_outlined, color: Colors.white.withAlpha(30), size: 80),
           ),
         ),
-        child: Center(
-          child: Icon(Icons.movie_filter_outlined, color: Colors.white.withAlpha(30), size: 80),
-        ),
-      ),
-    );
+      );
 
-    if (mounted) setState(() => _isInitialized = true);
+      if (mounted) setState(() => _isInitialized = true);
+    } catch (_) {
+      if (mounted) setState(() => _hasError = true);
+    }
+  }
+
+  void _retry() {
+    setState(() {
+      _hasError = false;
+      _isInitialized = false;
+    });
+    _initPlayer();
   }
 
   @override
   void dispose() {
-    _videoController?.dispose();
     _chewieController?.dispose();
+    _videoController?.dispose();
     super.dispose();
   }
 
@@ -78,12 +98,14 @@ class _MoviePlayScreenState extends State<MoviePlayScreen> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          if (_isInitialized && _chewieController != null)
+          if (_hasError)
+            _buildError()
+          else if (_isInitialized && _chewieController != null)
             Chewie(controller: _chewieController!)
           else if (_isInitialized)
             _buildPlaceholder()
           else
-            _buildPlaceholder(),
+            _buildLoading(),
           Positioned(
             top: MediaQuery.of(context).padding.top + 8,
             left: 8,
@@ -110,7 +132,7 @@ class _MoviePlayScreenState extends State<MoviePlayScreen> {
     );
   }
 
-  Widget _buildPlaceholder() {
+  Widget _gradientBackground(Widget child) {
     return Container(
       width: double.infinity,
       height: double.infinity,
@@ -125,43 +147,93 @@ class _MoviePlayScreenState extends State<MoviePlayScreen> {
           ],
         ),
       ),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 120, height: 120,
-              decoration: BoxDecoration(
-                color: Colors.white.withAlpha(15),
-                borderRadius: BorderRadius.circular(60),
-              ),
-              child: const Icon(
-                Icons.play_arrow,
-                color: Colors.white54,
-                size: 56,
-              ),
+      child: Center(child: child),
+    );
+  }
+
+  Widget _buildLoading() {
+    return _gradientBackground(
+      const Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CircularProgressIndicator(color: Color(0xFFE50914)),
+          SizedBox(height: 16),
+          Text('Loading video…', style: TextStyle(color: Colors.white54, fontSize: 14)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildError() {
+    return _gradientBackground(
+      Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.error_outline, color: Color(0xFFE50914), size: 56),
+          const SizedBox(height: 16),
+          Text(
+            widget.movie.title,
+            style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            "Couldn't load this video. Check your connection and try again.",
+            style: TextStyle(color: Colors.white54, fontSize: 13),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton.icon(
+            onPressed: _retry,
+            icon: const Icon(Icons.refresh, size: 18),
+            label: const Text('Retry'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFE50914),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            const SizedBox(height: 24),
-            Text(
-              widget.movie.title,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPlaceholder() {
+    return _gradientBackground(
+      Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 120, height: 120,
+            decoration: BoxDecoration(
+              color: Colors.white.withAlpha(15),
+              borderRadius: BorderRadius.circular(60),
             ),
-            const SizedBox(height: 8),
-            Text(
-              '${widget.movie.year} \u2022 ${widget.movie.genre}',
-              style: const TextStyle(color: Colors.white54, fontSize: 14),
+            child: const Icon(
+              Icons.play_arrow,
+              color: Colors.white54,
+              size: 56,
             ),
-            const SizedBox(height: 16),
-            const Text(
-              'No video URL available',
-              style: TextStyle(color: Colors.white24, fontSize: 13),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            widget.movie.title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '${widget.movie.year} • ${widget.movie.genre}',
+            style: const TextStyle(color: Colors.white54, fontSize: 14),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'No video URL available',
+            style: TextStyle(color: Colors.white24, fontSize: 13),
+          ),
+        ],
       ),
     );
   }

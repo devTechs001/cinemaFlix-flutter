@@ -4,7 +4,7 @@ import 'realtime_service.dart';
 import 'guest_service.dart';
 import 'notification_service.dart';
 import 'dev_service.dart';
-
+import 'gifting_service.dart';
 import 'update_service.dart';
 
 final authService = AuthService();
@@ -13,4 +13,5 @@ final realtimeService = RealtimeService();
 final guestService = GuestService();
 final notificationService = NotificationService();
 final devService = DevService();
+final giftingService = GiftingService();
 final updateService = UpdateService();

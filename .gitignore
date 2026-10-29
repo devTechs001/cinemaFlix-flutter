@@ -43,3 +43,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Local secrets & misc (copy .env.example to .env locally)
+.env
+wget-log

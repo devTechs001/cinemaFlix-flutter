@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../widgets/interactive_card.dart';
-import '../services/dev_service.dart';
+import '../services/globals.dart';
 
 class DevPanelScreen extends StatefulWidget {
   const DevPanelScreen({super.key});
@@ -11,19 +11,21 @@ class DevPanelScreen extends StatefulWidget {
 }
 
 class _DevPanelScreenState extends State<DevPanelScreen> {
-  final _devService = DevService();
-  final _codeController = TextEditingController();
+  final _devService = devService;
 
   @override
   void initState() {
     super.initState();
-    _devService.addListener(() => setState(() {}));
+    _devService.addListener(_onChanged);
+  }
+
+  void _onChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
-    _codeController.dispose();
-    _devService.dispose();
+    _devService.removeListener(_onChanged);
     super.dispose();
   }
 
@@ -68,46 +70,45 @@ class _DevPanelScreenState extends State<DevPanelScreen> {
             const SizedBox(height: 24),
             const Text('Developer Access', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
             const SizedBox(height: 8),
-            const Text('Enter access code to unlock developer options', style: TextStyle(color: Colors.white54), textAlign: TextAlign.center),
-            const SizedBox(height: 24),
-            TextField(
-              controller: _codeController,
-              obscureText: true,
+            Text(
+              (authService.currentUser?.isAdmin ?? false)
+                  ? 'You are signed in as an admin. Unlock developer options below.'
+                  : 'Sign in with an admin account to unlock developer options.',
+              style: const TextStyle(color: Colors.white54),
               textAlign: TextAlign.center,
-              decoration: InputDecoration(
-                hintText: 'Access Code',
-                hintStyle: const TextStyle(color: Colors.white38),
-                filled: true,
-                fillColor: const Color(0xFF2A2A2A),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide.none,
+            ),
+            const SizedBox(height: 24),
+            if (authService.currentUser?.isAdmin ?? false)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    HapticFeedback.mediumImpact();
+                    _devService.activateDevMode();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFE50914),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: const Text('Unlock', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                ),
+              )
+            else
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pushReplacementNamed(context, '/auth'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2A2A2A),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: const Text('Go to Sign In', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                 ),
               ),
-              style: const TextStyle(color: Colors.white, fontSize: 18, letterSpacing: 8),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  HapticFeedback.mediumImpact();
-                  final success = _devService.authenticate(_codeController.text);
-                  if (!success && mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Invalid access code'), backgroundColor: Color(0xFFE50914)),
-                    );
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFE50914),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                ),
-                child: const Text('Unlock', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-              ),
-            ),
           ],
         ),
       ),
@@ -149,8 +150,7 @@ class _DevPanelScreenState extends State<DevPanelScreen> {
           'Quick Actions',
           [
             _action(Icons.refresh, 'Clear Cache', () {
-              _devService.toggleMaintenanceMode();
-              _devService.toggleMaintenanceMode();
+              _devService.logEvent('Cache cleared');
               _showSnack('Cache cleared');
             }),
             _action(Icons.delete_sweep, 'Reset All Data', () {

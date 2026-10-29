@@ -31,8 +31,8 @@ class AppDrawer extends StatelessWidget {
                   _drawerItem(Icons.chat_rounded, 'Chat', () => _navigate(context, '/main', extra: 4)),
                   _drawerItem(Icons.explore_rounded, 'Explore', () => Navigator.pushNamed(context, '/explore')),
                   _sectionTitle('Library'),
-                  _drawerItem(Icons.bookmark_rounded, 'Watchlist', () => Navigator.pushNamed(context, '/search')),
-                  _drawerItem(Icons.favorite_rounded, 'Favorites', () => Navigator.pushNamed(context, '/search')),
+                  _drawerItem(Icons.bookmark_rounded, 'Watchlist', () => Navigator.pushNamed(context, '/records')),
+                  _drawerItem(Icons.favorite_rounded, 'Favorites', () => Navigator.pushNamed(context, '/records')),
                   _drawerItem(Icons.history_rounded, 'History', () => Navigator.pushNamed(context, '/records')),
                   _drawerItem(Icons.download_rounded, 'Downloads', () {
                     HapticFeedback.lightImpact();
@@ -55,7 +55,7 @@ class AppDrawer extends StatelessWidget {
                   if (authService.currentUser?.isAdmin ?? false)
                     _drawerItem(Icons.admin_panel_settings_rounded, 'Dev Panel', () => Navigator.pushNamed(context, '/dev-panel')),
                   _sectionTitle('Account'),
-                  _drawerItem(Icons.person_rounded, 'Profile', () => _navigate(context, '/main', extra: 4)),
+                  _drawerItem(Icons.person_rounded, 'Profile', () => Navigator.pushNamed(context, '/profile')),
                   _drawerItem(Icons.logout_rounded, 'Sign Out', () async {
                     HapticFeedback.heavyImpact();
                     Navigator.pop(context);

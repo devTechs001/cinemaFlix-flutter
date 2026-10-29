@@ -17,8 +17,10 @@ class _ChatScreenState extends State<ChatScreen> {
   final _scrollController = ScrollController();
   final _contactsService = ContactsService();
   final Set<String> _onlineUsers = {'1', '2', '3', '4'};
+  bool _inChat = false;
 
   List<ChatMessageModel> get _messages => realtimeService.messages;
+  String get _myId => authService.currentUser?.id ?? guestService.guestId;
 
   @override
   void initState() {
@@ -51,29 +53,42 @@ class _ChatScreenState extends State<ChatScreen> {
     {'id': '8', 'name': 'Movie Night', 'avatar': '🍿', 'color': const Color(0xFFD32F2F), 'lastMsg': 'This Friday at 8?', 'time': '3d', 'unread': 0},
   ];
 
-  void _sendMessage() {
+  Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
 
     HapticFeedback.mediumImpact();
     final message = ChatMessageModel(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-      userId: authService.currentUser?.id ?? guestService.guestId,
+      userId: _myId,
       username: authService.currentUser?.username ?? 'You',
       content: text,
       createdAt: DateTime.now(),
     );
 
-    realtimeService.sendMessage(message);
     _messageController.clear();
+    try {
+      await realtimeService.sendMessage(message);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not send message. Check your connection.'),
+            backgroundColor: Color(0xFFE50914),
+          ),
+        );
+      }
+      return;
+    }
     _scrollToBottom();
 
     if (text.toLowerCase().contains('movie') || text.toLowerCase().contains('film')) {
       Future.delayed(const Duration(seconds: 1), () {
         if (mounted) {
-          realtimeService.sendMessage(ChatMessageModel(
-            id: 'resp_${DateTime.now().millisecondsSinceEpoch}',
-            userId: '1',
+          // Local-only bot reply — never written to the shared DB table.
+          realtimeService.addLocalMessage(ChatMessageModel(
+            id: 'local_${DateTime.now().millisecondsSinceEpoch}',
+            userId: 'moviebot',
             username: 'MovieBot AI',
             content: 'I found some great movies for you! Check out "Dune: Part Two" and "Inception" — both have amazing reviews! 🎬',
             createdAt: DateTime.now(),
@@ -114,6 +129,12 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: _inChat
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => setState(() => _inChat = false),
+              )
+            : null,
         title: Row(
           children: [
             const Text('Chat', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -152,8 +173,8 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
       body: Column(
         children: [
-          Expanded(child: _messages.isEmpty ? _buildChatList() : _buildChatView()),
-          if (_messages.isNotEmpty) _buildMessageInput(),
+          Expanded(child: _inChat ? _buildChatView() : _buildChatList()),
+          if (_inChat) _buildMessageInput(),
         ],
       ),
     );
@@ -175,12 +196,7 @@ class _ChatScreenState extends State<ChatScreen> {
               return InteractiveCard(
                 onTap: () {
                   HapticFeedback.mediumImpact();
-                  setState(() {
-                    _messages.isNotEmpty ? null : null;
-                  });
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Opening chat with ${user['name']}...'), duration: const Duration(seconds: 1)),
-                  );
+                  setState(() => _inChat = true);
                 },
                 child: ListTile(
                   leading: Stack(
@@ -288,13 +304,25 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _buildChatView() {
+    if (_messages.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.chat_bubble_outline, size: 56, color: Colors.white.withAlpha(40)),
+            const SizedBox(height: 12),
+            const Text('No messages yet — say hello!', style: TextStyle(color: Colors.white38)),
+          ],
+        ),
+      );
+    }
     return ListView.builder(
       controller: _scrollController,
       padding: const EdgeInsets.all(16),
       itemCount: _messages.length,
       itemBuilder: (context, index) {
         final msg = _messages[index];
-        final isMe = msg.userId == 'me';
+        final isMe = _myId.isNotEmpty && msg.userId == _myId;
         final user = _chatUsers.firstWhere((u) => u['id'] == msg.userId, orElse: () => {'name': 'User', 'avatar': 'U', 'color': Colors.grey});
 
         return Padding(
