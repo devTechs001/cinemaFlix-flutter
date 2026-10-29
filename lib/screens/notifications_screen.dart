@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/notification_model.dart';
+import '../services/globals.dart';
 import '../services/notification_service.dart';
 import '../widgets/interactive_card.dart';
 
@@ -12,7 +13,7 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
-  final _notificationService = NotificationService();
+  final NotificationService _notificationService = notificationService;
   String _filter = 'All';
 
   @override
@@ -26,7 +27,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   void dispose() {
     _notificationService.removeListener(_onChange);
-    _notificationService.dispose();
     super.dispose();
   }
 

@@ -31,8 +31,11 @@ class AuthService extends ChangeNotifier {
           .table('profiles')
           .select()
           .eq('id', userId)
-          .single();
-      _currentUser = UserModel.fromMap(response);
+          .maybeSingle();
+      // A missing profile row is not the same as being signed out, but
+      // until a row exists we can't build a UserModel. (Tip: create the
+      // profile row with a Postgres trigger on auth.users — see REVIEW.md.)
+      _currentUser = response == null ? null : UserModel.fromMap(response);
       notifyListeners();
     } catch (_) {
       _currentUser = null;
@@ -44,19 +47,6 @@ class AuthService extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      // Dev Admin Special Logic
-      if (email == 'devTechs842@gmail.com' && password == 'Admin1234') {
-        try {
-          await _supabase.auth.signInWithPassword(email: email, password: password);
-        } catch (e) {
-          // If Supabase login fails for the admin (e.g. user not created yet),
-          // we can still allow them in for development if needed, 
-          // but usually it's better to just ensure the user exists.
-          // For now, let's just attempt the real login.
-          rethrow;
-        }
-        return;
-      }
       await _supabase.auth.signInWithPassword(email: email, password: password);
     } finally {
       _isLoading = false;
@@ -68,15 +58,26 @@ class AuthService extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final response = await _supabase.auth.signUp(email: email, password: password);
+      final response = await _supabase.auth.signUp(
+        email: email,
+        password: password,
+        data: {'username': username},
+      );
       final user = response.user;
-      if (user != null) {
-        await _supabase.table('profiles').insert({
-          'id': user.id,
-          'email': email,
-          'username': username,
-          'created_at': DateTime.now().toIso8601String(),
-        });
+      // Only insert the profile when we actually have a session. With
+      // email confirmation enabled there is no session yet and the
+      // insert would fail under RLS — use a DB trigger for that case.
+      if (user != null && response.session != null) {
+        try {
+          await _supabase.table('profiles').insert({
+            'id': user.id,
+            'email': email,
+            'username': username,
+            'created_at': DateTime.now().toIso8601String(),
+          });
+        } catch (_) {
+          // Profile may already exist (e.g. created by a DB trigger).
+        }
       }
     } finally {
       _isLoading = false;

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../services/app_prefs.dart';
+import '../services/supabase_service.dart';
 import '../widgets/app_logo.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -36,9 +38,16 @@ class _SplashScreenState extends State<SplashScreen>
 
   Future<void> _navigateAfterDelay() async {
     await Future.delayed(const Duration(seconds: 2));
-    if (mounted) {
-      Navigator.pushReplacementNamed(context, '/onboarding');
-    }
+    if (!mounted) return;
+    final hasSession =
+        SupabaseService().isInitialized &&
+        SupabaseService().auth.currentSession != null;
+    final seenOnboarding = await AppPrefs.onboardingSeen;
+    if (!mounted) return;
+    final route = hasSession
+        ? '/main'
+        : (seenOnboarding ? '/auth' : '/onboarding');
+    Navigator.pushReplacementNamed(context, route);
   }
 
   @override

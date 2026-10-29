@@ -6,7 +6,6 @@ class DevService extends ChangeNotifier {
   bool _verboseLogging = false;
   bool _bypassAuth = false;
   bool _showFps = false;
-  final String _devAccessCode = 'admin123';
   final List<String> _eventLog = [];
 
   bool get maintenanceMode => _maintenanceMode;
@@ -16,20 +15,19 @@ class DevService extends ChangeNotifier {
   bool get showFps => _showFps;
   List<String> get eventLog => List.unmodifiable(_eventLog);
 
-  bool authenticate(String code) {
-    if (code == _devAccessCode) {
-      _devModeEnabled = true;
-      _logEvent('Dev mode activated');
-      notifyListeners();
-      return true;
-    }
-    _logEvent('Failed dev auth attempt');
-    return false;
+  /// Enables dev mode. Callers must verify the signed-in user is an
+  /// admin first (see DevPanelScreen) — there is deliberately no
+  /// hardcoded access code in the client. Real authorization must
+  /// still be enforced server-side (Supabase RLS / roles).
+  void activateDevMode() {
+    _devModeEnabled = true;
+    logEvent('Dev mode activated');
+    notifyListeners();
   }
 
   void toggleMaintenanceMode() {
     _maintenanceMode = !_maintenanceMode;
-    _logEvent('Maintenance mode: ${_maintenanceMode ? "ON" : "OFF"}');
+    logEvent('Maintenance mode: ${_maintenanceMode ? "ON" : "OFF"}');
     notifyListeners();
   }
 
@@ -40,7 +38,7 @@ class DevService extends ChangeNotifier {
 
   void toggleBypassAuth() {
     _bypassAuth = !_bypassAuth;
-    _logEvent('Bypass auth: ${_bypassAuth ? "ON" : "OFF"}');
+    logEvent('Bypass auth: ${_bypassAuth ? "ON" : "OFF"}');
     notifyListeners();
   }
 
@@ -56,16 +54,11 @@ class DevService extends ChangeNotifier {
 
   void deactivateDevMode() {
     _devModeEnabled = false;
-    _logEvent('Dev mode deactivated');
+    logEvent('Dev mode deactivated');
     notifyListeners();
   }
 
   void logEvent(String event) {
-    final timestamp = DateTime.now().toIso8601String().split('T').last.split('.').first;
-    _eventLog.insert(0, '[$timestamp] $event');
-  }
-
-  void _logEvent(String event) {
     final timestamp = DateTime.now().toIso8601String().split('T').last.split('.').first;
     _eventLog.insert(0, '[$timestamp] $event');
   }

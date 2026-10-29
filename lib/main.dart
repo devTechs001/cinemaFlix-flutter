@@ -32,7 +32,56 @@ void main() async {
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
   ]);
+  if (!SupabaseService().isInitialized) {
+    runApp(ConfigErrorApp(message: SupabaseService().initError));
+    return;
+  }
   runApp(const CinemaFlixApp());
+}
+
+/// Shown when Supabase could not be initialized (e.g. missing .env)
+/// instead of crashing before the first frame.
+class ConfigErrorApp extends StatelessWidget {
+  final String? message;
+  const ConfigErrorApp({super.key, this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        backgroundColor: const Color(0xFF141414),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.error_outline, color: Color(0xFFE50914), size: 56),
+                const SizedBox(height: 16),
+                const Text(
+                  'Configuration error',
+                  style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  message ?? 'Supabase could not be initialized.',
+                  style: const TextStyle(color: Colors.white54, fontSize: 13),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Check your .env file (see .env.example) and restart the app.',
+                  style: TextStyle(color: Colors.white38, fontSize: 12),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class CinemaFlixApp extends StatelessWidget {
@@ -63,6 +112,7 @@ class CinemaFlixApp extends StatelessWidget {
           final int index = args is int ? args : 0;
           return MainShell(initialIndex: index);
         },
+        '/profile': (_) => const ProfileScreen(),
         '/shorts': (_) => const ShortsScreen(),
         '/search': (_) => const SearchScreen(),
         '/explore': (_) => const ExploreScreen(),

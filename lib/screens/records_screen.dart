@@ -15,23 +15,34 @@ class _RecordsScreenState extends State<RecordsScreen> {
 
   final List<Map<String, dynamic>> _records = [];
 
+  String _dateDaysAgo(int days) {
+    final d = DateTime.now().subtract(Duration(days: days));
+    String two(int v) => v.toString().padLeft(2, '0');
+    return '${d.year}-${two(d.month)}-${two(d.day)}';
+  }
+
   @override
   void initState() {
     super.initState();
+    // NOTE: demo data until watch history is wired to Supabase
+    // (`watch_history` table / DatabaseService.updateWatchProgress).
     for (int i = 0; i < sampleMovies.length; i++) {
       final m = sampleMovies[i];
       _records.addAll([
-        {'movie': m, 'action': 'Watched', 'date': '2024-06-${7 - i}', 'progress': '100%', 'icon': Icons.visibility},
-        {'movie': m, 'action': 'Added to Watchlist', 'date': '2024-06-${5 - i}', 'progress': '', 'icon': Icons.bookmark},
-        if (i < 4) {'movie': m, 'action': 'Reviewed', 'date': '2024-06-${3 - i}', 'progress': '★★★★☆', 'icon': Icons.star},
-        if (i < 5) {'movie': m, 'action': 'Shared', 'date': '2024-06-${1 - i}', 'progress': '', 'icon': Icons.share},
+        {'movie': m, 'action': 'Watched', 'date': _dateDaysAgo(i), 'progress': '100%', 'icon': Icons.visibility},
+        {'movie': m, 'action': 'Added to Watchlist', 'date': _dateDaysAgo(i + 2), 'progress': '', 'icon': Icons.bookmark},
+        if (i < 4) {'movie': m, 'action': 'Reviewed', 'date': _dateDaysAgo(i + 4), 'progress': '★★★★☆', 'icon': Icons.star},
+        if (i < 5) {'movie': m, 'action': 'Shared', 'date': _dateDaysAgo(i + 6), 'progress': '', 'icon': Icons.share},
       ]);
     }
   }
 
   List<Map<String, dynamic>> get _filtered {
     if (_filter == 'All') return _records;
-    return _records.where((r) => r['action'] == _filter).toList();
+    return _records
+        .where((r) =>
+            (r['action'] as String).toLowerCase().contains(_filter.toLowerCase()))
+        .toList();
   }
 
   @override

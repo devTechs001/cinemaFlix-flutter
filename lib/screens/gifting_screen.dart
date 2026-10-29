@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../widgets/interactive_card.dart';
-import '../services/gifting_service.dart';
+import '../services/globals.dart';
 
 class GiftingScreen extends StatefulWidget {
   const GiftingScreen({super.key});
@@ -11,7 +11,7 @@ class GiftingScreen extends StatefulWidget {
 }
 
 class _GiftingScreenState extends State<GiftingScreen> {
-  final _giftingService = GiftingService();
+  final _giftingService = giftingService;
   final _emailController = TextEditingController();
   int _selectedGift = 0;
 

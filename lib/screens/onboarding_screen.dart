@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../services/app_prefs.dart';
 import '../widgets/interactive_card.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -54,6 +55,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     super.dispose();
   }
 
+  Future<void> _finish() async {
+    await AppPrefs.setOnboardingSeen();
+    if (!mounted) return;
+    Navigator.pushReplacementNamed(context, '/auth');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -67,7 +74,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: InteractiveCard(
-                    onTap: () => Navigator.pushReplacementNamed(context, '/main'),
+                    onTap: _finish,
                     scaleAmount: 0.92,
                     child: const Padding(
                       padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -180,7 +187,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         curve: Curves.easeInOut,
                       );
                     } else {
-                      Navigator.pushReplacementNamed(context, '/main');
+                      _finish();
                     }
                   },
                   style: ElevatedButton.styleFrom(

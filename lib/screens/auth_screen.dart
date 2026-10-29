@@ -13,8 +13,8 @@ class AuthScreen extends StatefulWidget {
 
 class _AuthScreenState extends State<AuthScreen>
     with SingleTickerProviderStateMixin {
-  final _emailController = TextEditingController(text: 'demo@cinemaflix.com');
-  final _passwordController = TextEditingController(text: 'demo123');
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
   final _usernameController = TextEditingController();
   bool _isSignUp = false;
   bool _obscurePassword = true;
@@ -45,12 +45,13 @@ class _AuthScreenState extends State<AuthScreen>
       _showError('Please enter a username');
       return;
     }
-    if (_emailController.text.trim().isEmpty) {
-      _showError('Please enter your email');
+    final email = _emailController.text.trim();
+    if (email.isEmpty || !email.contains('@') || !email.contains('.')) {
+      _showError('Please enter a valid email');
       return;
     }
-    if (_passwordController.text.length < 4) {
-      _showError('Password must be at least 4 characters');
+    if (_passwordController.text.length < 6) {
+      _showError('Password must be at least 6 characters');
       return;
     }
 
@@ -218,13 +219,7 @@ class _AuthScreenState extends State<AuthScreen>
                             child: TextButton(
                               onPressed: () {
                                 HapticFeedback.lightImpact();
-                                setState(() {
-                                  _isSignUp = !_isSignUp;
-                                  if (!_isSignUp) {
-                                    _emailController.text = 'demo@cinemaflix.com';
-                                    _passwordController.text = 'demo123';
-                                  }
-                                });
+                                setState(() => _isSignUp = !_isSignUp);
                               },
                               child: Text(
                                 _isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up",

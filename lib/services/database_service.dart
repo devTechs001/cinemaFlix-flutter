@@ -27,7 +27,12 @@ class DatabaseService extends ChangeNotifier {
   Future<List<MovieModel>> getWatchlist(String userId) async {
     final response = await _supabase.table('watchlist').select().eq('user_id', userId);
     final data = response as List;
-    return data.map((e) => MovieModel.fromMap(e as Map<String, dynamic>)).toList();
+    // The movie's identity is `movie_id`, not the row's own `id` —
+    // map it in so callers can compare against catalogue ids.
+    return data.map((e) {
+      final map = e as Map<String, dynamic>;
+      return MovieModel.fromMap({...map, 'id': (map['movie_id'] ?? map['id']).toString()});
+    }).toList();
   }
 
   Future<bool> isInWatchlist(String userId, String movieId) async {
@@ -56,7 +61,10 @@ class DatabaseService extends ChangeNotifier {
   Future<List<MovieModel>> getFavorites(String userId) async {
     final response = await _supabase.table('favorites').select().eq('user_id', userId);
     final data = response as List;
-    return data.map((e) => MovieModel.fromMap(e as Map<String, dynamic>)).toList();
+    return data.map((e) {
+      final map = e as Map<String, dynamic>;
+      return MovieModel.fromMap({...map, 'id': (map['movie_id'] ?? map['id']).toString()});
+    }).toList();
   }
 
   Future<void> addReview(ReviewModel review) async {
