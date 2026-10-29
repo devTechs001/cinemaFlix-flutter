@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'local_db_service.dart';
 
 class ThemeService extends ChangeNotifier {
+  static const _themeIndexKey = 'theme_index';
   int _activeIndex = 0;
 
   int get activeIndex => _activeIndex;
@@ -8,7 +10,19 @@ class ThemeService extends ChangeNotifier {
 
   void setTheme(int index) {
     _activeIndex = index;
+    // Persist to SQLite so the choice survives restarts.
+    LocalDbService().setIntSetting(_themeIndexKey, index);
     notifyListeners();
+  }
+
+  /// Restores the saved theme (called once at startup, after
+  /// [LocalDbService.initialize]).
+  Future<void> loadPersistedTheme() async {
+    final saved = await LocalDbService().getIntSetting(_themeIndexKey);
+    if (saved != null && saved >= 0 && saved < themes.length) {
+      _activeIndex = saved;
+      notifyListeners();
+    }
   }
 
   static final List<ThemeData> themes = [
