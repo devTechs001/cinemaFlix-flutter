@@ -12,6 +12,22 @@ A premium movie streaming and social app built with Flutter and Supabase.
 - **Offline-first:** Favorites, watchlist, Continue Watching (resume playback) and theme persist on-device in SQLite — works offline and for guests; signed-in data also syncs to Supabase.
 
 ## Development
+### Setup
+```bash
+cp .env.example .env   # then fill in your Supabase URL + anon key
+flutter pub get
+```
+Run `supabase/schema.sql` once in the Supabase SQL Editor to create the
+tables, RLS policies, profile trigger and Realtime publication.
+
+### Tests & CI
+```bash
+flutter analyze
+flutter test
+```
+CI: copy `docs/flutter-ci-workflow.yml` to `.github/workflows/flutter.yml`
+(one-time — it runs `flutter analyze` + `flutter test` on every push/PR).
+
 ### Deployment
 Use the provided scripts for easy building:
 ```bash

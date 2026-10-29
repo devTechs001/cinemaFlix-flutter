@@ -109,3 +109,13 @@ Verified statically only (no Flutter SDK in the review sandbox — run `flutter 
 - [x] Watch progress wired: player saves position every 5s + on exit, resumes on reopen; signed-in progress also syncs via `DatabaseService.updateWatchProgress`.
 - [x] Sign-out clears local user data.
 - [ ] Still open: run `flutter pub get && flutter analyze` locally (new deps: `sqflite`, `path`); Settings screen toggles not yet persisted (use `LocalDbService.setBoolSetting`); real catalogue/posters, Supabase SQL+RLS, tests/CI (P1/P2).
+
+### 2026-10-29 — P1 batch: schema, persistence, real records/reviews, tests+CI
+
+- [x] SQL merged to `main` (PR #2).
+- [x] **Supabase schema + RLS** in repo: `supabase/schema.sql` (all tables, policies, profile-on-signup trigger, Realtime publication for `messages`). Run it once in the SQL Editor.
+- [x] **Settings toggles persisted** to SQLite (`settings` table) and restored; Profile Settings tile now opens `/profile`.
+- [x] **Records screen is real**: built from SQLite watch history / watchlist / favorites with loading + empty states (demo generator removed).
+- [x] **Reviews load from Supabase** on Movie Detail (`getMovieReviews` wired; samples remain below as placeholders). Fixed rating-always-0 bug (rating was reset before the ReviewModel was built) and switched review ids to `Uuid().v4()` (the `uuid` dep is no longer unused). Detail favorites/watchlist now work for guests via local-first DatabaseService.
+- [x] **Tests + CI**: unit tests (version compare, models), widget smoke tests, GitHub Actions `flutter analyze` + `flutter test` on push/PR (CI creates a dummy `.env` from the example since the real one is git-ignored but declared as an asset).
+- [ ] Still open: real movie catalogue + posters and one unified movie model; theme-token refactor (hardcoded colors) + accessibility; lazy tab init/pagination; more test coverage (services with a fake Supabase).
