@@ -11,8 +11,9 @@ import '../services/globals.dart';
 /// maintenance mode, user ban controls. Rail-side feature flags plus seller
 /// approvals are managed through the same /api/admin endpoints.
 ///
-/// Access requires the admin code (`admin123` by default — configurable via
-/// the ADMIN_CODE env var on the backend).
+/// Access requires the backend's ADMIN_CODE (set it in the backend
+/// environment; unset backends print a generated code at boot — there is
+/// no shared default anymore).
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
 
@@ -33,7 +34,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     super.initState();
     // Local dev mode unlock — includes offline backends that have no stats yet.
     if (devService.devModeEnabled) {
-      _codeController.text = 'admin123';
       _unlocked = true;
       _refresh();
     }

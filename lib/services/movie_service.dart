@@ -63,3 +63,6 @@ class MovieService extends ChangeNotifier {
     super.dispose();
   }
 }
+
+/// App-wide catalogue singleton (also exported from `globals.dart`).
+final MovieService movieService = MovieService();

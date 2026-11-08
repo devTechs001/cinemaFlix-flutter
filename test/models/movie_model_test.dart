@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:cinemaflix/models/movie_model.dart';
+import 'package:cinemaflix/models/movie.dart';
 
 void main() {
-  group('MovieModel', () {
+  group('Movie (unified model)', () {
     test('fromMap creates correct instance', () {
       final map = {
         'id': 'test-1',
@@ -12,12 +12,9 @@ void main() {
         'rating': '8.5',
         'poster_url': 'https://example.com/poster.jpg',
         'description': 'A test movie',
-        'user_rating': 4.5,
-        'is_favorited': true,
-        'in_watchlist': false,
       };
 
-      final movie = MovieModel.fromMap(map);
+      final movie = Movie.fromMap(map);
 
       expect(movie.id, 'test-1');
       expect(movie.title, 'Test Movie');
@@ -26,32 +23,45 @@ void main() {
       expect(movie.rating, '8.5');
       expect(movie.posterUrl, 'https://example.com/poster.jpg');
       expect(movie.description, 'A test movie');
-      expect(movie.userRating, 4.5);
-      expect(movie.isFavorited, true);
-      expect(movie.inWatchlist, false);
     });
 
-    test('fromMap handles null values', () {
+    test('fromMap accepts movie_id and numeric values (SQLite/Supabase rows)',
+        () {
+      final map = {
+        'movie_id': 'movie-9',
+        'title': 'Row Movie',
+        'rating': 8.5,
+        'year': 2023,
+      };
+
+      final movie = Movie.fromMap(map);
+
+      expect(movie.id, 'movie-9');
+      expect(movie.title, 'Row Movie');
+      expect(movie.rating, '8.5');
+      expect(movie.year, '2023');
+    });
+
+    test('fromMap handles null/missing values', () {
       final map = {
         'id': 'test-2',
         'title': 'Another Movie',
       };
 
-      final movie = MovieModel.fromMap(map);
+      final movie = Movie.fromMap(map);
 
       expect(movie.id, 'test-2');
       expect(movie.title, 'Another Movie');
-      expect(movie.genre, isNull);
-      expect(movie.year, isNull);
-      expect(movie.rating, isNull);
+      expect(movie.genre, '');
+      expect(movie.year, '');
+      expect(movie.rating, '');
       expect(movie.posterUrl, isNull);
-      expect(movie.userRating, isNull);
-      expect(movie.isFavorited, false);
-      expect(movie.inWatchlist, false);
+      expect(movie.videoUrl, isNull);
+      expect(movie.description, '');
     });
 
     test('toMap returns correct map', () {
-      final movie = MovieModel(
+      final movie = Movie(
         id: 'test-3',
         title: 'My Movie',
         genre: 'Comedy',
@@ -73,7 +83,7 @@ void main() {
     });
 
     test('copyWith creates modified copy', () {
-      final original = MovieModel(
+      const original = Movie(
         id: 'test-4',
         title: 'Original Title',
         genre: 'Drama',
@@ -88,11 +98,14 @@ void main() {
     });
 
     test('defaults are correct', () {
-      final movie = MovieModel(id: 'test-5', title: 'Defaults');
+      const movie = Movie(id: 'test-5', title: 'Defaults');
 
-      expect(movie.isFavorited, false);
-      expect(movie.inWatchlist, false);
-      expect(movie.userRating, isNull);
+      expect(movie.year, '');
+      expect(movie.rating, '');
+      expect(movie.genre, '');
+      expect(movie.posterUrl, isNull);
+      expect(movie.gradientStart, Movie.defaultGradientStart);
+      expect(movie.gradientEnd, Movie.defaultGradientEnd);
     });
   });
 }

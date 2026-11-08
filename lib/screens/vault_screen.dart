@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/sample_movies.dart';
 import '../widgets/interactive_card.dart';
+import '../services/lock_service.dart';
 import 'movie_detail_screen.dart';
 
 class VaultScreen extends StatefulWidget {
@@ -146,7 +147,7 @@ class _VaultScreenState extends State<VaultScreen> with TickerProviderStateMixin
 
   void _unlock() {
     HapticFeedback.mediumImpact();
-    if (_pinController.text == '1234') {
+    if (lockService.verifyPin(_pinController.text)) {
       setState(() => _locked = false);
       _unlockController.forward();
     } else {

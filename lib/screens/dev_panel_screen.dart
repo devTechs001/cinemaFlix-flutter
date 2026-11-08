@@ -77,7 +77,7 @@ class _DevPanelScreenState extends State<DevPanelScreen> {
             const SizedBox(height: 24),
             const Text('Developer Access', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
             const SizedBox(height: 8),
-            const Text('Code: admin123 — unlocks all features', style: TextStyle(color: Colors.white54), textAlign: TextAlign.center),
+            const Text('Enter the access code from DEV_ACCESS_CODE in .env', style: TextStyle(color: Colors.white54), textAlign: TextAlign.center),
             const SizedBox(height: 24),
             TextField(
               controller: _codeController,

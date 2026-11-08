@@ -56,7 +56,7 @@ class _AuthScreenState extends State<AuthScreen>
     _logoTapCount++;
     if (_logoTapCount >= 7) {
       _logoTapCount = 0;
-      devService.authenticate('admin123');
+      devService.grantFullAccess();
       HapticFeedback.heavyImpact();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

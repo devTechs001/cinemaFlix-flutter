@@ -12,7 +12,7 @@ class SocialFeedScreen extends StatefulWidget {
 }
 
 class _SocialFeedScreenState extends State<SocialFeedScreen> with TickerProviderStateMixin {
-  final List<Map<String, dynamic>> _posts = [
+  List<Map<String, dynamic>> _posts = [
     {
       'user': 'Alex Rivs',
       'avatar': 'AR',
@@ -69,6 +69,23 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with TickerProvider
 
   final Map<int, AnimationController> _likeControllers = {};
   final Map<int, Animation<double>> _likeAnimations = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFeed();
+  }
+
+  /// Best-effort backend feed: replaces the demo posts only when real
+  /// content came back; offline / backend down keeps the demo feed.
+  Future<void> _loadFeed() async {
+    final remote = await feedService.load();
+    if (!mounted || remote.isEmpty) return;
+    setState(() {
+      _posts = remote;
+      _visiblePostCount = _posts.length < 3 ? _posts.length : 3;
+    });
+  }
 
   @override
   void dispose() {

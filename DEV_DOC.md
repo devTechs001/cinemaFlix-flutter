@@ -14,7 +14,7 @@ Last updated: 2026-10-19 (second pass — production-grade fixes to the first pa
 ### Backend systems (was "backend incomplete")
 New `backend/systems.js` module — works with or without the database (in-memory fallbacks):
 - **App config** `GET /api/app/config` — version, maintenance status, feature flags.
-- **Admin/dev system** `GET /api/admin/stats`, `GET/PUT /api/admin/feature-flags`, `GET/PUT /api/admin/maintenance` (message + allowAdmins + allowSpecific), `PUT /api/admin/users/:id/ban|unban`, `PUT /api/admin/popups`. Auth via `x-admin-code` header (`ADMIN_CODE` env, default `admin123`).
+- **Admin/dev system** `GET /api/admin/stats`, `GET/PUT /api/admin/feature-flags`, `GET/PUT /api/admin/maintenance` (message + allowAdmins + allowSpecific), `PUT /api/admin/users/:id/ban|unban`, `PUT /api/admin/popups`. Auth via `x-admin-code` header matching `ADMIN_CODE` env — **no shared default**: when unset, the backend generates a random code at boot and prints it to the server console.
 - **Wallet** `/api/wallet/:userId` — balance, spend, earn, convert (points↔diamonds), gift (p2p with note history). Flutter `WalletService` mirrors every local transaction to these endpoints non-destructively (local wallet stays source of truth).
 - **Ads** `GET /api/ads`, impression/click tracking, click rewards (+2 pts into the ad clicker's wallet), `GET /api/admin/ads/stats` for partner/earnings view.
 - **Gaming** `GET /api/games`, `POST /api/games/:id/play` (diamond stake, weighted multipliers, wallet payout, session log), `GET /api/games/leaderboard`.
