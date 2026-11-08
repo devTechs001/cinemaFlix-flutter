@@ -11,6 +11,8 @@ import 'cache_service.dart';
 import 'sync_service.dart';
 import 'feed_service.dart';
 import 'social_service.dart';
+export 'movie_service.dart' show movieService;
+import 'local_db_service.dart';
 
 final authService = AuthService();
 final soundService = SoundService();
@@ -25,3 +27,4 @@ final cacheService = CacheService();
 final syncService = SyncService();
 final feedService = FeedService();
 final socialService = SocialService();
+final localDbService = LocalDbService();

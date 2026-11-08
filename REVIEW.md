@@ -130,3 +130,66 @@ Verified statically only (no Flutter SDK in the review sandbox — run `flutter 
 - [x] **Accessibility**: `InteractiveCard` exposes button semantics (+ optional `semanticLabel`); posters carry image semantics labels.
 - [x] **Desktop UX**: NavigationRail shell ≥900dp, mouse/trackpad drag scrolling, hover click cursors, responsive grids (Home popular, Explore).
 - [ ] Still: run `flutter analyze && flutter test` locally (or enable CI workflow); give the app a TMDB API key + licensed streams when ready; live rooms/social feed content are still demo data on top of real movie metadata.
+
+---
+
+## 2026-10-29 — bugs_fixed.txt consistency round (main force-push reconciliation)
+
+**Context:** `origin/main` was force-pushed as a single orphan commit (53835b5) containing
+the large parallel feature work (admin/wallet/shorts/live/creator/… + `bugs_fixed.txt`,
+`DEV_DOC.md`, `backend/`) built on the pre-PR codebase. The session branch merged it with
+`--allow-unrelated-histories -X theirs` (your main's content wins; PR lineage kept).
+
+**Static audit found the pushed tree could not compile — fixed in this round:**
+
+- **12 files referenced but never committed** were rebuilt against their call sites:
+  `api_config.dart` (`baseUrl`/`apiPath`→`/api/*`/`resolveUrl`), `video_url_resolver.dart`
+  (`resolve`/`candidates` with GTV fallbacks), `lock_service.dart` (persisted vault PIN),
+  `movie_db_service.dart` (startup catalogue import), `sync_service.dart` (sign-in
+  push/pull of favorites/watchlist/watch-history ↔ Supabase), `feed_service.dart`
+  (`GET /api/posts` → feed-card adapter), `social_service.dart` (follow/like endpoints),
+  `desktop_sidebar.dart`, `shorts_tiktok_nav.dart`, `dev_mode_badge.dart`,
+  `real_me_bridge.dart`, `user_profile_screen.dart` (`/user-profile` route).
+- **Undefined symbols:** `DevService.authenticate/hasFullAccess/unlockAll/toggleUnlockAll`
+  (+`grantFullAccess`), `movieService` singleton (exported via globals), `localDbService`
+  singleton (globals), `ConfigErrorApp` (main, used by widget_test).
+- **`test/models/movie_model_test.dart`** imported the deleted `movie_model.dart` →
+  rewritten against the unified `Movie` (incl. `movie_id`/numeric coercion cases).
+- **pubspec:** added `supabase_flutter ^2.8.4`, `sqflite ^2.3.3+1`, `path ^1.9.0`,
+  declared `assets/icon/`; restored the real 1024² `app_icon.png` (push contained a
+  69-byte stub).
+
+**Runtime bugs fixed:**
+
+- `localDbService.initialize()` was never called → SQLite silently ran in-memory (favorites/
+  records/settings never persisted). Now initialized in `main()`.
+- `SupabaseService().initialize()` was never called → chat Realtime, catalogue import and
+  mirrors were dead. Now initialized in `main()` (non-fatal on failure).
+- **`admin123` backdoor removed everywhere:** auth logo-tap now uses `grantFullAccess()`;
+  dev panel shows no code (reads `DEV_ACCESS_CODE`); admin dashboard no longer prefills it;
+  backend `ADMIN_CODE` has no shared default (env or per-boot random, printed to console);
+  `.env.example` + `DEV_DOC.md` updated.
+- Vault PIN verified through `LockService` (persisted `vault_pin`, default `1234`) instead
+  of a hard-coded comparison.
+- App drawer tab misroutes: Chat went to Profile (extra 4→3); Live now pushes `/live`.
+- Notifications: added real Supabase Realtime `messages` insert notifications alongside the
+  existing random popups (per bugs_fixed.txt "notifications(real time)").
+- `main.dart` dotenv guarded: missing `.env` → `ConfigErrorApp('Missing env')` instead of a
+  pre-frame crash.
+
+**bugs_fixed.txt wiring made real:** FeedService loads the backend feed into
+SocialFeedScreen (demo posts kept when offline); SocialService powers follow/unfollow on
+the new profile screen; SyncService reconciles local↔cloud on sign-in; MovieDbService
+imports the Supabase `movies` catalogue with Realtime refresh; desktop sidebar + TikTok
+shorts nav + real_me bridge card implemented for the shell in `main.dart`.
+
+**Verified (static only):** 0 broken imports across `lib`+`test`; delimiter balance OK;
+singleton-member audit clean; no `admin123` left in code; all new tests' symbols resolve.
+**Not runnable here:** `flutter pub get/analyze/test` (no SDK) — first CI/user run will be
+the real gate. Move `docs/flutter-ci-workflow.yml` into `.github/workflows/` to get CI.
+
+**Known remaining gaps (not in this round):** dual movie models still coexist
+(`SampleMovie` in most screens vs unified `Movie` in records/search/service) — recommend a
+follow-up unification pass; most screens still use raw `Color(0xFF…)` literals (token sweep
+was lost in the force-push); live rooms/social content partly demo; rate limiting,
+OAuth/OTP production hardening and test coverage per `DEV_DOC.md` §Remaining.

@@ -10,7 +10,15 @@ const https = require('https');
 const { verifyIdToken } = require('./oauth');
 const models = require('./models/systems');
 
-const ADMIN_CODE = process.env.ADMIN_CODE || 'admin123';
+// Admin endpoints require the `x-admin-code` header to match ADMIN_CODE.
+// No shared default: with ADMIN_CODE unset a random code is generated at
+// boot and printed to the server console (see below).
+const ADMIN_CODE = process.env.ADMIN_CODE || (() => {
+  const generated = require('crypto').randomBytes(9).toString('base64url');
+  console.warn(`[admin] ADMIN_CODE not set — generated one-time code: ${generated}`);
+  console.warn('[admin] Set ADMIN_CODE in your environment to pick your own.');
+  return generated;
+})();
 const OAUTH_DEV_MODE = process.env.OAUTH_DEV_MODE === 'true';
 
 // ---------- in-memory stores (fallback mode) ----------

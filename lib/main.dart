@@ -8,6 +8,7 @@ import 'services/globals.dart';
 import 'services/storage_service.dart';
 import 'services/lock_service.dart';
 import 'services/movie_db_service.dart';
+import 'services/supabase_service.dart';
 import 'screens/splash_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/auth_screen.dart';
@@ -59,19 +60,79 @@ import 'widgets/shorts_tiktok_nav.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: '.env');
+  try {
+    await dotenv.load(fileName: '.env');
+  } catch (_) {
+    // Missing/unreadable .env — surface a clear config screen instead
+    // of crashing before the first frame (see ConfigErrorApp below).
+    runApp(const ConfigErrorApp(message: 'Missing env'));
+    return;
+  }
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
   ]);
   await themeService.initialize();
+  await SupabaseService().initialize(); // never throws; app runs backend-only on failure
   storageService.checkStorage();
   await lockService.initialize();
+  await localDbService.initialize(); // SQLite — without this everything runs in-memory
   await syncService.initialize();
-  await movieDbService.initialize();
+  await movieDbService.initialize(); // real-time catalogue import
   _initSystemTray();
   runApp(const CinemaFlixApp());
+}
+
+/// Shown instead of the app when required configuration (.env) is missing.
+class ConfigErrorApp extends StatelessWidget {
+  final String message;
+  const ConfigErrorApp({super.key, required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'CinemaFlix',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData.dark(useMaterial3: true),
+      home: Scaffold(
+        backgroundColor: const Color(0xFF141414),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.movie_filter_rounded,
+                    color: Color(0xFFE50914), size: 56),
+                const SizedBox(height: 20),
+                const Text(
+                  'Configuration error',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  message,
+                  style: const TextStyle(color: Colors.white70, fontSize: 14),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Copy .env.example to .env and fill in your keys, then restart.',
+                  style: TextStyle(color: Colors.white54, fontSize: 13),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 Future<void> _initSystemTray() async {

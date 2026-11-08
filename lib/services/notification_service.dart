@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/notification_model.dart';
 import 'storage_service.dart';
+import 'supabase_service.dart';
 
 class InAppAlert {
   final String id;
@@ -27,6 +29,7 @@ class NotificationService extends ChangeNotifier {
   int _unreadCount = 0;
   InAppAlert? _currentAlert;
   Timer? _alertTimer;
+  RealtimeChannel? _chatChannel;
 
   List<AppNotification> get notifications => _notifications;
   int get unreadCount => _unreadCount;
@@ -37,6 +40,44 @@ class NotificationService extends ChangeNotifier {
     _notifications = List.from(sampleNotifications);
     _unreadCount = _notifications.where((n) => !n.read).length;
     _simulateLiveNotifications();
+    _subscribeToChatActivity();
+  }
+
+  /// Real-time notifications from other users' chat messages (Supabase
+  /// Realtime on `public.messages`). Complements the random popups above.
+  void _subscribeToChatActivity() {
+    final supa = SupabaseService();
+    if (!supa.isInitialized) return;
+    try {
+      _chatChannel = supa.channel('public:chat-activity')
+        ..onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'messages',
+          callback: (payload) {
+            final row = payload.newRecord;
+            final sender = row['user_id']?.toString() ?? '';
+            final myId = supa.auth.currentUser?.id;
+            if (sender.isNotEmpty && sender == myId) return;
+            final content = (row['content'] ?? '').toString();
+            if (content.isEmpty) return;
+            final id = 'chat_${row['id'] ?? DateTime.now().millisecondsSinceEpoch}';
+            if (_notifications.any((n) => n.id == id)) return;
+            final body =
+                content.length > 60 ? '${content.substring(0, 60)}…' : content;
+            _addNotification(AppNotification(
+              id: id,
+              title: '${(row['username'] ?? 'Someone')} sent a message',
+              body: body,
+              time: 'just now',
+              type: NotificationType.chat,
+            ));
+          },
+        )
+        ..subscribe();
+    } catch (e) {
+      debugPrint('NotificationService: chat activity subscription failed: $e');
+    }
   }
 
   void _simulateLiveNotifications() {
@@ -148,6 +189,7 @@ class NotificationService extends ChangeNotifier {
 
   @override
   void dispose() {
+    _chatChannel?.unsubscribe();
     _timerSubscription?.cancel();
     _alertTimer?.cancel();
     super.dispose();
