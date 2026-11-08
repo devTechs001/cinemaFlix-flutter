@@ -33,6 +33,19 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# Environment files (keep secrets local)
+.env
+.env.*
+!.env.example
+!.env.sample
+/backend/.env
+/backend/.env.*
+
+# Firebase local config
+.firebaserc
+.firebaserc.*
+.firebase/
+
 # Symbolication related
 app.*.symbols
 
