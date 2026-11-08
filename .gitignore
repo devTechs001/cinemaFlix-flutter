@@ -59,3 +59,6 @@ app.*.map.json
 
 # Local feature documentation (not for GitHub)
 README.md
+
+# Local secrets & misc (copy .env.example to .env locally)
+wget-log

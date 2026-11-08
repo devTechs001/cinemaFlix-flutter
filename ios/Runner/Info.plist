@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Cinemaflix</string>
+	<string>CinemaFlix</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -66,5 +66,13 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSContactsUsageDescription</key>
+	<string>CinemaFlix uses your contacts to help you find friends to chat and share movies with.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>CinemaFlix uses the camera so you can set a profile photo and share media.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>CinemaFlix uses the microphone for voice features in live rooms.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>CinemaFlix accesses your photos so you can set a profile picture and share media.</string>
 </dict>
 </plist>
