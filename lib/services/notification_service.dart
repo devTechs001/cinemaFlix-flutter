@@ -1,60 +1,126 @@
-import 'package:flutter/foundation.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:async';
+import 'package:flutter/material.dart';
 import '../models/notification_model.dart';
-import 'supabase_service.dart';
+import 'storage_service.dart';
 
-/// In-app notifications.
-///
-/// Seeded with a few starter notifications, then driven by **real**
-/// activity: new community chat messages from other users arrive over
-/// Supabase Realtime and become notifications here. (The previous
-/// version invented a fake notification every 30 seconds.)
+class InAppAlert {
+  final String id;
+  final String title;
+  final String body;
+  final String icon;
+  final Color color;
+  final VoidCallback? onTap;
+
+  InAppAlert({
+    required this.id,
+    required this.title,
+    required this.body,
+    required this.icon,
+    required this.color,
+    this.onTap,
+  });
+}
+
 class NotificationService extends ChangeNotifier {
-  final SupabaseService _supabase = SupabaseService();
   List<AppNotification> _notifications = [];
-  RealtimeChannel? _channel;
+  StreamSubscription? _timerSubscription;
   int _unreadCount = 0;
+  InAppAlert? _currentAlert;
+  Timer? _alertTimer;
 
   List<AppNotification> get notifications => _notifications;
   int get unreadCount => _unreadCount;
   int get totalCount => _notifications.length;
+  InAppAlert? get currentAlert => _currentAlert;
 
   NotificationService() {
     _notifications = List.from(sampleNotifications);
     _unreadCount = _notifications.where((n) => !n.read).length;
-    _subscribeToChatActivity();
+    _simulateLiveNotifications();
   }
 
-  void _subscribeToChatActivity() {
-    if (!_supabase.isInitialized) return;
-    _channel = _supabase.channel('notifications:chat')
-      ..onPostgresChanges(
-        event: PostgresChangeEvent.insert,
-        table: 'messages',
-        callback: (payload) {
-          final record = payload.newRecord;
-          final myId = _supabase.auth.currentUser?.id;
-          final senderId = record['user_id']?.toString();
-          if (senderId != null && senderId == myId) return;
-          final username = record['username']?.toString() ?? 'Someone';
-          final content = record['content']?.toString() ?? '';
-          final preview =
-              content.length > 60 ? '${content.substring(0, 60)}…' : content;
-          _notifications.insert(
-            0,
-            AppNotification(
-              id: 'chat_${DateTime.now().millisecondsSinceEpoch}',
-              title: 'New chat message',
-              body: '$username: $preview',
-              time: 'just now',
-              type: NotificationType.chat,
-            ),
-          );
-          _unreadCount++;
-          notifyListeners();
-        },
-      )
-      ..subscribe();
+  void _simulateLiveNotifications() {
+    _timerSubscription = Stream.periodic(const Duration(seconds: 30), (i) => i).listen((_) {
+      _addNotification(AppNotification(
+        id: 'live_${DateTime.now().millisecondsSinceEpoch}',
+        title: 'Live Activity',
+        body: '${_randomItem(_chatters)} is discussing "${_randomItem(_movies)}" in the Live Room',
+        time: 'just now',
+        type: NotificationType.live,
+      ));
+    });
+  }
+
+  static const _chatters = ['Sarah J.', 'Mike Chen', 'Alex T.', 'Rachel K.', 'Emma W.', 'James B.'];
+  static const _movies = ['Dune', 'Inception', 'The Batman', 'Interstellar', 'Oppenheimer', 'Deadpool'];
+
+  String _randomItem(List<String> items) => items[DateTime.now().millisecond % items.length];
+
+  void _addNotification(AppNotification n) {
+    _notifications.insert(0, n);
+    _unreadCount++;
+    notifyListeners();
+  }
+
+  void showAlert({required String title, required String body, required String icon, required Color color, VoidCallback? onTap}) {
+    _currentAlert = InAppAlert(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      title: title,
+      body: body,
+      icon: icon,
+      color: color,
+      onTap: onTap,
+    );
+    notifyListeners();
+    _alertTimer?.cancel();
+    _alertTimer = Timer(const Duration(seconds: 5), () {
+      _currentAlert = null;
+      notifyListeners();
+    });
+  }
+
+  void dismissAlert() {
+    _currentAlert = null;
+    _alertTimer?.cancel();
+    notifyListeners();
+  }
+
+  Future<void> showStorageAlert(StorageAlertLevel level) async {
+    final (title, icon, color) = switch (level) {
+      StorageAlertLevel.critical => ('Storage Critical', '🚨', const Color(0xFFE50914)),
+      StorageAlertLevel.warning => ('Storage Low', '⚠️', const Color(0xFFFF8F00)),
+      StorageAlertLevel.ok => ('Storage OK', '✅', const Color(0xFF10B981)),
+    };
+    showAlert(title: title, body: 'Your device storage is running low. Free up space in Settings.', icon: icon, color: color);
+    _addNotification(AppNotification(
+      id: 'storage_${DateTime.now().millisecondsSinceEpoch}',
+      title: title,
+      body: 'Your device storage is running low. Free up space in Settings.',
+      time: 'just now',
+      type: NotificationType.system,
+    ));
+  }
+
+  void showConnectivityAlert(bool isOnline, String strength) {
+    if (isOnline) {
+      showAlert(title: 'Back Online', body: 'Connection restored ($strength)', icon: '📶', color: const Color(0xFF10B981));
+      _addNotification(AppNotification(
+        id: 'conn_${DateTime.now().millisecondsSinceEpoch}',
+        title: 'Back Online',
+        body: 'Connection restored ($strength)',
+        time: 'just now',
+        type: NotificationType.system,
+      ));
+    } else {
+      showAlert(title: 'Disconnected', body: 'No internet connection', icon: '❌', color: const Color(0xFFE50914));
+      _addNotification(AppNotification(
+        id: 'conn_${DateTime.now().millisecondsSinceEpoch}',
+        title: 'Disconnected',
+        body: 'No internet connection',
+        time: 'just now',
+        type: NotificationType.system,
+      ));
+    }
   }
 
   void markAsRead(String id) {
@@ -82,7 +148,8 @@ class NotificationService extends ChangeNotifier {
 
   @override
   void dispose() {
-    _channel?.unsubscribe();
+    _timerSubscription?.cancel();
+    _alertTimer?.cancel();
     super.dispose();
   }
 }

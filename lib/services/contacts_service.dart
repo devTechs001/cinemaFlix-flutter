@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -19,6 +21,12 @@ class ContactsService extends ChangeNotifier {
   bool get isLoading => _isLoading;
 
   Future<bool> requestPermission() async {
+    if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS)) {
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+
     _isLoading = true;
     notifyListeners();
 
@@ -36,14 +44,46 @@ class ContactsService extends ChangeNotifier {
 
   List<ContactInfo> _mockContacts() {
     return [
-      ContactInfo(name: 'Sarah Johnson', phone: '+1 (555) 123-4567', email: 'sarah@email.com'),
-      ContactInfo(name: 'Mike Chen', phone: '+1 (555) 234-5678', email: 'mike@email.com'),
-      ContactInfo(name: 'Emma Wilson', phone: '+1 (555) 345-6789', email: 'emma@email.com'),
-      ContactInfo(name: 'James Brown', phone: '+1 (555) 456-7890', email: 'james@email.com'),
-      ContactInfo(name: 'Lisa Garcia', phone: '+1 (555) 567-8901', email: 'lisa@email.com'),
-      ContactInfo(name: 'Alex Turner', phone: '+1 (555) 678-9012', email: 'alex@email.com'),
-      ContactInfo(name: 'Rachel Kim', phone: '+1 (555) 789-0123', email: 'rachel@email.com'),
-      ContactInfo(name: 'David Miller', phone: '+1 (555) 890-1234', email: 'david@email.com'),
+      ContactInfo(
+        name: 'Sarah Johnson',
+        phone: '+1 (555) 123-4567',
+        email: 'sarah@email.com',
+      ),
+      ContactInfo(
+        name: 'Mike Chen',
+        phone: '+1 (555) 234-5678',
+        email: 'mike@email.com',
+      ),
+      ContactInfo(
+        name: 'Emma Wilson',
+        phone: '+1 (555) 345-6789',
+        email: 'emma@email.com',
+      ),
+      ContactInfo(
+        name: 'James Brown',
+        phone: '+1 (555) 456-7890',
+        email: 'james@email.com',
+      ),
+      ContactInfo(
+        name: 'Lisa Garcia',
+        phone: '+1 (555) 567-8901',
+        email: 'lisa@email.com',
+      ),
+      ContactInfo(
+        name: 'Alex Turner',
+        phone: '+1 (555) 678-9012',
+        email: 'alex@email.com',
+      ),
+      ContactInfo(
+        name: 'Rachel Kim',
+        phone: '+1 (555) 789-0123',
+        email: 'rachel@email.com',
+      ),
+      ContactInfo(
+        name: 'David Miller',
+        phone: '+1 (555) 890-1234',
+        email: 'david@email.com',
+      ),
     ];
   }
 }

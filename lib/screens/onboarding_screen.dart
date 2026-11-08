@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import '../theme/app_tokens.dart';
 import 'package:flutter/services.dart';
-import '../services/app_prefs.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/interactive_card.dart';
+import '../services/globals.dart';
+import '../services/sound_service.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -20,7 +21,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       icon: Icons.movie_creation_rounded,
       title: 'Welcome to CinemaFlix',
       description: 'Your ultimate movie companion. Discover, track, discuss, and rate your favorite films all in one place.',
-      color: const AppColors.brand,
+      color: const Color(0xFFE50914),
       detail: 'Installation Complete',
       features: ['8K Streaming Ready', 'Offline Downloads', 'Smart Recommendations'],
     ),
@@ -50,22 +51,25 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     ),
   ];
 
+  Future<void> _finishOnboarding() async {
+    HapticFeedback.mediumImpact();
+    soundService.play(SoundEvent.success);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('onboarding_complete', true);
+    if (!mounted) return;
+    Navigator.pushReplacementNamed(context, '/main');
+  }
+
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
   }
 
-  Future<void> _finish() async {
-    await AppPrefs.setOnboardingSeen();
-    if (!mounted) return;
-    Navigator.pushReplacementNamed(context, '/auth');
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const AppColors.background,
+      backgroundColor: const Color(0xFF141414),
       body: SafeArea(
         child: Column(
           children: [
@@ -75,7 +79,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: InteractiveCard(
-                    onTap: _finish,
+                    onTap: () => _finishOnboarding(),
                     scaleAmount: 0.92,
                     child: const Padding(
                       padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -167,7 +171,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   width: _currentPage == i ? 28 : 8,
                   height: 8,
                   decoration: BoxDecoration(
-                    color: _currentPage == i ? const AppColors.brand : Colors.white24,
+                    color: _currentPage == i ? const Color(0xFFE50914) : Colors.white24,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -188,11 +192,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         curve: Curves.easeInOut,
                       );
                     } else {
-                      _finish();
+                      _finishOnboarding();
                     }
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const AppColors.brand,
+                    backgroundColor: const Color(0xFFE50914),
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     elevation: 0,

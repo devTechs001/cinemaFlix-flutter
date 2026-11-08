@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import '../theme/app_tokens.dart';
 import 'package:flutter/services.dart';
 import '../models/notification_model.dart';
 import '../services/globals.dart';
-import '../services/notification_service.dart';
 import '../widgets/interactive_card.dart';
 
 class NotificationsScreen extends StatefulWidget {
@@ -14,7 +12,7 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
-  final NotificationService _notificationService = notificationService;
+  final _notificationService = notificationService;
   String _filter = 'All';
 
   @override
@@ -28,6 +26,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   void dispose() {
     _notificationService.removeListener(_onChange);
+    _notificationService.dispose();
     super.dispose();
   }
 
@@ -54,7 +53,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               },
               child: const Padding(
                 padding: EdgeInsets.all(8),
-                child: Text('Mark all read', style: TextStyle(color: AppColors.brand, fontSize: 13)),
+                child: Text('Mark all read', style: TextStyle(color: Color(0xFFE50914), fontSize: 13)),
               ),
             ),
         ],
@@ -78,7 +77,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     physics: const BouncingScrollPhysics(),
                     padding: const EdgeInsets.symmetric(vertical: 4),
                     itemCount: _filtered.length,
-                    separatorBuilder: (_, _) => const Divider(color: AppColors.surfaceVariant, height: 1, indent: 72),
+                    separatorBuilder: (_, _) => const Divider(color: Color(0xFF2A2A2A), height: 1, indent: 72),
                     itemBuilder: (context, index) {
                       final notif = _filtered[index];
                       return InteractiveCard(
@@ -99,7 +98,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                 const SizedBox(width: 8),
                                 Container(
                                   width: 8, height: 8,
-                                  decoration: const BoxDecoration(color: AppColors.brand, shape: BoxShape.circle),
+                                  decoration: const BoxDecoration(color: Color(0xFFE50914), shape: BoxShape.circle),
                                 ),
                               ],
                             ],
@@ -135,7 +134,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
-                    color: active ? const AppColors.brand : const AppColors.surfaceVariant,
+                    color: active ? const Color(0xFFE50914) : const Color(0xFF2A2A2A),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(f, style: TextStyle(
@@ -158,8 +157,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       case NotificationType.movie:
         return Container(
           width: 44, height: 44,
-          decoration: BoxDecoration(color: const AppColors.brand.withAlpha(alpha), borderRadius: BorderRadius.circular(12)),
-          child: const Icon(Icons.movie_outlined, color: AppColors.brand, size: 22),
+          decoration: BoxDecoration(color: const Color(0xFFE50914).withAlpha(alpha), borderRadius: BorderRadius.circular(12)),
+          child: const Icon(Icons.movie_outlined, color: Color(0xFFE50914), size: 22),
         );
       case NotificationType.chat:
         return Container(
@@ -182,8 +181,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       case NotificationType.system:
         return Container(
           width: 44, height: 44,
-          decoration: BoxDecoration(color: const AppColors.success.withAlpha(alpha), borderRadius: BorderRadius.circular(12)),
-          child: const Icon(Icons.settings_outlined, color: AppColors.success, size: 22),
+          decoration: BoxDecoration(color: const Color(0xFF43A047).withAlpha(alpha), borderRadius: BorderRadius.circular(12)),
+          child: const Icon(Icons.settings_outlined, color: Color(0xFF43A047), size: 22),
         );
     }
   }

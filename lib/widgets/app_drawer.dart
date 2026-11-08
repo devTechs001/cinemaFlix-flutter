@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../theme/app_tokens.dart';
 import 'package:flutter/services.dart';
 import '../services/globals.dart';
 import 'app_logo.dart';
@@ -13,7 +12,7 @@ class AppDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Drawer(
-      backgroundColor: const AppColors.background,
+      backgroundColor: const Color(0xFF141414),
       width: MediaQuery.of(context).size.width * 0.78,
       child: SafeArea(
         child: Column(
@@ -32,8 +31,8 @@ class AppDrawer extends StatelessWidget {
                   _drawerItem(Icons.chat_rounded, 'Chat', () => _navigate(context, '/main', extra: 4)),
                   _drawerItem(Icons.explore_rounded, 'Explore', () => Navigator.pushNamed(context, '/explore')),
                   _sectionTitle('Library'),
-                  _drawerItem(Icons.bookmark_rounded, 'Watchlist', () => Navigator.pushNamed(context, '/records')),
-                  _drawerItem(Icons.favorite_rounded, 'Favorites', () => Navigator.pushNamed(context, '/records')),
+                  _drawerItem(Icons.bookmark_rounded, 'Watchlist', () => Navigator.pushNamed(context, '/search')),
+                  _drawerItem(Icons.favorite_rounded, 'Favorites', () => Navigator.pushNamed(context, '/search')),
                   _drawerItem(Icons.history_rounded, 'History', () => Navigator.pushNamed(context, '/records')),
                   _drawerItem(Icons.download_rounded, 'Downloads', () {
                     HapticFeedback.lightImpact();
@@ -41,9 +40,16 @@ class AppDrawer extends StatelessWidget {
                       const SnackBar(content: Text('Downloads: 3 movies offline'), duration: Duration(seconds: 1)),
                     );
                   }),
-                  _sectionTitle('Social'),
-                  _drawerItem(Icons.notifications_rounded, 'Notifications', () => Navigator.pushNamed(context, '/notifications'), badge: '3'),
+                  _sectionTitle('Creator'),
+                  _drawerItem(Icons.videocam_rounded, 'Creator Hub', () => Navigator.pushNamed(context, '/creator-hub')),
+                  _drawerItem(Icons.add_circle_outline, 'Upload', () => Navigator.pushNamed(context, '/creator-upload')),
+                  _sectionTitle('Finance'),
+                  _drawerItem(Icons.account_balance_wallet_rounded, 'Wallet', () => Navigator.pushNamed(context, '/wallet')),
                   _drawerItem(Icons.card_giftcard_rounded, 'Gifting', () => Navigator.pushNamed(context, '/gifting')),
+                  _drawerItem(Icons.lock_outline, 'Vault', () => Navigator.pushNamed(context, '/vault')),
+                  _sectionTitle('Social'),
+                  _drawerItem(Icons.favorite_rounded, 'Dating', () => Navigator.pushNamed(context, '/dating')),
+                  _drawerItem(Icons.notifications_rounded, 'Notifications', () => Navigator.pushNamed(context, '/notifications'), badge: '3'),
                   _drawerItem(Icons.group_rounded, 'Contacts', () {
                     HapticFeedback.lightImpact();
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -53,16 +59,22 @@ class AppDrawer extends StatelessWidget {
                   _sectionTitle('Settings'),
                   _drawerItem(Icons.settings_rounded, 'Settings', () => Navigator.pushNamed(context, '/settings')),
                   _drawerItem(Icons.palette_rounded, 'Themes', () => Navigator.pushNamed(context, '/themes')),
-                  if (authService.currentUser?.isAdmin ?? false)
-                    _drawerItem(Icons.admin_panel_settings_rounded, 'Dev Panel', () => Navigator.pushNamed(context, '/dev-panel')),
                   _sectionTitle('Account'),
-                  _drawerItem(Icons.person_rounded, 'Profile', () => Navigator.pushNamed(context, '/profile')),
-                  _drawerItem(Icons.logout_rounded, 'Sign Out', () async {
-                    HapticFeedback.heavyImpact();
-                    Navigator.pop(context);
-                    await authService.signOut();
-                    Navigator.pushReplacementNamed(context, '/auth');
-                  }, isDanger: true),
+                  _drawerItem(Icons.person_rounded, 'Profile', () => _navigate(context, '/main', extra: 4)),
+                  if (authService.currentUser == null) ...[
+                    _drawerItem(Icons.login_rounded, 'Sign In / Register', () => Navigator.pushReplacementNamed(context, '/auth')),
+                  ] else ...[
+                    if (authService.currentUser!.isAdmin)
+                      _drawerItem(Icons.admin_panel_settings_rounded, 'Dev Panel', () => Navigator.pushNamed(context, '/dev-panel')),
+                    _drawerItem(Icons.logout_rounded, 'Sign Out', () async {
+                      HapticFeedback.heavyImpact();
+                      final currentContext = context;
+                      Navigator.pop(currentContext);
+                      await authService.signOut();
+                      if (!currentContext.mounted) return;
+                      Navigator.pushReplacementNamed(currentContext, '/auth');
+                    }, isDanger: true),
+                  ],
                 ],
               ),
             ),
@@ -77,7 +89,7 @@ class AppDrawer extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.surfaceVariant)),
+        border: Border(bottom: BorderSide(color: Color(0xFF2A2A2A))),
       ),
       child: Row(
         children: [
@@ -86,8 +98,30 @@ class AppDrawer extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('CinemaFlix', style: TextStyle(color: AppColors.brand, fontWeight: FontWeight.bold, fontSize: 18)),
-              Text('v1.0 • Premium', style: TextStyle(color: Colors.white38, fontSize: 11)),
+              const Text('CinemaFlix', style: TextStyle(color: Color(0xFFE50914), fontWeight: FontWeight.bold, fontSize: 18)),
+              ListenableBuilder(
+                listenable: connectivityService,
+                builder: (context, _) {
+                  final online = connectivityService.isOnline;
+                  return Row(
+                    children: [
+                      Container(
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: online ? const Color(0xFF43A047) : Colors.redAccent,
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        online ? 'Online' : 'Offline',
+                        style: TextStyle(color: Colors.white38, fontSize: 11),
+                      ),
+                    ],
+                  );
+                },
+              ),
             ],
           ),
           const Spacer(),
@@ -146,7 +180,7 @@ class AppDrawer extends StatelessWidget {
               ? Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: const AppColors.brand,
+                    color: const Color(0xFFE50914),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(badge, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
@@ -161,7 +195,7 @@ class AppDrawer extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: AppColors.surfaceVariant)),
+        border: Border(top: BorderSide(color: Color(0xFF2A2A2A))),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,

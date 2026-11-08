@@ -1,97 +1,145 @@
-import 'dart:ui' show PointerDeviceKind;
-import 'theme/app_tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'services/globals.dart';
-import 'services/supabase_service.dart';
+import 'dart:io' show Platform;
+import 'package:system_tray/system_tray.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'services/theme_service.dart';
+import 'services/globals.dart';
+import 'services/storage_service.dart';
+import 'services/lock_service.dart';
+import 'services/movie_db_service.dart';
 import 'screens/splash_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/auth_screen.dart';
 import 'screens/home_screen.dart';
-import 'screens/chat_screen.dart';
 import 'screens/live_screen.dart';
+import 'screens/dating_screen.dart';
 import 'screens/shorts_screen.dart';
-import 'screens/notifications_screen.dart';
 import 'screens/profile_screen.dart';
+import 'screens/notifications_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/dev_panel_screen.dart';
+import 'screens/admin_dashboard_screen.dart';
+import 'screens/ecommerce_screen.dart';
+import 'screens/gaming_screen.dart';
 import 'screens/gifting_screen.dart';
 import 'screens/records_screen.dart';
 import 'screens/recover_screen.dart';
 import 'screens/themes_screen.dart';
 import 'screens/search_screen.dart';
 import 'screens/explore_screen.dart';
-import 'models/movie_catalogue.dart';
+import 'models/sample_movies.dart';
 import 'screens/movie_detail_screen.dart';
 import 'screens/social_feed_screen.dart';
+import 'screens/install_host_screen.dart';
+import 'screens/maintenance_screen.dart';
+import 'screens/vault_screen.dart';
+import 'screens/wallet_screen.dart';
+import 'screens/email_verification_screen.dart';
+import 'screens/password_reset_screen.dart';
+import 'screens/creator_hub_screen.dart';
+import 'screens/creator_content_screen.dart';
+import 'screens/creator_analytics_screen.dart';
+import 'screens/creator_earnings_screen.dart';
+import 'screens/upload_content_screen.dart';
+import 'screens/chat_screen.dart';
+import 'screens/downloads_screen.dart';
+import 'screens/connected_devices_screen.dart';
+import 'screens/cache_cleaner_screen.dart';
+import 'screens/plugins_screen.dart';
+import 'screens/local_media_screen.dart';
+import 'screens/local_media_player_screen.dart';
+import 'screens/watch_party_screen.dart';
+import 'screens/user_profile_screen.dart';
 import 'widgets/app_drawer.dart';
+import 'widgets/desktop_sidebar.dart';
+import 'widgets/offline_banner.dart';
+import 'widgets/notification_alert_overlay.dart';
+import 'widgets/shorts_tiktok_nav.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await SupabaseService().initialize();
+  await dotenv.load(fileName: '.env');
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
   ]);
-  if (!SupabaseService().isInitialized) {
-    runApp(ConfigErrorApp(message: SupabaseService().initError));
-    return;
-  }
-  await localDbService.initialize();
-  await themeService.loadPersistedTheme();
-  movieService.load(); // bundled catalogue shows instantly; remote swaps in when ready
+  await themeService.initialize();
+  storageService.checkStorage();
+  await lockService.initialize();
+  await syncService.initialize();
+  await movieDbService.initialize();
+  _initSystemTray();
   runApp(const CinemaFlixApp());
 }
 
-/// Shown when Supabase could not be initialized (e.g. missing .env)
-/// instead of crashing before the first frame.
-class ConfigErrorApp extends StatelessWidget {
-  final String? message;
-  const ConfigErrorApp({super.key, this.message});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: Scaffold(
-        backgroundColor: const AppColors.background,
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.error_outline, color: AppColors.brand, size: 56),
-                const SizedBox(height: 16),
-                const Text(
-                  'Configuration error',
-                  style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  message ?? 'Supabase could not be initialized.',
-                  style: const TextStyle(color: Colors.white54, fontSize: 13),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Check your .env file (see .env.example) and restart the app.',
-                  style: TextStyle(color: Colors.white38, fontSize: 12),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+Future<void> _initSystemTray() async {
+  if (!Platform.isLinux) return;
+  try {
+    final tray = SystemTray();
+    await tray.initSystemTray(
+      title: 'CinemaFlix',
+      iconPath: 'assets/icon/app_icon.png',
+      toolTip: 'CinemaFlix',
     );
+    final menu = [
+      MenuItem(label: 'Show', onClicked: () => tray.popUpContextMenu()),
+      MenuItem(label: 'Quit', onClicked: () => SystemNavigator.pop()),
+    ];
+    await tray.setContextMenu(menu);
+  } catch (e) {
+    debugPrint('SystemTray: Failed to init: $e');
   }
 }
 
-class CinemaFlixApp extends StatelessWidget {
+class CinemaFlixApp extends StatefulWidget {
   const CinemaFlixApp({super.key});
+
+  @override
+  State<CinemaFlixApp> createState() => _CinemaFlixAppState();
+}
+
+class _CinemaFlixAppState extends State<CinemaFlixApp> {
+  bool _wasOnline = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _wasOnline = connectivityService.isOnline;
+    connectivityService.addListener(_onConnectivityChanged);
+    storageService.addListener(_onStorageChanged);
+  }
+
+  @override
+  void dispose() {
+    connectivityService.removeListener(_onConnectivityChanged);
+    storageService.removeListener(_onStorageChanged);
+    super.dispose();
+  }
+
+  void _onConnectivityChanged() {
+    final online = connectivityService.isOnline;
+    if (online != _wasOnline) {
+      _wasOnline = online;
+      if (online) {
+        notificationService.showAlert(
+          title: 'Back Online',
+          body: 'Connection restored (${connectivityService.strengthLabel})',
+          icon: '📶',
+          color: const Color(0xFF10B981),
+        );
+      } else {
+        notificationService.showConnectivityAlert(false, '');
+      }
+    }
+  }
+
+  void _onStorageChanged() {
+    if (storageService.checkAlertNeeded()) {
+      notificationService.showStorageAlert(storageService.info!.alertLevel);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -105,7 +153,7 @@ class CinemaFlixApp extends StatelessWidget {
       builder: (context, child) {
         return ScrollConfiguration(
           behavior: _NoScrollbarBehavior(),
-          child: child!,
+          child: NotificationAlertOverlay(child: child!),
         );
       },
       initialRoute: '/splash',
@@ -118,21 +166,56 @@ class CinemaFlixApp extends StatelessWidget {
           final int index = args is int ? args : 0;
           return MainShell(initialIndex: index);
         },
-        '/profile': (_) => const ProfileScreen(),
         '/shorts': (_) => const ShortsScreen(),
         '/search': (_) => const SearchScreen(),
         '/explore': (_) => const ExploreScreen(),
         '/notifications': (_) => const NotificationsScreen(),
         '/settings': (_) => const SettingsScreen(),
         '/dev-panel': (_) => const DevPanelScreen(),
+        '/admin-dashboard': (_) => const AdminDashboardScreen(),
+        '/ecommerce': (_) => const EcommerceScreen(),
+        '/gaming': (_) => const GamingScreen(),
         '/gifting': (_) => const GiftingScreen(),
         '/records': (_) => const RecordsScreen(),
         '/recover': (_) => const RecoverScreen(),
         '/themes': (_) => const ThemesScreen(),
+        '/dating': (_) => const DatingScreen(),
+        '/live': (_) => const LiveScreen(),
+        '/chat': (_) => const ChatScreen(),
+        '/downloads': (_) => const DownloadsScreen(),
+        '/install': (_) => const InstallHostScreen(),
+        '/maintenance': (_) => const MaintenanceScreen(),
+        '/vault': (_) => const VaultScreen(),
+        '/wallet': (_) => const WalletScreen(),
+        '/email-verification': (context) {
+          final email = ModalRoute.of(context)?.settings.arguments as String? ?? '';
+          return EmailVerificationScreen(email: email);
+        },
+        '/password-reset': (_) => const PasswordResetScreen(),
+        '/creator-hub': (_) => const CreatorHubScreen(),
+        '/creator-content': (_) => const CreatorContentScreen(),
+        '/creator-analytics': (_) => const CreatorAnalyticsScreen(),
+        '/creator-earnings': (_) => const CreatorEarningsScreen(),
+        '/creator-upload': (_) => const UploadContentScreen(),
+        '/devices': (_) => const ConnectedDevicesScreen(),
+        '/cache-cleaner': (_) => const CacheCleanerScreen(),
+        '/plugins': (_) => const PluginsScreen(),
+        '/local-media': (_) => const LocalMediaScreen(),
+        '/local-player': (_) => const LocalMediaPlayerScreen(),
+        '/watch-party': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? {};
+          return WatchPartyScreen(movieId: args['movieId'] ?? '', movieTitle: args['movieTitle'] ?? '');
+        },
       },
       onGenerateRoute: (settings) {
+        if (settings.name == '/user-profile') {
+          final userId = settings.arguments as String;
+          return MaterialPageRoute(
+            builder: (_) => UserProfileScreen(userId: userId),
+          );
+        }
         if (settings.name == '/movie-detail') {
-          final movie = settings.arguments as Movie;
+          final movie = settings.arguments as SampleMovie;
           return PageRouteBuilder(
             pageBuilder: (context, anim1, anim2) => MovieDetailScreen(movie: movie),
             transitionsBuilder: (context, anim, secondaryAnimation, child) =>
@@ -158,15 +241,6 @@ class CinemaFlixApp extends StatelessWidget {
 }
 
 class _NoScrollbarBehavior extends ScrollBehavior {
-  // Desktop: allow dragging scrollables with mouse/trackpad too.
-  @override
-  Set<PointerDeviceKind> get dragDevices => {
-        PointerDeviceKind.touch,
-        PointerDeviceKind.mouse,
-        PointerDeviceKind.trackpad,
-        PointerDeviceKind.stylus,
-      };
-
   @override
   Widget buildScrollbar(BuildContext context, Widget child, ScrollableDetails details) {
     return child;
@@ -200,65 +274,76 @@ class _MainShellState extends State<MainShell> {
     HomeScreen(),
     SocialFeedScreen(),
     ShortsScreen(),
-    LiveScreen(),
     ChatScreen(),
+    ProfileScreen(),
   ];
-
-  void _onTabSelected(int index) {
-    HapticFeedback.selectionClick();
-    setState(() => _currentIndex = index);
-  }
 
   @override
   Widget build(BuildContext context) {
-    // Desktop/tablet: side NavigationRail. Phones: bottom navigation bar.
-    final wide = MediaQuery.of(context).size.width >= 900;
-    final content = IndexedStack(
-      index: _currentIndex,
-      children: _screens,
-    );
+    final isDesktop = Platform.isLinux;
+
+    if (isDesktop) {
+      return Row(
+        children: [
+          DesktopSidebar(
+            currentIndex: _currentIndex,
+            onNavigate: (index) => setState(() => _currentIndex = index),
+          ),
+          const VerticalDivider(width: 1, color: Color(0xFF2A2A2A)),
+          Expanded(
+            child: OfflineBanner(
+              connectivityService: connectivityService,
+              child: IndexedStack(
+                index: _currentIndex,
+                children: _screens,
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
     return Scaffold(
       key: _scaffoldKey,
       drawer: const AppDrawer(),
-      body: wide
-          ? Row(
-              children: [
-                NavigationRail(
-                  selectedIndex: _currentIndex,
-                  onDestinationSelected: _onTabSelected,
-                  labelType: NavigationRailLabelType.all,
-                  destinations: const [
-                    NavigationRailDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: Text('Home')),
-                    NavigationRailDestination(icon: Icon(Icons.dynamic_feed_outlined), selectedIcon: Icon(Icons.dynamic_feed), label: Text('Feed')),
-                    NavigationRailDestination(icon: Icon(Icons.video_library_outlined), selectedIcon: Icon(Icons.video_library), label: Text('Shorts')),
-                    NavigationRailDestination(icon: Icon(Icons.live_tv_outlined), selectedIcon: Icon(Icons.live_tv), label: Text('Live')),
-                    NavigationRailDestination(icon: Icon(Icons.chat_outlined), selectedIcon: Icon(Icons.chat), label: Text('Chat')),
-                  ],
-                ),
-                const VerticalDivider(width: 1, thickness: 1, color: AppColors.surfaceVariant),
-                Expanded(child: content),
-              ],
+      body: OfflineBanner(
+        connectivityService: connectivityService,
+        child: IndexedStack(
+          index: _currentIndex,
+          children: _screens,
+        ),
+      ),
+      bottomNavigationBar: _currentIndex == 2
+          ? ShortsTikTokNav(
+              onHome: () => setState(() => _currentIndex = 0),
+              onDiscover: () {},
+              onCreate: () => Navigator.pushNamed(context, '/creator-upload'),
+              onInbox: () => setState(() => _currentIndex = 3),
+              onProfile: () => setState(() => _currentIndex = 4),
+              inboxBadge: 3,
             )
-          : content,
-      bottomNavigationBar: wide
+          : _currentIndex == 4
           ? null
           : Container(
-              decoration: const BoxDecoration(
-                border: Border(top: BorderSide(color: AppColors.surfaceVariant, width: 0.5)),
-              ),
-              child: BottomNavigationBar(
-                currentIndex: _currentIndex,
-                onTap: _onTabSelected,
-                type: BottomNavigationBarType.fixed,
-                items: const [
-                  BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Home'),
-                  BottomNavigationBarItem(icon: Icon(Icons.dynamic_feed_outlined), activeIcon: Icon(Icons.dynamic_feed), label: 'Feed'),
-                  BottomNavigationBarItem(icon: Icon(Icons.video_library_outlined), activeIcon: Icon(Icons.video_library), label: 'Shorts'),
-                  BottomNavigationBarItem(icon: Icon(Icons.live_tv_outlined), activeIcon: Icon(Icons.live_tv), label: 'Live'),
-                  BottomNavigationBarItem(icon: Icon(Icons.chat_outlined), activeIcon: Icon(Icons.chat), label: 'Chat'),
-                ],
-              ),
-            ),
+        decoration: const BoxDecoration(
+          border: Border(top: BorderSide(color: Color(0xFF2A2A2A), width: 0.5)),
+        ),
+        child: BottomNavigationBar(
+          currentIndex: _currentIndex,
+          onTap: (index) {
+            HapticFeedback.selectionClick();
+            setState(() => _currentIndex = index);
+          },
+          type: BottomNavigationBarType.fixed,
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Home'),
+            BottomNavigationBarItem(icon: Icon(Icons.dynamic_feed_outlined), activeIcon: Icon(Icons.dynamic_feed), label: 'Feed'),
+            BottomNavigationBarItem(icon: Icon(Icons.video_library_outlined), activeIcon: Icon(Icons.video_library), label: 'Shorts'),
+            BottomNavigationBarItem(icon: Icon(Icons.chat_outlined), activeIcon: Icon(Icons.chat), label: 'Chat'),
+            BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Profile'),
+          ],
+        ),
+      ),
     );
   }
 }

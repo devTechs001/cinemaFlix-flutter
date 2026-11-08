@@ -33,6 +33,19 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# Environment files (keep secrets local)
+.env
+.env.*
+!.env.example
+!.env.sample
+/backend/.env
+/backend/.env.*
+
+# Firebase local config
+.firebaserc
+.firebaserc.*
+.firebase/
+
 # Symbolication related
 app.*.symbols
 
@@ -44,6 +57,8 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+# Local feature documentation (not for GitHub)
+README.md
+
 # Local secrets & misc (copy .env.example to .env locally)
-.env
 wget-log

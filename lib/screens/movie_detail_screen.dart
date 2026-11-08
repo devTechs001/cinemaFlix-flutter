@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
-import '../theme/app_tokens.dart';
 import 'package:flutter/services.dart';
-import 'package:uuid/uuid.dart';
+import 'package:share_plus/share_plus.dart';
 import '../services/globals.dart';
-import '../models/movie_catalogue.dart';
+import '../models/sample_movies.dart';
 import '../models/review_model.dart';
 import '../widgets/interactive_card.dart';
-import '../widgets/movie_poster.dart';
 import 'movie_play_screen.dart';
 
 class MovieDetailScreen extends StatefulWidget {
-  final Movie movie;
+  final SampleMovie movie;
 
   const MovieDetailScreen({super.key, required this.movie});
 
@@ -18,12 +16,17 @@ class MovieDetailScreen extends StatefulWidget {
   State<MovieDetailScreen> createState() => _MovieDetailScreenState();
 }
 
-class _MovieDetailScreenState extends State<MovieDetailScreen> {
+class _MovieDetailScreenState extends State<MovieDetailScreen>
+    with TickerProviderStateMixin {
   final _commentController = TextEditingController();
   final List<Map<String, dynamic>> _comments = [];
   double _userRating = 0;
   bool _isFavorited = false;
   bool _inWatchlist = false;
+  late AnimationController _starsController;
+  late AnimationController _parallaxController;
+  late ScrollController _scrollController;
+  double _parallaxOffset = 0;
 
   String get _userId => authService.currentUser?.id ?? '';
 
@@ -32,12 +35,37 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     super.initState();
     _comments.addAll(_sampleComments);
     _loadStates();
-    _loadReviews();
+
+    _starsController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+
+    _parallaxController = AnimationController(
+      vsync: this,
+      value: 0,
+      upperBound: 1,
+    );
+
+    _scrollController = ScrollController()
+      ..addListener(() {
+        setState(() {
+          _parallaxOffset = (_scrollController.offset / 360).clamp(0, 1);
+        });
+      });
+  }
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    _starsController.dispose();
+    _parallaxController.dispose();
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadStates() async {
-    // No auth gate: DatabaseService is local-first, so guests load
-    // their SQLite favorites/watchlist here too.
+    if (authService.currentUser == null) return;
     try {
       final allFavs = await databaseService.getFavorites(_userId);
       final watch = await databaseService.isInWatchlist(_userId, widget.movie.id);
@@ -50,35 +78,6 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     } catch (_) {}
   }
 
-  /// Loads real reviews from Supabase and shows them above the sample
-  /// ones (samples stay as placeholders until there is real content).
-  Future<void> _loadReviews() async {
-    try {
-      final reviews = await databaseService.getMovieReviews(widget.movie.id);
-      if (reviews.isEmpty || !mounted) return;
-      setState(() {
-        _comments.insertAll(0, reviews.map((r) => <String, dynamic>{
-              'user': r.username ?? 'Cinema Fan',
-              'avatar': (r.username == null || r.username!.isEmpty)
-                  ? 'C'
-                  : r.username![0].toUpperCase(),
-              'comment': r.content,
-              'rating': r.rating.round(),
-              'time': _relativeTime(r.createdAt),
-              'likes': 0,
-            }));
-      });
-    } catch (_) {}
-  }
-
-  String _relativeTime(DateTime time) {
-    final diff = DateTime.now().difference(time);
-    if (diff.inMinutes < 1) return 'just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    return '${diff.inDays}d ago';
-  }
-
   final List<Map<String, dynamic>> _sampleComments = const [
     {'user': 'Sarah J.', 'avatar': 'S', 'comment': 'Absolutely stunning cinematography! The visual effects were mind-blowing. A must-watch for any sci-fi fan.', 'rating': 5, 'time': '2h ago', 'likes': 24},
     {'user': 'Mike Chen', 'avatar': 'M', 'comment': 'The storyline kept me on the edge of my seat. One of the best movies this year!', 'rating': 4, 'time': '5h ago', 'likes': 18},
@@ -86,12 +85,6 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     {'user': 'Alex Turner', 'avatar': 'A', 'comment': 'I watched it twice already. Each time I notice something new. Brilliant filmmaking.', 'rating': 4, 'time': '2d ago', 'likes': 12},
     {'user': 'Rachel Kim', 'avatar': 'R', 'comment': 'Good movie but the pacing was a bit slow in the middle. The ending made up for it though.', 'rating': 3, 'time': '3d ago', 'likes': 7},
   ];
-
-  @override
-  void dispose() {
-    _commentController.dispose();
-    super.dispose();
-  }
 
   Future<void> _addComment() async {
     final text = _commentController.text.trim();
@@ -110,17 +103,16 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       _comments.insert(0, newReview);
     });
     _commentController.clear();
-    final rating = _userRating;
     _userRating = 0;
 
     if (authService.currentUser != null) {
       try {
         await databaseService.addReview(
           ReviewModel(
-            id: const Uuid().v4(),
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
             userId: _userId,
             movieId: widget.movie.id,
-            rating: rating,
+            rating: _userRating,
             content: text,
             createdAt: DateTime.now(),
           ),
@@ -128,6 +120,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       } catch (_) {}
     }
 
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Review added!'), duration: Duration(seconds: 1)),
     );
@@ -136,61 +129,98 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const AppColors.background,
+      backgroundColor: const Color(0xFF141414),
       body: CustomScrollView(
+        controller: _scrollController,
         physics: const BouncingScrollPhysics(),
         slivers: [
           SliverAppBar(
             expandedHeight: 360,
             pinned: true,
-            backgroundColor: const AppColors.background,
+            backgroundColor: const Color(0xFF141414),
             leading: IconButton(
               icon: const Icon(Icons.arrow_back, color: Colors.white),
               onPressed: () => Navigator.pop(context),
             ),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.share_outlined, color: Colors.white),
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  Share.share(
+                    'Check out "${widget.movie.title}" on CinemaFlix! ★ ${widget.movie.rating}',
+                  );
+                },
+              ),
+            ],
             flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      widget.movie.gradientStart,
-                      widget.movie.gradientEnd,
-                      const AppColors.background,
-                    ],
-                  ),
-                ),
-                child: Stack(
-                  children: [
-                    Positioned.fill(
-                      child: MoviePoster(movie: widget.movie, scrim: true),
-                    ),
-                    Positioned(
-                      bottom: 40, left: 20, right: 20,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+              background: Stack(
+                children: [
+                  Transform.translate(
+                    offset: Offset(0, -_parallaxOffset * 60),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            widget.movie.gradientStart,
+                            widget.movie.gradientEnd,
+                            const Color(0xFF141414),
+                          ],
+                        ),
+                      ),
+                      child: Stack(
                         children: [
-                          Text(widget.movie.title, style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white)),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              _badge(widget.movie.rating, const AppColors.brand),
-                              const SizedBox(width: 10),
-                              Text(widget.movie.year, style: const TextStyle(color: Colors.white54)),
-                              const SizedBox(width: 10),
-                              const Icon(Icons.circle, size: 4, color: Colors.white38),
-                              const SizedBox(width: 10),
-                              Text(widget.movie.duration, style: const TextStyle(color: Colors.white54)),
-                            ],
+                          Center(
+                            child: Icon(Icons.movie_filter_outlined, color: Colors.white.withAlpha(30), size: 120),
                           ),
-                          const SizedBox(height: 6),
-                          Text(widget.movie.genre, style: const TextStyle(color: AppColors.brand, fontSize: 13)),
+                          Positioned(
+                            bottom: 40, left: 20, right: 20,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(widget.movie.title, style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white)),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    _badge(widget.movie.rating, const Color(0xFFE50914)),
+                                    const SizedBox(width: 10),
+                                    Text(widget.movie.year, style: const TextStyle(color: Colors.white54)),
+                                    const SizedBox(width: 10),
+                                    const Icon(Icons.circle, size: 4, color: Colors.white38),
+                                    const SizedBox(width: 10),
+                                    Text(widget.movie.duration, style: const TextStyle(color: Colors.white54)),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Text(widget.movie.genre, style: const TextStyle(color: Color(0xFFE50914), fontSize: 13)),
+                              ],
+                            ),
+                          ),
                         ],
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      height: 40,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            const Color(0xFF141414),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -219,17 +249,44 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                           child: Container(
                             height: 50,
                             decoration: BoxDecoration(
-                              color: const AppColors.brand,
+                              color: const Color(0xFFE50914),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.play_arrow, color: Colors.white, size: 24),
-                                SizedBox(width: 8),
-                                Text('Play Now', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
-                              ],
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.play_arrow, color: Colors.white, size: 24),
+                                  SizedBox(width: 8),
+                                  Text('Play Now', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+                                ],
+                              ),
                             ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      InteractiveCard(
+                        onTap: () {
+                          HapticFeedback.mediumImpact();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Trailer coming soon!'), duration: Duration(seconds: 1)),
+                          );
+                        },
+                        child: Container(
+                          height: 50,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.white24),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.play_circle_outline, color: Colors.white, size: 20),
+                              SizedBox(width: 6),
+                              Text('Trailer', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+                            ],
                           ),
                         ),
                       ),
@@ -237,7 +294,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                       _actionButton(Icons.bookmark_border, Icons.bookmark, _inWatchlist, () async {
                         HapticFeedback.lightImpact();
                         setState(() => _inWatchlist = !_inWatchlist);
-                        { // local-first: SQLite for guests, Supabase sync when signed in
+                        if (authService.currentUser != null) {
                           await databaseService.toggleWatchlist(_userId, widget.movie.id,
                             title: widget.movie.title, genre: widget.movie.genre, year: widget.movie.year, rating: widget.movie.rating);
                         }
@@ -246,7 +303,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                       _actionButton(Icons.favorite_border, Icons.favorite, _isFavorited, () async {
                         HapticFeedback.lightImpact();
                         setState(() => _isFavorited = !_isFavorited);
-                        { // local-first: SQLite for guests, Supabase sync when signed in
+                        if (authService.currentUser != null) {
                           await databaseService.toggleFavorite(_userId, widget.movie.id,
                             title: widget.movie.title, genre: widget.movie.genre, year: widget.movie.year, rating: widget.movie.rating);
                         }
@@ -262,7 +319,9 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                   const SizedBox(height: 8),
                   _infoRow('Cast', widget.movie.cast),
                   const SizedBox(height: 24),
-                  const Divider(color: AppColors.surfaceVariant),
+                  _buildUserRatingBarChart(),
+                  const SizedBox(height: 24),
+                  const Divider(color: Color(0xFF2A2A2A)),
                   const SizedBox(height: 16),
                   _buildRatingSection(),
                   const SizedBox(height: 20),
@@ -276,7 +335,26 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  ..._comments.asMap().entries.map((e) => _buildCommentCard(e.value, e.key)),
+                  if (_comments.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      child: Center(
+                        child: Text('No reviews yet. Be the first!', style: TextStyle(color: Colors.white.withAlpha(80), fontSize: 14)),
+                      ),
+                    )
+                  else
+                    SizedBox(
+                      height: 320,
+                      child: Scrollbar(
+                        child: ListView.separated(
+                          physics: const BouncingScrollPhysics(),
+                          padding: EdgeInsets.zero,
+                          itemCount: _comments.length,
+                          separatorBuilder: (_, _) => const Divider(color: Color(0xFF2A2A2A), height: 1, indent: 60),
+                          itemBuilder: (context, index) => _buildCommentCard(_comments[index], index),
+                        ),
+                      ),
+                    ),
                   const SizedBox(height: 24),
                   _buildMoreLikeThis(),
                   const SizedBox(height: 40),
@@ -289,6 +367,55 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     );
   }
 
+  Widget _buildUserRatingBarChart() {
+    final ratings = [12, 28, 45, 68, 92];
+    final labels = ['1★', '2★', '3★', '4★', '5★'];
+    final maxVal = ratings.reduce((a, b) => a > b ? a : b).toDouble();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('User Ratings', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+        const SizedBox(height: 12),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: List.generate(5, (i) {
+            final height = maxVal > 0 ? (ratings[i] / maxVal) * 80 : 0.0;
+            return Expanded(
+              child: Column(
+                children: [
+                  Text('${ratings[i]}', style: const TextStyle(color: Colors.white38, fontSize: 10)),
+                  const SizedBox(height: 4),
+                  Container(
+                    height: 80,
+                    alignment: Alignment.bottomCenter,
+                    child: Container(
+                      width: 20,
+                      height: height,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(4),
+                        gradient: LinearGradient(
+                          begin: Alignment.bottomCenter,
+                          end: Alignment.topCenter,
+                          colors: [
+                            const Color(0xFFE50914).withAlpha(180),
+                            const Color(0xFFE50914),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(labels[i], style: const TextStyle(color: Colors.white38, fontSize: 10)),
+                ],
+              ),
+            );
+          }),
+        ),
+      ],
+    );
+  }
+
   Widget _actionButton(IconData outlined, IconData filled, bool isActive, VoidCallback onTap) {
     return InteractiveCard(
       onTap: onTap,
@@ -296,10 +423,10 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       child: Container(
         width: 50, height: 50,
         decoration: BoxDecoration(
-          border: Border.all(color: isActive ? const AppColors.brand : Colors.white24),
+          border: Border.all(color: isActive ? const Color(0xFFE50914) : Colors.white24),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Icon(isActive ? filled : outlined, color: isActive ? const AppColors.brand : Colors.white54),
+        child: Icon(isActive ? filled : outlined, color: isActive ? const Color(0xFFE50914) : Colors.white54),
       ),
     );
   }
@@ -310,25 +437,44 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       children: [
         const Text('Rate This Movie', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
         const SizedBox(height: 8),
-        Row(
-          children: List.generate(5, (i) {
-            final star = i + 1;
-            return InteractiveCard(
-              onTap: () {
-                HapticFeedback.lightImpact();
-                setState(() => _userRating = _userRating == star ? 0 : star.toDouble());
-              },
-              scaleAmount: 0.85,
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                child: Icon(
-                  star <= _userRating ? Icons.star : Icons.star_border,
-                  color: star <= _userRating ? Colors.amber : Colors.white24,
-                  size: 36,
+        GestureDetector(
+          onTap: () {
+            _starsController.reset();
+            _starsController.forward();
+          },
+          child: Row(
+            children: List.generate(5, (i) {
+              final star = i + 1;
+              return InteractiveCard(
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  setState(() => _userRating = _userRating == star ? 0 : star.toDouble());
+                  _starsController.reset();
+                  _starsController.forward();
+                },
+                scaleAmount: 0.85,
+                child: AnimatedBuilder(
+                  animation: _starsController,
+                  builder: (context, _) {
+                    final delay = i * 0.15;
+                    final animValue = ((_starsController.value - delay) / (1 - delay)).clamp(0.0, 1.0);
+                    final scaleAnim = Tween<double>(begin: 0.5, end: 1).transform(animValue);
+                    return Transform.scale(
+                      scale: _userRating >= star ? scaleAnim : 1,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        child: Icon(
+                          star <= _userRating ? Icons.star : Icons.star_border,
+                          color: star <= _userRating ? Colors.amber : Colors.white24,
+                          size: 36,
+                        ),
+                      ),
+                    );
+                  },
                 ),
-              ),
-            );
-          }),
+              );
+            }),
+          ),
         ),
       ],
     );
@@ -338,7 +484,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const AppColors.surface,
+        color: const Color(0xFF1F1F1F),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -362,7 +508,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                 decoration: BoxDecoration(
-                  color: _commentController.text.trim().isEmpty ? Colors.white12 : const AppColors.brand,
+                  color: _commentController.text.trim().isEmpty ? Colors.white12 : const Color(0xFFE50914),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: const Text('Post', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
@@ -379,7 +525,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const AppColors.surface,
+        color: const Color(0xFF1F1F1F),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -389,8 +535,8 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
             children: [
               CircleAvatar(
                 radius: 18,
-                backgroundColor: const AppColors.surfaceVariant,
-                child: Text(comment['avatar'], style: const TextStyle(color: AppColors.brand, fontWeight: FontWeight.bold)),
+                backgroundColor: const Color(0xFF2A2A2A),
+                child: Text(comment['avatar'], style: const TextStyle(color: Color(0xFFE50914), fontWeight: FontWeight.bold)),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -441,13 +587,13 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
         const Text('More Like This', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
         const SizedBox(height: 12),
         SizedBox(
-          height: 160,
+          height: 180,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            itemCount: movieCatalogue.length,
+            itemCount: sampleMovies.length,
             separatorBuilder: (_, _) => const SizedBox(width: 8),
             itemBuilder: (_, i) {
-              final related = movieCatalogue[i];
+              final related = sampleMovies[i];
               if (related.id == widget.movie.id) return const SizedBox.shrink();
               return InteractiveCard(
                 onTap: () {
@@ -460,24 +606,39 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                     ),
                   );
                 },
-                child: SizedBox(
-                  width: 120,
-                  child: Stack(
+                child: Container(
+                  width: 140,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(colors: [related.gradientStart, related.gradientEnd]),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Positioned.fill(
-                        child: MoviePoster(movie: related, borderRadius: BorderRadius.circular(12), scrim: true),
-                      ),
-                      Positioned(
-                        left: 6, right: 6, bottom: 8,
-                        child: Column(
-                          children: [
-                            Text(related.title, textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12)),
-                            const SizedBox(height: 2),
-                            Text('★ ${related.rating}', style: const TextStyle(color: Colors.amber, fontSize: 11)),
-                          ],
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE50914).withAlpha(30),
+                          borderRadius: BorderRadius.circular(10),
                         ),
+                        child: Icon(Icons.movie_outlined, color: const Color(0xFFE50914).withAlpha(180), size: 24),
                       ),
+                      const SizedBox(height: 10),
+                      Text(related.title, textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+                      const SizedBox(height: 6),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.star, color: Colors.amber, size: 14),
+                          const SizedBox(width: 4),
+                          Text(related.rating, style: const TextStyle(color: Colors.amber, fontSize: 12, fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(related.genre.split('/')[0].trim(), style: const TextStyle(color: Colors.white38, fontSize: 10)),
                     ],
                   ),
                 ),

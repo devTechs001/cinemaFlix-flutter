@@ -1,28 +1,24 @@
 import 'package:flutter/material.dart';
-import 'local_db_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ThemeService extends ChangeNotifier {
-  static const _themeIndexKey = 'theme_index';
   int _activeIndex = 0;
+  static const _prefsKey = 'theme_index';
 
   int get activeIndex => _activeIndex;
   ThemeData get activeTheme => themes[_activeIndex];
 
-  void setTheme(int index) {
-    _activeIndex = index;
-    // Persist to SQLite so the choice survives restarts.
-    LocalDbService().setIntSetting(_themeIndexKey, index);
+  Future<void> initialize() async {
+    final prefs = await SharedPreferences.getInstance();
+    _activeIndex = prefs.getInt(_prefsKey) ?? 0;
     notifyListeners();
   }
 
-  /// Restores the saved theme (called once at startup, after
-  /// [LocalDbService.initialize]).
-  Future<void> loadPersistedTheme() async {
-    final saved = await LocalDbService().getIntSetting(_themeIndexKey);
-    if (saved != null && saved >= 0 && saved < themes.length) {
-      _activeIndex = saved;
-      notifyListeners();
-    }
+  Future<void> setTheme(int index) async {
+    _activeIndex = index;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_prefsKey, index);
   }
 
   static final List<ThemeData> themes = [

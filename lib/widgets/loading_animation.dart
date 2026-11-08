@@ -48,7 +48,7 @@ class _CinemaLoadingState extends State<CinemaLoading>
         children: [
           AnimatedBuilder(
             animation: Listenable.merge([_pulseController, _rotateController]),
-            builder: (_, __) {
+            builder: (_, _) {
               return Transform.scale(
                 scale: _pulse.value,
                 child: RotationTransition(
