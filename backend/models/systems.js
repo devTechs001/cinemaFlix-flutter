@@ -93,6 +93,11 @@ const userSettingsSchema = new mongoose.Schema({
     reminders: { type: Boolean, default: true },
     engagement: { type: Boolean, default: true },
   },
+  playback: { type: mongoose.Schema.Types.Mixed, default: {} },
+  privacy: { type: mongoose.Schema.Types.Mixed, default: {} },
+  notifications: { type: mongoose.Schema.Types.Mixed, default: {} },
+  content: { type: mongoose.Schema.Types.Mixed, default: {} },
+  profile: { type: mongoose.Schema.Types.Mixed, default: {} },
 }, { minimize: false });
 
 const adminConfigSchema = new mongoose.Schema({

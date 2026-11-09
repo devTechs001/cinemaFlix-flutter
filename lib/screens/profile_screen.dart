@@ -1,5 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
+import '../services/api_config.dart';
 import '../services/globals.dart';
 import '../services/sound_service.dart' show SoundEvent;
 import '../widgets/interactive_card.dart';
@@ -23,6 +27,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late final TextEditingController _locationController;
   String _selectedLanguage = 'English';
   String _avatarEmoji = '';
+  int _followers = 0;
+  int _following = 0;
+  int _posts = 0;
 
   int _userLevel = 12;
   double _xpProgress = 0.65;
@@ -73,10 +80,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: authService.currentUser?.username ?? 'Cinema Fan');
-    _bioController = TextEditingController(text: 'Movie enthusiast 🎬 | 100+ films watched');
-    _websiteController = TextEditingController(text: '');
-    _locationController = TextEditingController(text: '');
+    _bioController = TextEditingController(
+      text: (authService.currentUser?.bio.isNotEmpty ?? false)
+          ? authService.currentUser!.bio
+          : settingsService.bio,
+    );
+    _websiteController = TextEditingController(
+      text: (authService.currentUser?.website.isNotEmpty ?? false)
+          ? authService.currentUser!.website
+          : settingsService.website,
+    );
+    _locationController = TextEditingController(
+      text: (authService.currentUser?.location.isNotEmpty ?? false)
+          ? authService.currentUser!.location
+          : settingsService.location,
+    );
+    _selectedLanguage = settingsService.language;
+    _avatarEmoji = settingsService.avatarEmoji;
+    _nameController.addListener(_onPreviewTick);
+    _bioController.addListener(_onPreviewTick);
+    _websiteController.addListener(_onPreviewTick);
+    _locationController.addListener(_onPreviewTick);
     authService.addListener(_onAuthChange);
+    settingsService.addListener(_onSettingsChange);
+    _hydrateProfile();
+  }
+
+  void _onPreviewTick() {
+    if (mounted) setState(() {});
+  }
+
+  void _onSettingsChange() {
+    if (!mounted || _isEditing) return;
+    setState(() {
+      _selectedLanguage = settingsService.language;
+      _avatarEmoji = settingsService.avatarEmoji;
+    });
   }
 
   void _onAuthChange() {
@@ -85,11 +124,61 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _nameController.text = authService.currentUser?.username ?? 'Cinema Fan';
       });
     }
+    _hydrateProfile();
+  }
+
+  Future<void> _hydrateProfile() async {
+    final user = authService.currentUser;
+    settingsService.bind(userId: user?.id, token: authService.token);
+    await settingsService.load();
+    if (!mounted) return;
+    if (!_isEditing) {
+      if (settingsService.bio.isNotEmpty) _bioController.text = settingsService.bio;
+      _websiteController.text = settingsService.website;
+      _locationController.text = settingsService.location;
+      _selectedLanguage = settingsService.language;
+      _avatarEmoji = settingsService.avatarEmoji;
+    }
+    if (user == null) {
+      if (mounted) setState(() {});
+      return;
+    }
+    try {
+      final res = await http
+          .get(Uri.parse(ApiConfig.apiPath('/users/${user.id}')))
+          .timeout(const Duration(seconds: 8));
+      if (res.statusCode == 200) {
+        final body = jsonDecode(res.body);
+        if (body is Map<String, dynamic>) {
+          _followers = (body['followersCount'] as num?)?.toInt() ?? _followers;
+          _following = (body['followingCount'] as num?)?.toInt() ?? _following;
+          _posts = (body['postsCount'] as num?)?.toInt() ?? _posts;
+          final remoteBio = (body['bio'] ?? '').toString();
+          final remoteWebsite = (body['website'] ?? '').toString();
+          final remoteLocation = (body['location'] ?? '').toString();
+          if (!_isEditing) {
+            if (remoteBio.isNotEmpty) _bioController.text = remoteBio;
+            _websiteController.text = remoteWebsite;
+            _locationController.text = remoteLocation;
+            final uname = (body['username'] ?? '').toString();
+            if (uname.isNotEmpty) _nameController.text = uname;
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Profile hydrate: $e');
+    }
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
     authService.removeListener(_onAuthChange);
+    settingsService.removeListener(_onSettingsChange);
+    _nameController.removeListener(_onPreviewTick);
+    _bioController.removeListener(_onPreviewTick);
+    _websiteController.removeListener(_onPreviewTick);
+    _locationController.removeListener(_onPreviewTick);
     _nameController.dispose();
     _bioController.dispose();
     _websiteController.dispose();
@@ -219,6 +308,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   trailing: isSelected ? const Icon(Icons.check, color: Color(0xFFE50914)) : null,
                   onTap: () {
                     setState(() => _selectedLanguage = lang);
+                    settingsService.patch(() => settingsService.language = lang);
                     Navigator.pop(ctx);
                     HapticFeedback.lightImpact();
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -590,9 +680,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-                          _buildFollowerCount('248', 'Followers'),
-                          _buildFollowerCount('186', 'Following'),
-                          _buildFollowerCount('126', 'Watched'),
+                          _buildFollowerCount('$_followers', 'Followers'),
+                          _buildFollowerCount('$_following', 'Following'),
+                          _buildFollowerCount('$_posts', 'Posts'),
                         ],
                       ),
                     ),
@@ -833,8 +923,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _toggleEdit() async {
-    if (_isEditing && authService.currentUser != null) {
-      await authService.updateProfile(username: _nameController.text.trim());
+    if (_isEditing) {
+      final name = _nameController.text.trim();
+      final bio = _bioController.text.trim();
+      final website = _websiteController.text.trim();
+      final location = _locationController.text.trim();
+      await authService.updateProfile(
+        username: name,
+        bio: bio,
+        website: website,
+        location: location,
+      );
+      await settingsService.patch(() {
+        settingsService.bio = bio;
+        settingsService.website = website;
+        settingsService.location = location;
+        settingsService.avatarEmoji = _avatarEmoji;
+      });
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Profile updated'), duration: Duration(seconds: 1)),
@@ -1359,36 +1464,65 @@ class _ProfileScreenState extends State<ProfileScreen> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
         padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Settings', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
-            const SizedBox(height: 20),
-            _settingsTile(Icons.wifi, 'Wi-Fi Only Streaming', true),
-            _settingsTile(Icons.download, 'Auto-download Watchlist', false),
-            _settingsTile(Icons.hd, 'HD Streaming', true),
-            _settingsTile(Icons.subtitles, 'Subtitles', true),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFE50914),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+        child: ListenableBuilder(
+          listenable: settingsService,
+          builder: (context, _) {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Settings', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+                const SizedBox(height: 8),
+                const Text(
+                  'Saved to your account',
+                  style: TextStyle(color: Colors.white38, fontSize: 12),
                 ),
-                child: const Text('Done'),
-              ),
-            ),
-          ],
+                const SizedBox(height: 20),
+                _settingsTile(Icons.wifi, 'Wi-Fi Only Streaming', settingsService.downloadOnWifi, (v) {
+                  settingsService.patch(() => settingsService.downloadOnWifi = v);
+                }),
+                _settingsTile(Icons.download, 'Auto-download Watchlist', settingsService.smartDownloads, (v) {
+                  settingsService.patch(() => settingsService.smartDownloads = v);
+                }),
+                _settingsTile(Icons.hd, 'HD Streaming', settingsService.hdStreaming, (v) {
+                  settingsService.patch(() => settingsService.hdStreaming = v);
+                }),
+                _settingsTile(Icons.subtitles, 'Subtitles', settingsService.subtitles, (v) {
+                  settingsService.patch(() => settingsService.subtitles = v);
+                }),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(context, '/settings');
+                    },
+                    child: const Text('All settings'),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFE50914),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: const Text('Done'),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget _settingsTile(IconData icon, String title, bool value) {
+  Widget _settingsTile(IconData icon, String title, bool value, ValueChanged<bool> onChanged) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
@@ -1398,8 +1532,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Expanded(child: Text(title, style: const TextStyle(color: Colors.white, fontSize: 14))),
           Switch(
             value: value,
-            onChanged: (_) => HapticFeedback.lightImpact(),
-            activeThumbColor: const Color(0xFFE50914),
+            onChanged: (v) {
+              HapticFeedback.lightImpact();
+              onChanged(v);
+            },
+            activeTrackColor: const Color(0xFFE50914),
           ),
         ],
       ),

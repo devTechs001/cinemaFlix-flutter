@@ -28,6 +28,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   String _username = '';
   String? _avatarUrl;
   String _createdAt = '';
+  String _bio = '';
+  String _website = '';
+  String _location = '';
   int _followers = 0;
   int _following = 0;
   int _postCount = 0;
@@ -65,6 +68,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         _following = (body['followingCount'] as num?)?.toInt() ?? 0;
         _postCount = (body['postsCount'] as num?)?.toInt() ?? 0;
         _isFollowing = body['isFollowing'] is bool ? body['isFollowing'] as bool : null;
+        _bio = (body['bio'] ?? '').toString();
+        _website = (body['website'] ?? '').toString();
+        _location = (body['location'] ?? '').toString();
       });
     } catch (_) {
       // Backend offline — keep the derived fallback below.
@@ -251,6 +257,22 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             '@$_shortId${_createdAt.isEmpty ? '' : ' · joined ${_createdAt.substring(0, _createdAt.length > 10 ? 10 : _createdAt.length)}'}',
             style: const TextStyle(color: Colors.white54, fontSize: 12),
           ),
+          if (_bio.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              _bio,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.35),
+            ),
+          ],
+          if (_location.isNotEmpty || _website.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                [_location, _website].where((s) => s.isNotEmpty).join(' · '),
+                style: const TextStyle(color: Colors.white38, fontSize: 12),
+              ),
+            ),
         ],
       ),
     );

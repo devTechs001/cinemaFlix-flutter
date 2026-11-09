@@ -14,6 +14,7 @@ import 'social_service.dart';
 import 'feature_flags.dart';
 export 'movie_service.dart' show movieService;
 import 'local_db_service.dart';
+import 'settings_service.dart';
 
 final authService = AuthService();
 final soundService = SoundService();
@@ -30,3 +31,4 @@ final syncService = SyncService();
 final feedService = FeedService();
 final socialService = SocialService();
 final localDbService = LocalDbService();
+final settingsService = SettingsService();

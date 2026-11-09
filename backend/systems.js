@@ -223,6 +223,11 @@ async function saveSettings(userId, partial) {
     sounds: { ...defaultSettings().sounds, ...(current.sounds || {}), ...((partial || {}).sounds || {}) },
     autoClean: { ...defaultSettings().autoClean, ...(current.autoClean || {}), ...((partial || {}).autoClean || {}) },
     popups: { ...defaultSettings().popups, ...(current.popups || {}), ...((partial || {}).popups || {}) },
+    playback: { ...defaultSettings().playback, ...(current.playback || {}), ...((partial || {}).playback || {}) },
+    privacy: { ...defaultSettings().privacy, ...(current.privacy || {}), ...((partial || {}).privacy || {}) },
+    notifications: { ...defaultSettings().notifications, ...(current.notifications || {}), ...((partial || {}).notifications || {}) },
+    content: { ...defaultSettings().content, ...(current.content || {}), ...((partial || {}).content || {}) },
+    profile: { ...defaultSettings().profile, ...(current.profile || {}), ...((partial || {}).profile || {}) },
   };
   if (!dbConnected()) { memory.settings.set(userId, merged); return merged; }
   await models.UserSettings.updateOne({ userId }, merged, { upsert: true });
@@ -231,9 +236,27 @@ async function saveSettings(userId, partial) {
 
 function defaultSettings() {
   return {
-    sounds: { notification: true, success: true, transaction: true, like: true, comment: true, celebrate: true, popups: true },
+    sounds: { notification: true, success: true, transaction: true, like: true, comment: true, celebrate: true, popups: true, gift: true, navigation: true },
     autoClean: { enabled: true, clearCacheDays: 14, clearOfflineVideos: false },
     popups: { enabled: true, reminders: true, engagement: true },
+    playback: {
+      hdStreaming: true,
+      autoPlay: true,
+      autoplayNext: true,
+      subtitles: true,
+      dolbyAtmos: false,
+      backgroundPlay: false,
+      gestureControls: true,
+      streamingQuality: 'Auto',
+      downloadQuality: 'HD',
+      downloadOnWifi: true,
+      smartDownloads: false,
+      dataSaver: false,
+    },
+    privacy: { privateAccount: false, socialShare: true, parentalControls: false },
+    notifications: { push: true, movies: true, chat: true, social: true, live: true },
+    content: { language: 'English', region: 'United States' },
+    profile: { bio: '', website: '', location: '', avatarEmoji: '' },
   };
 }
 

@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
 import 'api_config.dart';
+import 'settings_service.dart';
 import 'wallet_service.dart';
 
 class AuthService extends ChangeNotifier {
@@ -28,6 +29,8 @@ class AuthService extends ChangeNotifier {
       _token = savedToken;
       _currentUser = UserModel.fromJson(jsonDecode(savedUser) as Map<String, dynamic>);
       WalletService.setSignedIn(true); // restored session also mirrors the wallet
+      SettingsService.instance.bind(userId: _currentUser!.id, token: _token);
+      SettingsService.instance.load();
       notifyListeners();
     }
   }
@@ -36,6 +39,7 @@ class AuthService extends ChangeNotifier {
     _token = token;
     _currentUser = user;
     WalletService.setSignedIn(true); // enable backend wallet mirroring
+    SettingsService.instance.bind(userId: user.id, token: token);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('auth_token', token);
     await prefs.setString('auth_user', jsonEncode(user.toJson()));
@@ -202,22 +206,44 @@ class AuthService extends ChangeNotifier {
     _token = null;
     _currentUser = null;
     WalletService.setSignedIn(false); // stop backend wallet mirroring
+    SettingsService.instance.bind(userId: null, token: null);
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('auth_token');
     await prefs.remove('auth_user');
     notifyListeners();
   }
 
-  Future<void> updateProfile({String? username, String? avatarUrl}) async {
+  Future<void> updateProfile({
+    String? username,
+    String? avatarUrl,
+    String? bio,
+    String? website,
+    String? location,
+  }) async {
     if (_currentUser == null) return;
     try {
       final response = await http.put(
         Uri.parse(ApiConfig.apiPath('/users/${_currentUser!.id}')),
         headers: _headers,
-        body: jsonEncode({if (username != null) 'username': username}),
+        body: jsonEncode({
+          if (username != null) 'username': username,
+          if (avatarUrl != null) 'avatarUrl': avatarUrl,
+          if (bio != null) 'bio': bio,
+          if (website != null) 'website': website,
+          if (location != null) 'location': location,
+        }),
       );
       if (response.statusCode == 200) {
-        await _saveSession(_token!, _currentUser!.copyWith(username: username));
+        await _saveSession(
+          _token!,
+          _currentUser!.copyWith(
+            username: username,
+            avatarUrl: avatarUrl,
+            bio: bio,
+            website: website,
+            location: location,
+          ),
+        );
       }
     } catch (e) {
       debugPrint('AuthService: updateProfile failed: $e');
