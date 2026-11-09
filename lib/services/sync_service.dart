@@ -39,12 +39,17 @@ class SyncService {
 
   // ---------------------------------------------------------------- push
 
-  Future<void> _pushList(String userId, String table, List<Movie> movies) async {
+  Future<void> _pushList(
+    String userId,
+    String table,
+    List<Movie> movies,
+  ) async {
     if (movies.isEmpty) return;
     final supa = SupabaseService();
     try {
       final remote =
-          await supa.table(table).select('movie_id').eq('user_id', userId) as List;
+          await supa.table(table).select('movie_id').eq('user_id', userId)
+              as List;
       final have = remote.map((r) => r['movie_id']?.toString()).toSet();
       for (final m in movies) {
         if (have.contains(m.id)) continue;
@@ -68,10 +73,12 @@ class SyncService {
     try {
       final rows = await LocalDbService().getWatchHistory();
       if (rows.isEmpty) return;
-      final remote = await supa
-          .table('watch_history')
-          .select('movie_id')
-          .eq('user_id', userId) as List;
+      final remote =
+          await supa
+                  .table('watch_history')
+                  .select('movie_id')
+                  .eq('user_id', userId)
+              as List;
       final have = remote.map((r) => r['movie_id']?.toString()).toSet();
       for (final row in rows) {
         final movieId = row['movie_id']?.toString() ?? '';
@@ -90,13 +97,18 @@ class SyncService {
   // ---------------------------------------------------------------- pull
 
   Future<void> _pullList(
-      String userId, String table, LocalDbService local) async {
+    String userId,
+    String table,
+    LocalDbService local,
+  ) async {
     try {
       final supa = SupabaseService();
       final remote =
           await supa.table(table).select().eq('user_id', userId) as List;
       if (remote.isEmpty) return;
-      final movies = remote.map(Movie.fromMap).toList();
+      final movies = remote
+          .map((row) => Movie.fromMap(Map<String, dynamic>.from(row as Map)))
+          .toList();
       final localMovies = table == 'favorites'
           ? await local.getFavorites()
           : await local.getWatchlist();
@@ -104,19 +116,23 @@ class SyncService {
       for (final m in movies) {
         if (m.id.isEmpty || have.contains(m.id)) continue;
         if (table == 'favorites') {
-          await local.toggleFavorite(m.id,
-              title: m.title,
-              genre: m.genre,
-              year: m.year,
-              rating: m.rating,
-              posterUrl: m.posterUrl);
+          await local.toggleFavorite(
+            m.id,
+            title: m.title,
+            genre: m.genre,
+            year: m.year,
+            rating: m.rating,
+            posterUrl: m.posterUrl,
+          );
         } else {
-          await local.toggleWatchlist(m.id,
-              title: m.title,
-              genre: m.genre,
-              year: m.year,
-              rating: m.rating,
-              posterUrl: m.posterUrl);
+          await local.toggleWatchlist(
+            m.id,
+            title: m.title,
+            genre: m.genre,
+            year: m.year,
+            rating: m.rating,
+            posterUrl: m.posterUrl,
+          );
         }
       }
     } catch (e) {
@@ -127,10 +143,12 @@ class SyncService {
   Future<void> _pullHistory(String userId) async {
     try {
       final supa = SupabaseService();
-      final remote = await supa
-          .table('watch_history')
-          .select('movie_id, progress')
-          .eq('user_id', userId) as List;
+      final remote =
+          await supa
+                  .table('watch_history')
+                  .select('movie_id, progress')
+                  .eq('user_id', userId)
+              as List;
       if (remote.isEmpty) return;
       final local = LocalDbService();
       final existing = await local.getWatchHistory();

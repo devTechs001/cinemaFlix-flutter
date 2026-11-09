@@ -31,28 +31,109 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
   // Reactions
   final List<_FloatingReaction> _reactions = [];
   Timer? _reactionTimer;
-  final List<String> _reactionEmojis = ['❤️', '🔥', '👏', '😂', '😮', '😍', '🎬', '🍿'];
+  final List<String> _reactionEmojis = [
+    '❤️',
+    '🔥',
+    '👏',
+    '😂',
+    '😮',
+    '😍',
+    '🎬',
+    '🍿',
+  ];
 
   // Gift system
   int _diamonds = 500;
 
   final List<Map<String, dynamic>> _liveRooms = [
-    {'name': 'Sci-Fi Night', 'host': 'MovieBot', 'viewers': 284, 'movie': 'Interstellar', 'color': const Color(0xFF1E88E5), 'active': true, 'tags': ['Trending', 'Popular']},
-    {'name': 'Marvel Marathon', 'host': 'FanClub', 'viewers': 156, 'movie': 'Deadpool 3', 'color': const Color(0xFFE50914), 'active': true, 'tags': ['New']},
-    {'name': 'Classic Cinema', 'host': 'Cinephiles', 'viewers': 89, 'movie': 'Inception', 'color': const Color(0xFF7B1FA2), 'active': true, 'tags': ['Classic']},
-    {'name': 'New Releases', 'host': 'Reviews Hub', 'viewers': 67, 'movie': 'Dune: Part Two', 'color': const Color(0xFF43A047), 'active': false, 'tags': []},
-    {'name': 'Action Hour', 'host': 'Alex C.', 'viewers': 42, 'movie': 'The Batman', 'color': const Color(0xFFFF6F00), 'active': false, 'tags': []},
-    {'name': 'Horror Night', 'host': 'Spooky Club', 'viewers': 78, 'movie': 'The Others', 'color': const Color(0xFF5E35B1), 'active': true, 'tags': ['Scary']},
-    {'name': 'Anime Corner', 'host': 'OtakuHub', 'viewers': 53, 'movie': 'Spirited Away', 'color': const Color(0xFFE91E63), 'active': true, 'tags': ['Anime']},
+    {
+      'name': 'Sci-Fi Night',
+      'host': 'MovieBot',
+      'viewers': 284,
+      'movie': 'Interstellar',
+      'color': const Color(0xFF1E88E5),
+      'active': true,
+      'tags': ['Trending', 'Popular'],
+    },
+    {
+      'name': 'Marvel Marathon',
+      'host': 'FanClub',
+      'viewers': 156,
+      'movie': 'Deadpool 3',
+      'color': const Color(0xFFE50914),
+      'active': true,
+      'tags': ['New'],
+    },
+    {
+      'name': 'Classic Cinema',
+      'host': 'Cinephiles',
+      'viewers': 89,
+      'movie': 'Inception',
+      'color': const Color(0xFF7B1FA2),
+      'active': true,
+      'tags': ['Classic'],
+    },
+    {
+      'name': 'New Releases',
+      'host': 'Reviews Hub',
+      'viewers': 67,
+      'movie': 'Dune: Part Two',
+      'color': const Color(0xFF43A047),
+      'active': false,
+      'tags': [],
+    },
+    {
+      'name': 'Action Hour',
+      'host': 'Alex C.',
+      'viewers': 42,
+      'movie': 'The Batman',
+      'color': const Color(0xFFFF6F00),
+      'active': false,
+      'tags': [],
+    },
+    {
+      'name': 'Horror Night',
+      'host': 'Spooky Club',
+      'viewers': 78,
+      'movie': 'The Others',
+      'color': const Color(0xFF5E35B1),
+      'active': true,
+      'tags': ['Scary'],
+    },
+    {
+      'name': 'Anime Corner',
+      'host': 'OtakuHub',
+      'viewers': 53,
+      'movie': 'Spirited Away',
+      'color': const Color(0xFFE91E63),
+      'active': true,
+      'tags': ['Anime'],
+    },
   ];
 
   final List<Map<String, dynamic>> _sampleChat = [
     {'user': 'Sarah J.', 'msg': 'The soundtrack is incredible!', 'time': 'now'},
-    {'user': 'Mike Chen', 'msg': 'Best scene is when they enter the wormhole', 'time': '12s'},
-    {'user': 'Emma W.', 'msg': 'I\'ve watched this 5 times already', 'time': '30s'},
-    {'user': 'Alex T.', 'msg': 'The science behind this movie is fascinating', 'time': '45s'},
+    {
+      'user': 'Mike Chen',
+      'msg': 'Best scene is when they enter the wormhole',
+      'time': '12s',
+    },
+    {
+      'user': 'Emma W.',
+      'msg': 'I\'ve watched this 5 times already',
+      'time': '30s',
+    },
+    {
+      'user': 'Alex T.',
+      'msg': 'The science behind this movie is fascinating',
+      'time': '45s',
+    },
     {'user': 'Rachel K.', 'msg': 'Can we watch the sequel next?', 'time': '1m'},
-    {'user': 'James B.', 'msg': 'The visuals are stunning in 4K!', 'time': '1m'},
+    {
+      'user': 'James B.',
+      'msg': 'The visuals are stunning in 4K!',
+      'time': '1m',
+    },
   ];
 
   @override
@@ -134,8 +215,12 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
   /// the card/detail shape the UI uses.
   Map<String, dynamic> _adaptRemoteRoom(Map<String, dynamic> raw, String id) {
     const palette = [
-      Color(0xFFE50914), Color(0xFF1E88E5), Color(0xFF7B1FA2),
-      Color(0xFF43A047), Color(0xFFFF6F00), Color(0xFF00ACC1),
+      Color(0xFFE50914),
+      Color(0xFF1E88E5),
+      Color(0xFF7B1FA2),
+      Color(0xFF43A047),
+      Color(0xFFFF6F00),
+      Color(0xFF00ACC1),
     ];
     return {
       'name': (raw['title'] ?? 'Live room').toString(),
@@ -170,7 +255,9 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
     });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(ended ? '🔴 Stream ended' : 'Stream ended locally (backend offline)'),
+        content: Text(
+          ended ? '🔴 Stream ended' : 'Stream ended locally (backend offline)',
+        ),
         backgroundColor: const Color(0xFFE50914),
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 1),
@@ -239,8 +326,8 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
           needsApproval
               ? '⏳ Join request sent — waiting for \'${room['host']}\' to approve'
               : joined
-                  ? 'Joined ${room['name']}!'
-                  : 'Could not join room',
+              ? 'Joined ${room['name']}!'
+              : 'Could not join room',
         ),
         duration: const Duration(seconds: 2),
       ),
@@ -260,7 +347,9 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF1A1A1A),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (sheetCtx) {
         return StatefulBuilder(
           builder: (sheetCtx, setSheetState) {
@@ -278,7 +367,11 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
               if (mounted && ok) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text(approve ? '✅ Viewer approved — token issued' : 'Request rejected'),
+                    content: Text(
+                      approve
+                          ? '✅ Viewer approved — token issued'
+                          : 'Request rejected',
+                    ),
                     duration: const Duration(seconds: 1),
                   ),
                 );
@@ -291,14 +384,29 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Join requests', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17)),
+                  const Text(
+                    'Join requests',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 17,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text('Room: ${room['name']}', style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                  Text(
+                    'Room: ${room['name']}',
+                    style: const TextStyle(color: Colors.white54, fontSize: 12),
+                  ),
                   const SizedBox(height: 14),
                   if (requests.isEmpty)
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 24),
-                      child: Center(child: Text('No pending requests', style: TextStyle(color: Colors.white38))),
+                      child: Center(
+                        child: Text(
+                          'No pending requests',
+                          style: TextStyle(color: Colors.white38),
+                        ),
+                      ),
                     )
                   else
                     ...requests.asMap().entries.map((entry) {
@@ -311,30 +419,54 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
                             const CircleAvatar(
                               radius: 18,
                               backgroundColor: Color(0xFF2A2A2A),
-                              child: Icon(Icons.person, color: Colors.white54, size: 18),
+                              child: Icon(
+                                Icons.person,
+                                color: Colors.white54,
+                                size: 18,
+                              ),
                             ),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(req['userName'] ?? 'Viewer', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                                  Text('requested to join', style: const TextStyle(color: Colors.white38, fontSize: 11)),
+                                  Text(
+                                    req['userName'] ?? 'Viewer',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  Text(
+                                    'requested to join',
+                                    style: const TextStyle(
+                                      color: Colors.white38,
+                                      fontSize: 11,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
                             TextButton(
                               onPressed: () => decide(i, false),
-                              child: const Text('Reject', style: TextStyle(color: Colors.white38)),
+                              child: const Text(
+                                'Reject',
+                                style: TextStyle(color: Colors.white38),
+                              ),
                             ),
                             ElevatedButton(
                               onPressed: () => decide(i, true),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFFE50914),
                                 foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
                               ),
-                              child: const Text('Approve', style: TextStyle(fontWeight: FontWeight.w600)),
+                              child: const Text(
+                                'Approve',
+                                style: TextStyle(fontWeight: FontWeight.w600),
+                              ),
                             ),
                           ],
                         ),
@@ -350,7 +482,10 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildFeaturedBanner() {
-    final featured = _liveRooms.firstWhere((r) => r['active'] == true, orElse: () => _liveRooms.first);
+    final featured = _liveRooms.firstWhere(
+      (r) => r['active'] == true,
+      orElse: () => _liveRooms.first,
+    );
     return GestureDetector(
       onTap: () => setState(() {
         _showRoomDetail = true;
@@ -362,15 +497,25 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           gradient: LinearGradient(
-            colors: [(featured['color'] as Color).withValues(alpha: 0.8), const Color(0xFF141414)],
+            colors: [
+              (featured['color'] as Color).withValues(alpha: 0.8),
+              const Color(0xFF141414),
+            ],
           ),
-          border: Border.all(color: const Color(0xFFE50914).withValues(alpha: 0.4)),
+          border: Border.all(
+            color: const Color(0xFFE50914).withValues(alpha: 0.4),
+          ),
         ),
         child: Stack(
           children: [
             Positioned(
-              right: -20, bottom: -20,
-              child: Icon(Icons.live_tv, size: 120, color: Colors.white.withValues(alpha: 0.06)),
+              right: -20,
+              bottom: -20,
+              child: Icon(
+                Icons.live_tv,
+                size: 120,
+                color: Colors.white.withValues(alpha: 0.06),
+              ),
             ),
             Padding(
               padding: const EdgeInsets.all(16),
@@ -378,22 +523,44 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(color: const Color(0xFFE50914), borderRadius: BorderRadius.circular(20)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE50914),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.circle, color: Colors.white, size: 8),
                         SizedBox(width: 6),
-                        Text('FEATURED LIVE', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                        Text(
+                          'FEATURED LIVE',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ],
                     ),
                   ),
                   const Spacer(),
-                  Text(featured['name'] as String, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                  Text(
+                    featured['name'] as String,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text('${featured['host']} · ${featured['viewers']} watching · ${featured['movie']}',
-                      style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                  Text(
+                    '${featured['host']} · ${featured['viewers']} watching · ${featured['movie']}',
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
                 ],
               ),
             ),
@@ -421,7 +588,9 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
         builder: (context, setDialogState) => Padding(
           padding: EdgeInsets.only(
             bottom: MediaQuery.of(context).viewInsets.bottom,
-            left: 16, right: 16, top: 16,
+            left: 16,
+            right: 16,
+            top: 16,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -429,20 +598,44 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
             children: [
               Center(
                 child: Container(
-                  width: 32, height: 4,
-                  decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+                  width: 32,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
               Row(
                 children: [
                   Container(
-                    width: 10, height: 10,
-                    decoration: const BoxDecoration(color: Color(0xFFE50914), shape: BoxShape.circle),
-                    child: const Center(child: SizedBox(width: 5, height: 5, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))),
+                    width: 10,
+                    height: 10,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFE50914),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Center(
+                      child: SizedBox(
+                        width: 5,
+                        height: 5,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
                   ),
                   const SizedBox(width: 8),
-                  const Text('Go Live', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Go Live',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 20),
@@ -480,36 +673,65 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
                 style: const TextStyle(color: Colors.white),
               ),
               const SizedBox(height: 16),
-              const Text('Category', style: TextStyle(color: Colors.white54, fontSize: 13)),
+              const Text(
+                'Category',
+                style: TextStyle(color: Colors.white54, fontSize: 13),
+              ),
               const SizedBox(height: 8),
               Wrap(
                 spacing: 8,
-                children: ['Movies', 'Gaming', 'Music', 'Chat', 'Education', 'Sports'].map((cat) {
-                  final isSelected = cat == selectedCategory;
-                  return InteractiveCard(
-                    onTap: () => setDialogState(() => selectedCategory = cat),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: isSelected ? const Color(0xFFE50914) : const Color(0xFF2A2A2A),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(cat, style: TextStyle(
-                        color: isSelected ? Colors.white : Colors.white54,
-                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                        fontSize: 13,
-                      )),
-                    ),
-                  );
-                }).toList(),
+                children:
+                    [
+                      'Movies',
+                      'Gaming',
+                      'Music',
+                      'Chat',
+                      'Education',
+                      'Sports',
+                    ].map((cat) {
+                      final isSelected = cat == selectedCategory;
+                      return InteractiveCard(
+                        onTap: () =>
+                            setDialogState(() => selectedCategory = cat),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? const Color(0xFFE50914)
+                                : const Color(0xFF2A2A2A),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            cat,
+                            style: TextStyle(
+                              color: isSelected ? Colors.white : Colors.white54,
+                              fontWeight: isSelected
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
               ),
               const SizedBox(height: 16),
               Row(
                 children: [
-                  const Icon(Icons.lock_outline, color: Colors.white54, size: 18),
+                  const Icon(
+                    Icons.lock_outline,
+                    color: Colors.white54,
+                    size: 18,
+                  ),
                   const SizedBox(width: 8),
                   const Expanded(
-                    child: Text('Require approval to join', style: TextStyle(color: Colors.white70, fontSize: 14)),
+                    child: Text(
+                      'Require approval to join',
+                      style: TextStyle(color: Colors.white70, fontSize: 14),
+                    ),
                   ),
                   Switch(
                     value: requireApproval,
@@ -566,10 +788,19 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
                     );
                   },
                   icon: const Icon(Icons.videocam, color: Colors.white),
-                  label: const Text('Start Stream', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+                  label: const Text(
+                    'Start Stream',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFE50914),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                   ),
                 ),
               ),
@@ -590,10 +821,21 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
         title: Row(
           children: [
             Container(
-              width: 10, height: 10,
-              decoration: const BoxDecoration(color: Color(0xFFE50914), shape: BoxShape.circle),
+              width: 10,
+              height: 10,
+              decoration: const BoxDecoration(
+                color: Color(0xFFE50914),
+                shape: BoxShape.circle,
+              ),
               child: const Center(
-                child: SizedBox(width: 4, height: 4, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+                child: SizedBox(
+                  width: 4,
+                  height: 4,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                ),
               ),
             ),
             const SizedBox(width: 10),
@@ -601,12 +843,18 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
             const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(color: Colors.white.withAlpha(15), borderRadius: BorderRadius.circular(12)),
+              decoration: BoxDecoration(
+                color: Colors.white.withAlpha(15),
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: Row(
                 children: [
                   const Icon(Icons.visibility, color: Colors.white54, size: 14),
                   const SizedBox(width: 4),
-                  Text('$_viewerCount', style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                  Text(
+                    '$_viewerCount',
+                    style: const TextStyle(color: Colors.white54, fontSize: 12),
+                  ),
                 ],
               ),
             ),
@@ -616,7 +864,10 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
           InteractiveCard(
             onTap: () => _showGoLiveDialog(),
             scaleAmount: 0.88,
-            child: const Padding(padding: EdgeInsets.all(8), child: Icon(Icons.video_call_outlined, color: Colors.white54)),
+            child: const Padding(
+              padding: EdgeInsets.all(8),
+              child: Icon(Icons.video_call_outlined, color: Colors.white54),
+            ),
           ),
         ],
       ),
@@ -628,31 +879,48 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [const Color(0xFF6C2BD9).withAlpha(15), Colors.transparent],
+                colors: [
+                  const Color(0xFF6C2BD9).withAlpha(15),
+                  Colors.transparent,
+                ],
               ),
               borderRadius: BorderRadius.circular(12),
             ),
             child: ListTile(
               dense: true,
               leading: Container(
-                width: 8, height: 8,
+                width: 8,
+                height: 8,
                 decoration: const BoxDecoration(
-                  color: Color(0xFF6C2BD9), shape: BoxShape.circle,
+                  color: Color(0xFF6C2BD9),
+                  shape: BoxShape.circle,
                 ),
               ),
-              title: const Text('Go Live on RealMe',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-              subtitle: Text('Stream with real-time chat, gifts & stickers',
-                  style: const TextStyle(fontSize: 11)),
+              title: const Text(
+                'Go Live on RealMe',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+              subtitle: Text(
+                'Stream with real-time chat, gifts & stickers',
+                style: const TextStyle(fontSize: 11),
+              ),
               trailing: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFF6C2BD9),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: const Text('Stream',
-                    style: TextStyle(color: Colors.white,
-                        fontWeight: FontWeight.w600, fontSize: 12)),
+                child: const Text(
+                  'Stream',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                  ),
+                ),
               ),
               onTap: _showGoLiveDialog,
             ),
@@ -666,13 +934,32 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
 
   List<Map<String, dynamic>> get _filteredRooms {
     if (_selectedCategory == 'All') return _liveRooms;
-    if (_selectedCategory == 'Trending') return _liveRooms.where((r) => (r['tags'] as List).contains('Trending')).toList();
-    if (_selectedCategory == 'Anime') return _liveRooms.where((r) => (r['tags'] as List).contains('Anime')).toList();
-    return _liveRooms.where((r) => !(r['tags'] as List).contains('Trending') && !(r['tags'] as List).contains('Anime')).toList();
+    if (_selectedCategory == 'Trending')
+      return _liveRooms
+          .where((r) => (r['tags'] as List).contains('Trending'))
+          .toList();
+    if (_selectedCategory == 'Anime')
+      return _liveRooms
+          .where((r) => (r['tags'] as List).contains('Anime'))
+          .toList();
+    return _liveRooms
+        .where(
+          (r) =>
+              !(r['tags'] as List).contains('Trending') &&
+              !(r['tags'] as List).contains('Anime'),
+        )
+        .toList();
   }
 
   Widget _buildCategoryTabs() {
-    const categories = ['All', 'Trending', 'Movies', 'Anime', 'Gaming', 'Music'];
+    const categories = [
+      'All',
+      'Trending',
+      'Movies',
+      'Anime',
+      'Gaming',
+      'Music',
+    ];
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: SingleChildScrollView(
@@ -689,16 +976,24 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
                   setState(() => _selectedCategory = cat);
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
-                    color: active ? const Color(0xFFE50914) : const Color(0xFF2A2A2A),
+                    color: active
+                        ? const Color(0xFFE50914)
+                        : const Color(0xFF2A2A2A),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Text(cat, style: TextStyle(
-                    color: active ? Colors.white : Colors.white54,
-                    fontWeight: active ? FontWeight.w600 : FontWeight.normal,
-                    fontSize: 13,
-                  )),
+                  child: Text(
+                    cat,
+                    style: TextStyle(
+                      color: active ? Colors.white : Colors.white54,
+                      fontWeight: active ? FontWeight.w600 : FontWeight.normal,
+                      fontSize: 13,
+                    ),
+                  ),
                 ),
               ),
             );
@@ -713,86 +1008,133 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
       color: const Color(0xFFE50914),
       onRefresh: _loadLiveRooms,
       child: GridView.builder(
-      padding: const EdgeInsets.all(12),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 1.2,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
-      ),
-      itemCount: _filteredRooms.length,
-      itemBuilder: (_, i) {
-        final room = _filteredRooms[i];
-        return InteractiveCard(
-          onTap: () {
-            HapticFeedback.mediumImpact();
-            setState(() {
-              _currentRoom = room['name'];
-              _selectedRoom = room;
-              _isHost = _isRoomOwner(room);
-              _showRoomDetail = true;
-            });
-            // First beat immediately so the companion sees us as alive.
-            if (_isHost && room['call_id'] != null) {
-              BackendApiService.heartbeatLiveRoom(room['call_id'].toString());
-            }
-          },
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [(room['color'] as Color).withAlpha(80), (room['color'] as Color).withAlpha(20)],
-                begin: Alignment.topLeft, end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: room['active'] ? (room['color'] as Color).withAlpha(100) : Colors.white10),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 8, height: 8,
-                      decoration: BoxDecoration(
-                        color: room['active'] ? Colors.green : Colors.grey,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(room['name'], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
-                    const Spacer(),
-                    if ((room['tags'] as List).isNotEmpty)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: (room['color'] as Color).withAlpha(40),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text((room['tags'] as List).first, style: TextStyle(color: room['color'], fontSize: 9, fontWeight: FontWeight.w600)),
-                      ),
+        padding: const EdgeInsets.all(12),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          childAspectRatio: 1.2,
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 10,
+        ),
+        itemCount: _filteredRooms.length,
+        itemBuilder: (_, i) {
+          final room = _filteredRooms[i];
+          return InteractiveCard(
+            onTap: () {
+              HapticFeedback.mediumImpact();
+              setState(() {
+                _currentRoom = room['name'];
+                _selectedRoom = room;
+                _isHost = _isRoomOwner(room);
+                _showRoomDetail = true;
+              });
+              // First beat immediately so the companion sees us as alive.
+              if (_isHost && room['call_id'] != null) {
+                BackendApiService.heartbeatLiveRoom(room['call_id'].toString());
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    (room['color'] as Color).withAlpha(80),
+                    (room['color'] as Color).withAlpha(20),
                   ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                const Spacer(),
-                Text(room['movie'], style: const TextStyle(color: Colors.white70, fontSize: 13)),
-                const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        const Icon(Icons.person, color: Colors.white38, size: 14),
-                        const SizedBox(width: 4),
-                        Flexible(child: Text('${room['viewers']} watching', style: const TextStyle(color: Colors.white38, fontSize: 12), overflow: TextOverflow.ellipsis)),
-                        const SizedBox(width: 8),
-                        const Icon(Icons.mic, color: Colors.white24, size: 12),
-                        const SizedBox(width: 3),
-                        Flexible(child: Text(room['host'], style: const TextStyle(color: Colors.white24, fontSize: 11), overflow: TextOverflow.ellipsis)),
-                      ],
-                    ),
-              ],
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: room['active']
+                      ? (room['color'] as Color).withAlpha(100)
+                      : Colors.white10,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: room['active'] ? Colors.green : Colors.grey,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        room['name'],
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const Spacer(),
+                      if ((room['tags'] as List).isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: (room['color'] as Color).withAlpha(40),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            (room['tags'] as List).first,
+                            style: TextStyle(
+                              color: room['color'],
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const Spacer(),
+                  Text(
+                    room['movie'],
+                    style: const TextStyle(color: Colors.white70, fontSize: 13),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(Icons.person, color: Colors.white38, size: 14),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          '${room['viewers']} watching',
+                          style: const TextStyle(
+                            color: Colors.white38,
+                            fontSize: 12,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Icon(Icons.mic, color: Colors.white24, size: 12),
+                      const SizedBox(width: 3),
+                      Flexible(
+                        child: Text(
+                          room['host'],
+                          style: const TextStyle(
+                            color: Colors.white24,
+                            fontSize: 11,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        );
-      },
-    );
+          );
+        },
+      ),
     );
   }
 
@@ -814,27 +1156,53 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
           children: [
             Row(
               children: [
-                Text(room['name'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                Text(
+                  room['name'],
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
                 const SizedBox(width: 8),
                 Container(
-                  width: 6, height: 6,
-                  decoration: const BoxDecoration(color: Color(0xFFE50914), shape: BoxShape.circle),
+                  width: 6,
+                  height: 6,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFE50914),
+                    shape: BoxShape.circle,
+                  ),
                 ),
               ],
             ),
             Row(
               children: [
-                Text('${room['viewers']} watching', style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                Text(
+                  '${room['viewers']} watching',
+                  style: const TextStyle(color: Colors.white54, fontSize: 11),
+                ),
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                  decoration: BoxDecoration(color: Colors.white.withAlpha(15), borderRadius: BorderRadius.circular(4)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 1,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withAlpha(15),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.wifi, color: Color(0xFF10B981), size: 10),
                       SizedBox(width: 2),
-                      Text('HD', style: TextStyle(color: Color(0xFF10B981), fontSize: 8, fontWeight: FontWeight.bold)),
+                      Text(
+                        'HD',
+                        style: TextStyle(
+                          color: Color(0xFF10B981),
+                          fontSize: 8,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -851,13 +1219,26 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
               decoration: BoxDecoration(
                 color: const Color(0xFFE50914).withAlpha(30),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFE50914).withAlpha(80)),
+                border: Border.all(
+                  color: const Color(0xFFE50914).withAlpha(80),
+                ),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.card_giftcard, color: Color(0xFFE50914), size: 14),
+                  const Icon(
+                    Icons.card_giftcard,
+                    color: Color(0xFFE50914),
+                    size: 14,
+                  ),
                   const SizedBox(width: 4),
-                  Text('$_diamonds', style: const TextStyle(color: Color(0xFFE50914), fontSize: 12, fontWeight: FontWeight.bold)),
+                  Text(
+                    '$_diamonds',
+                    style: const TextStyle(
+                      color: Color(0xFFE50914),
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -877,7 +1258,14 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
                   children: [
                     Icon(Icons.people_alt, color: Colors.white70, size: 14),
                     SizedBox(width: 4),
-                    Text('Requests', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
+                    Text(
+                      'Requests',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -894,7 +1282,14 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
                 children: [
                   Icon(Icons.add, color: Colors.white, size: 16),
                   SizedBox(width: 4),
-                  Text('Join', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12)),
+                  Text(
+                    'Join',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -910,79 +1305,135 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
                   margin: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [(room['color'] as Color).withAlpha(60), Colors.black],
-                      begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                      colors: [
+                        (room['color'] as Color).withAlpha(60),
+                        Colors.black,
+                      ],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
                     ),
                     borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                Container(
-                  width: 240, height: 140,
-                  decoration: BoxDecoration(
-                    color: Colors.black,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: (room['color'] as Color).withAlpha(80), width: 1),
-                    image: const DecorationImage(
-                      image: NetworkImage('https://picsum.photos/seed/livestream/800/450'),
-                      fit: BoxFit.cover,
-                      colorFilter: ColorFilter.mode(Colors.black26, BlendMode.darken),
-                    ),
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Container(
-                        width: 56, height: 56,
+                        width: 240,
+                        height: 140,
                         decoration: BoxDecoration(
-                          color: (room['color'] as Color).withAlpha(60),
-                          borderRadius: BorderRadius.circular(28),
+                          color: Colors.black,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: (room['color'] as Color).withAlpha(80),
+                            width: 1,
+                          ),
+                          image: const DecorationImage(
+                            image: NetworkImage(
+                              'https://picsum.photos/seed/livestream/800/450',
+                            ),
+                            fit: BoxFit.cover,
+                            colorFilter: ColorFilter.mode(
+                              Colors.black26,
+                              BlendMode.darken,
+                            ),
+                          ),
                         ),
-                        child: Icon(Icons.play_arrow, color: room['color'], size: 32),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              width: 56,
+                              height: 56,
+                              decoration: BoxDecoration(
+                                color: (room['color'] as Color).withAlpha(60),
+                                borderRadius: BorderRadius.circular(28),
+                              ),
+                              child: Icon(
+                                Icons.play_arrow,
+                                color: room['color'],
+                                size: 32,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              room['movie'],
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 8),
-                      Text(room['movie'], style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFE50914),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Center(
+                              child: SizedBox(
+                                width: 3,
+                                height: 3,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 1.5,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'LIVE',
+                            style: TextStyle(
+                              color: Color(0xFFE50914),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Text(
+                            'Hosted by ${room['host']}',
+                            style: const TextStyle(
+                              color: Colors.white38,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      _buildReactionBar(room),
+                      const SizedBox(height: 16),
+                      _buildHostControls(),
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 8, height: 8,
-                      decoration: const BoxDecoration(color: Color(0xFFE50914), shape: BoxShape.circle),
-                      child: const Center(child: SizedBox(width: 3, height: 3, child: CircularProgressIndicator(strokeWidth: 1.5, color: Colors.white))),
-                    ),
-                    const SizedBox(width: 8),
-                    const Text('LIVE', style: TextStyle(color: Color(0xFFE50914), fontWeight: FontWeight.bold, fontSize: 12)),
-                    const SizedBox(width: 16),
-                    Text('Hosted by ${room['host']}', style: const TextStyle(color: Colors.white38, fontSize: 12)),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                _buildReactionBar(room),
-                const SizedBox(height: 16),
-                _buildHostControls(),
-                    ],
-                  ),
-                ),
-                ..._reactions.map((r) => Positioned(
-                  top: 20 + (r.id % 100).toDouble(),
-                  right: 20 + (r.id % 60).toDouble(),
-                  child: TweenAnimationBuilder<double>(
-                    tween: Tween(begin: 0, end: 1),
-                    duration: const Duration(seconds: 2),
-                    builder: (_, value, __) => Opacity(
-                      opacity: 1 - value,
-                      child: Transform.translate(
-                        offset: Offset(0, -value * 80),
-                        child: Text(r.emoji, style: TextStyle(fontSize: 24 + value * 16)),
+                ..._reactions.map(
+                  (r) => Positioned(
+                    top: 20 + (r.id % 100).toDouble(),
+                    right: 20 + (r.id % 60).toDouble(),
+                    child: TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0, end: 1),
+                      duration: const Duration(seconds: 2),
+                      builder: (_, value, __) => Opacity(
+                        opacity: 1 - value,
+                        child: Transform.translate(
+                          offset: Offset(0, -value * 80),
+                          child: Text(
+                            r.emoji,
+                            style: TextStyle(fontSize: 24 + value * 16),
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                )),
+                ),
               ],
             ),
           ),
@@ -998,26 +1449,37 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          ..._reactionEmojis.take(4).map((e) => Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: InteractiveCard(
-              onTap: () {
-                HapticFeedback.lightImpact();
-                setState(() => _reactions.add(_FloatingReaction(emoji: e, id: DateTime.now().millisecondsSinceEpoch)));
-                Future.delayed(const Duration(seconds: 3), () {
-                  if (mounted) setState(() => _reactions.removeAt(0));
-                });
-              },
-              child: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.white.withAlpha(15),
-                  borderRadius: BorderRadius.circular(12),
+          ..._reactionEmojis
+              .take(4)
+              .map(
+                (e) => Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: InteractiveCard(
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      setState(
+                        () => _reactions.add(
+                          _FloatingReaction(
+                            emoji: e,
+                            id: DateTime.now().millisecondsSinceEpoch,
+                          ),
+                        ),
+                      );
+                      Future.delayed(const Duration(seconds: 3), () {
+                        if (mounted) setState(() => _reactions.removeAt(0));
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withAlpha(15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(e, style: const TextStyle(fontSize: 22)),
+                    ),
+                  ),
                 ),
-                child: Text(e, style: const TextStyle(fontSize: 22)),
               ),
-            ),
-          )),
           const SizedBox(width: 8),
           _actionChip(Icons.thumb_up, 'Like'),
           const SizedBox(width: 8),
@@ -1028,13 +1490,22 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
               decoration: BoxDecoration(
                 color: const Color(0xFFE50914).withAlpha(30),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFFE50914).withAlpha(80)),
+                border: Border.all(
+                  color: const Color(0xFFE50914).withAlpha(80),
+                ),
               ),
               child: const Row(
                 children: [
                   Icon(Icons.card_giftcard, color: Color(0xFFE50914), size: 16),
                   SizedBox(width: 4),
-                  Text('Gift', style: TextStyle(color: Color(0xFFE50914), fontSize: 12, fontWeight: FontWeight.bold)),
+                  Text(
+                    'Gift',
+                    style: TextStyle(
+                      color: Color(0xFFE50914),
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -1074,7 +1545,9 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
             child: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: _isMicOn ? Colors.white.withAlpha(15) : const Color(0xFFE50914).withAlpha(40),
+                color: _isMicOn
+                    ? Colors.white.withAlpha(15)
+                    : const Color(0xFFE50914).withAlpha(40),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
@@ -1089,13 +1562,24 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
             onTap: () {
               HapticFeedback.mediumImpact();
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('🎥 Screen shared!'), behavior: SnackBarBehavior.floating, duration: Duration(seconds: 1)),
+                const SnackBar(
+                  content: Text('🎥 Screen shared!'),
+                  behavior: SnackBarBehavior.floating,
+                  duration: Duration(seconds: 1),
+                ),
               );
             },
             child: Container(
               padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: Colors.white.withAlpha(15), borderRadius: BorderRadius.circular(12)),
-              child: const Icon(Icons.screen_share_outlined, color: Colors.white54, size: 20),
+              decoration: BoxDecoration(
+                color: Colors.white.withAlpha(15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.screen_share_outlined,
+                color: Colors.white54,
+                size: 20,
+              ),
             ),
           ),
           if (_isHost) ...[
@@ -1120,12 +1604,18 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
               child: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: _isStreamLive ? Colors.white.withAlpha(15) : const Color(0xFFE50914).withAlpha(40),
+                  color: _isStreamLive
+                      ? Colors.white.withAlpha(15)
+                      : const Color(0xFFE50914).withAlpha(40),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
-                  _isStreamLive ? Icons.stop_circle_outlined : Icons.play_circle_outline,
-                  color: _isStreamLive ? const Color(0xFFE50914) : const Color(0xFF10B981),
+                  _isStreamLive
+                      ? Icons.stop_circle_outlined
+                      : Icons.play_circle_outline,
+                  color: _isStreamLive
+                      ? const Color(0xFFE50914)
+                      : const Color(0xFF10B981),
                   size: 20,
                 ),
               ),
@@ -1151,26 +1641,59 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF1F1F1F),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (ctx) => Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(width: 32, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
+            Container(
+              width: 32,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
             const SizedBox(height: 16),
             Row(
               children: [
-                const Text('Send a Gift', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                const Text(
+                  'Send a Gift',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const Spacer(),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(color: const Color(0xFFE50914).withAlpha(30), borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE50914).withAlpha(30),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   child: Row(
                     children: [
-                      const Icon(Icons.diamond, color: Color(0xFFE50914), size: 14),
+                      const Icon(
+                        Icons.diamond,
+                        color: Color(0xFFE50914),
+                        size: 14,
+                      ),
                       const SizedBox(width: 4),
-                      Text('$_diamonds', style: const TextStyle(color: Color(0xFFE50914), fontWeight: FontWeight.bold, fontSize: 13)),
+                      Text(
+                        '$_diamonds',
+                        style: const TextStyle(
+                          color: Color(0xFFE50914),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -1191,32 +1714,65 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
                 final gift = gifts[i];
                 final canAfford = _diamonds >= (gift['cost'] as int);
                 return InteractiveCard(
-                  onTap: canAfford ? () {
-                    setState(() => _diamonds -= gift['cost'] as int);
-                    Navigator.pop(ctx);
-                    HapticFeedback.mediumImpact();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Sent ${gift['emoji']} ${gift['name']} to ${room['host']}!'),
-                        backgroundColor: const Color(0xFFE50914),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                  } : null,
+                  onTap: canAfford
+                      ? () {
+                          setState(() => _diamonds -= gift['cost'] as int);
+                          Navigator.pop(ctx);
+                          HapticFeedback.mediumImpact();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Sent ${gift['emoji']} ${gift['name']} to ${room['host']}!',
+                              ),
+                              backgroundColor: const Color(0xFFE50914),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        }
+                      : null,
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: canAfford ? Colors.white.withAlpha(10) : Colors.white.withAlpha(5),
+                      color: canAfford
+                          ? Colors.white.withAlpha(10)
+                          : Colors.white.withAlpha(5),
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: canAfford ? Colors.white10 : Colors.white.withAlpha(5)),
+                      border: Border.all(
+                        color: canAfford
+                            ? Colors.white10
+                            : Colors.white.withAlpha(5),
+                      ),
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(gift['emoji'] as String, style: TextStyle(fontSize: 28, color: Colors.white.withAlpha(canAfford ? 255 : 100))),
+                        Text(
+                          gift['emoji'] as String,
+                          style: TextStyle(
+                            fontSize: 28,
+                            color: Colors.white.withAlpha(
+                              canAfford ? 255 : 100,
+                            ),
+                          ),
+                        ),
                         const SizedBox(height: 4),
-                        Text(gift['name'] as String, style: TextStyle(color: canAfford ? Colors.white70 : Colors.white30, fontSize: 10)),
-                        Text('💎${gift['cost']}', style: TextStyle(color: canAfford ? const Color(0xFFE50914) : Colors.white30, fontSize: 9, fontWeight: FontWeight.bold)),
+                        Text(
+                          gift['name'] as String,
+                          style: TextStyle(
+                            color: canAfford ? Colors.white70 : Colors.white30,
+                            fontSize: 10,
+                          ),
+                        ),
+                        Text(
+                          '💎${gift['cost']}',
+                          style: TextStyle(
+                            color: canAfford
+                                ? const Color(0xFFE50914)
+                                : Colors.white30,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -1234,23 +1790,62 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF1F1F1F),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (ctx) => Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(width: 32, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
+            Container(
+              width: 32,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
             const SizedBox(height: 12),
-            const Text('Share Stream', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+            const Text(
+              'Share Stream',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _shareOption(Icons.share, 'Share', Colors.blue, () => Navigator.pop(ctx)),
-                _shareOption(Icons.link, 'Copy Link', Colors.teal, () { Navigator.pop(ctx); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Link copied'), behavior: SnackBarBehavior.floating)); }),
-                _shareOption(Icons.person_add, 'Invite', const Color(0xFF7B1FA2), () => Navigator.pop(ctx)),
-                _shareOption(Icons.whatshot, 'WhatsApp', const Color(0xFF25D366), () => Navigator.pop(ctx)),
+                _shareOption(
+                  Icons.share,
+                  'Share',
+                  Colors.blue,
+                  () => Navigator.pop(ctx),
+                ),
+                _shareOption(Icons.link, 'Copy Link', Colors.teal, () {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Link copied'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }),
+                _shareOption(
+                  Icons.person_add,
+                  'Invite',
+                  const Color(0xFF7B1FA2),
+                  () => Navigator.pop(ctx),
+                ),
+                _shareOption(
+                  Icons.whatshot,
+                  'WhatsApp',
+                  const Color(0xFF25D366),
+                  () => Navigator.pop(ctx),
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -1260,14 +1855,30 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _shareOption(IconData icon, String label, Color color, VoidCallback onTap) {
+  Widget _shareOption(
+    IconData icon,
+    String label,
+    Color color,
+    VoidCallback onTap,
+  ) {
     return InteractiveCard(
       onTap: onTap,
       child: Column(
         children: [
-          Container(width: 48, height: 48, decoration: BoxDecoration(color: color.withAlpha(25), borderRadius: BorderRadius.circular(14)), child: Icon(icon, color: color, size: 24)),
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: color.withAlpha(25),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(icon, color: color, size: 24),
+          ),
           const SizedBox(height: 4),
-          Text(label, style: const TextStyle(color: Colors.white54, fontSize: 10)),
+          Text(
+            label,
+            style: const TextStyle(color: Colors.white54, fontSize: 10),
+          ),
         ],
       ),
     );
@@ -1278,7 +1889,10 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
       onTap: () {
         HapticFeedback.lightImpact();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$label action'), duration: const Duration(seconds: 1)),
+          SnackBar(
+            content: Text('$label action'),
+            duration: const Duration(seconds: 1),
+          ),
         );
       },
       child: Container(
@@ -1286,13 +1900,22 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
         decoration: BoxDecoration(
           color: color?.withAlpha(40) ?? Colors.white.withAlpha(15),
           borderRadius: BorderRadius.circular(20),
-          border: color != null ? Border.all(color: color.withAlpha(100)) : null,
+          border: color != null
+              ? Border.all(color: color.withAlpha(100))
+              : null,
         ),
         child: Row(
           children: [
             Icon(icon, color: color ?? Colors.white54, size: 16),
             const SizedBox(width: 4),
-            Text(label, style: TextStyle(color: color ?? Colors.white54, fontSize: 12, fontWeight: color != null ? FontWeight.bold : FontWeight.normal)),
+            Text(
+              label,
+              style: TextStyle(
+                color: color ?? Colors.white54,
+                fontSize: 12,
+                fontWeight: color != null ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
           ],
         ),
       ),
@@ -1314,24 +1937,53 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
               children: [
                 const Icon(Icons.chat, color: Color(0xFFE50914), size: 16),
                 const SizedBox(width: 6),
-                const Text('Live Chat', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
+                const Text(
+                  'Live Chat',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
                 const Spacer(),
                 Row(
                   children: [
                     InteractiveCard(
                       onTap: () {
                         HapticFeedback.lightImpact();
-                        final emoji = _reactionEmojis[DateTime.now().millisecondsSinceEpoch % _reactionEmojis.length];
-                        setState(() => _messages.insert(0, {'user': 'You', 'msg': emoji, 'time': 'now'}));
+                        final emoji =
+                            _reactionEmojis[DateTime.now()
+                                    .millisecondsSinceEpoch %
+                                _reactionEmojis.length];
+                        setState(
+                          () => _messages.insert(0, {
+                            'user': 'You',
+                            'msg': emoji,
+                            'time': 'now',
+                          }),
+                        );
                       },
                       child: Container(
                         padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(color: Colors.white.withAlpha(10), borderRadius: BorderRadius.circular(8)),
-                        child: const Icon(Icons.emoji_emotions_outlined, color: Colors.white38, size: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withAlpha(10),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.emoji_emotions_outlined,
+                          color: Colors.white38,
+                          size: 16,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Text('${_messages.length}', style: const TextStyle(color: Colors.white24, fontSize: 11)),
+                    Text(
+                      '${_messages.length}',
+                      style: const TextStyle(
+                        color: Colors.white24,
+                        fontSize: 11,
+                      ),
+                    ),
                   ],
                 ),
               ],
@@ -1346,20 +1998,35 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
               itemCount: _messages.length,
               itemBuilder: (_, i) {
                 final msg = _messages[_messages.length - 1 - i];
-                final isEmoji = (msg['msg'] as String).length <= 2 && (msg['msg'] as String).codeUnitAt(0) > 0x2000;
+                final isEmoji =
+                    (msg['msg'] as String).length <= 2 &&
+                    (msg['msg'] as String).codeUnitAt(0) > 0x2000;
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 6),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Container(
-                        width: 24, height: 24,
+                        width: 24,
+                        height: 24,
                         decoration: BoxDecoration(
-                          color: msg['user'] == 'You' ? const Color(0xFFE50914) : const Color(0xFF2A2A2A),
+                          color: msg['user'] == 'You'
+                              ? const Color(0xFFE50914)
+                              : const Color(0xFF2A2A2A),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Center(child: Text((msg['user'] as String)[0],
-                            style: TextStyle(color: msg['user'] == 'You' ? Colors.white : Colors.white54, fontSize: 11, fontWeight: FontWeight.bold))),
+                        child: Center(
+                          child: Text(
+                            (msg['user'] as String)[0],
+                            style: TextStyle(
+                              color: msg['user'] == 'You'
+                                  ? Colors.white
+                                  : Colors.white54,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
@@ -1368,12 +2035,31 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
                           children: [
                             Row(
                               children: [
-                                Text(msg['user'], style: const TextStyle(color: Color(0xFFE50914), fontSize: 11, fontWeight: FontWeight.w600)),
+                                Text(
+                                  msg['user'],
+                                  style: const TextStyle(
+                                    color: Color(0xFFE50914),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                                 const SizedBox(width: 4),
-                                Text(msg['time'], style: const TextStyle(color: Colors.white24, fontSize: 9)),
+                                Text(
+                                  msg['time'],
+                                  style: const TextStyle(
+                                    color: Colors.white24,
+                                    fontSize: 9,
+                                  ),
+                                ),
                               ],
                             ),
-                            Text(msg['msg'], style: TextStyle(color: isEmoji ? Colors.white : Colors.white70, fontSize: isEmoji ? 24 : 12)),
+                            Text(
+                              msg['msg'],
+                              style: TextStyle(
+                                color: isEmoji ? Colors.white : Colors.white70,
+                                fontSize: isEmoji ? 24 : 12,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -1399,7 +2085,10 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
                         borderRadius: BorderRadius.circular(20),
                         borderSide: BorderSide.none,
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
                     ),
                     style: const TextStyle(color: Colors.white, fontSize: 13),
                     textInputAction: TextInputAction.send,
@@ -1411,9 +2100,17 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
                   onTap: _sendMessage,
                   scaleAmount: 0.85,
                   child: Container(
-                    width: 40, height: 40,
-                    decoration: const BoxDecoration(color: Color(0xFFE50914), shape: BoxShape.circle),
-                    child: const Icon(Icons.send, color: Colors.white, size: 16),
+                    width: 40,
+                    height: 40,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFE50914),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.send,
+                      color: Colors.white,
+                      size: 16,
+                    ),
                   ),
                 ),
               ],

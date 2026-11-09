@@ -24,7 +24,7 @@ class AppLogo extends StatelessWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: const AppColors.brand.withAlpha(80),
+                color: AppColors.brand.withAlpha(80),
                 blurRadius: size * 0.3,
                 offset: Offset(0, size * 0.1),
               ),
@@ -45,7 +45,7 @@ class AppLogo extends StatelessWidget {
             style: TextStyle(
               fontSize: size * 0.4,
               fontWeight: FontWeight.bold,
-              color: const AppColors.brand,
+              color: AppColors.brand,
               letterSpacing: 1.2,
             ),
           ),

@@ -34,9 +34,11 @@ class _SearchScreenState extends State<SearchScreen> {
         _results = [];
       } else {
         _results = movieService.movies
-            .where((m) =>
-                m.title.toLowerCase().contains(query.toLowerCase()) ||
-                m.genre.toLowerCase().contains(query.toLowerCase()))
+            .where(
+              (m) =>
+                  m.title.toLowerCase().contains(query.toLowerCase()) ||
+                  m.genre.toLowerCase().contains(query.toLowerCase()),
+            )
             .toList();
       }
     });
@@ -50,9 +52,7 @@ class _SearchScreenState extends State<SearchScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Search'),
-      ),
+      appBar: AppBar(title: const Text('Search')),
       body: Column(
         children: [
           Padding(
@@ -74,10 +74,13 @@ class _SearchScreenState extends State<SearchScreen> {
                       )
                     : InteractiveCard(
                         onTap: () => HapticFeedback.lightImpact(),
-                        child: const Icon(Icons.filter_list, color: Colors.white54),
+                        child: const Icon(
+                          Icons.filter_list,
+                          color: Colors.white54,
+                        ),
                       ),
                 filled: true,
-                fillColor: const AppColors.surfaceVariant,
+                fillColor: AppColors.surfaceVariant,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
                   borderSide: BorderSide.none,
@@ -92,13 +95,21 @@ class _SearchScreenState extends State<SearchScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.search_off, size: 64, color: Colors.white.withAlpha(40)),
+                    Icon(
+                      Icons.search_off,
+                      size: 64,
+                      color: Colors.white.withAlpha(40),
+                    ),
                     const SizedBox(height: 16),
-                    const Text('No movies found',
-                        style: TextStyle(color: Colors.white38, fontSize: 16)),
+                    const Text(
+                      'No movies found',
+                      style: TextStyle(color: Colors.white38, fontSize: 16),
+                    ),
                     const SizedBox(height: 8),
-                    const Text('Try a different search term',
-                        style: TextStyle(color: Colors.white24, fontSize: 13)),
+                    const Text(
+                      'Try a different search term',
+                      style: TextStyle(color: Colors.white24, fontSize: 13),
+                    ),
                   ],
                 ),
               ),
@@ -110,19 +121,34 @@ class _SearchScreenState extends State<SearchScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 itemCount: _results.length,
                 separatorBuilder: (_, _) => const Divider(
-                    color: AppColors.surfaceVariant, height: 1, indent: 76),
+                  color: AppColors.surfaceVariant,
+                  height: 1,
+                  indent: 76,
+                ),
                 itemBuilder: (context, index) {
                   final movie = _results[index];
                   return InteractiveCard(
                     onTap: () => _openMovie(context, movie),
                     child: ListTile(
-                      leading: MoviePoster(movie: movie, width: 48, height: 48, borderRadius: BorderRadius.circular(12)),
-                      title: Text(movie.title,
-                          style:
-                              const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                      leading: MoviePoster(
+                        movie: movie,
+                        width: 48,
+                        height: 48,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      title: Text(
+                        movie.title,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                       subtitle: Text(
                         '${movie.genre} • ★ ${movie.rating}',
-                        style: const TextStyle(color: Colors.white54, fontSize: 12),
+                        style: const TextStyle(
+                          color: Colors.white54,
+                          fontSize: 12,
+                        ),
                       ),
                       trailing: InteractiveCard(
                         onTap: () async {
@@ -135,14 +161,25 @@ class _SearchScreenState extends State<SearchScreen> {
                               _watchlist.add(movie.id);
                             }
                           });
-                          { // local-first: SQLite works for guests; Supabase syncs when signed in
-                            await databaseService.toggleWatchlist(_userId, movie.id,
-                              title: movie.title, genre: movie.genre, year: movie.year, rating: movie.rating);
+                          {
+                            // local-first: SQLite works for guests; Supabase syncs when signed in
+                            await databaseService.toggleWatchlist(
+                              _userId,
+                              movie.id,
+                              title: movie.title,
+                              genre: movie.genre,
+                              year: movie.year,
+                              rating: movie.rating,
+                            );
                           }
                           if (!mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text(isWatch ? 'Removed from watchlist' : 'Added to watchlist'),
+                              content: Text(
+                                isWatch
+                                    ? 'Removed from watchlist'
+                                    : 'Added to watchlist',
+                              ),
                               duration: const Duration(seconds: 1),
                             ),
                           );
@@ -155,8 +192,14 @@ class _SearchScreenState extends State<SearchScreen> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Icon(
-                            _watchlist.contains(movie.id) ? Icons.bookmark : Icons.bookmark_border,
-                              color: _watchlist.contains(movie.id) ? const AppColors.brand : Colors.white38, size: 18),
+                            _watchlist.contains(movie.id)
+                                ? Icons.bookmark
+                                : Icons.bookmark_border,
+                            color: _watchlist.contains(movie.id)
+                                ? AppColors.brand
+                                : Colors.white38,
+                            size: 18,
+                          ),
                         ),
                       ),
                     ),
@@ -175,9 +218,10 @@ class _SearchScreenState extends State<SearchScreen> {
                     child: Text(
                       'Popular Searches',
                       style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white),
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -189,22 +233,29 @@ class _SearchScreenState extends State<SearchScreen> {
                         onTap: () => _openMovie(context, movie),
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 10),
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
                           decoration: BoxDecoration(
-                            color: const AppColors.surfaceVariant,
+                            color: AppColors.surfaceVariant,
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(color: Colors.white10),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.trending_up,
-                                  color: AppColors.brand, size: 16),
+                              const Icon(
+                                Icons.trending_up,
+                                color: AppColors.brand,
+                                size: 16,
+                              ),
                               const SizedBox(width: 6),
                               Text(
                                 movie.title,
-                                style:
-                                    const TextStyle(color: Colors.white70, fontSize: 13),
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 13,
+                                ),
                               ),
                             ],
                           ),

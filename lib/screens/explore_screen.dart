@@ -8,14 +8,22 @@ class ExploreScreen extends StatelessWidget {
 
   final List<Map<String, dynamic>> categories = const [
     {'name': 'Action', 'icon': Icons.flash_on, 'color': AppColors.brand},
-    {'name': 'Comedy', 'icon': Icons.emoji_emotions, 'color': Color(0xFFFFB300)},
+    {
+      'name': 'Comedy',
+      'icon': Icons.emoji_emotions,
+      'color': Color(0xFFFFB300),
+    },
     {'name': 'Drama', 'icon': Icons.theater_comedy, 'color': Color(0xFF7B1FA2)},
     {'name': 'Horror', 'icon': Icons.dangerous, 'color': AppColors.surfaceAlt},
     {'name': 'Sci-Fi', 'icon': Icons.rocket_launch, 'color': Color(0xFF1E88E5)},
     {'name': 'Romance', 'icon': Icons.favorite, 'color': Color(0xFFE91E63)},
     {'name': 'Thriller', 'icon': Icons.sensors, 'color': Color(0xFFFF6F00)},
     {'name': 'Animation', 'icon': Icons.brush, 'color': AppColors.success},
-    {'name': 'Documentary', 'icon': Icons.menu_book, 'color': Color(0xFF00ACC1)},
+    {
+      'name': 'Documentary',
+      'icon': Icons.menu_book,
+      'color': Color(0xFF00ACC1),
+    },
     {'name': 'Mystery', 'icon': Icons.search, 'color': Color(0xFF5E35B1)},
     {'name': 'Fantasy', 'icon': Icons.auto_awesome, 'color': Color(0xFFD32F2F)},
     {'name': 'Music', 'icon': Icons.music_note, 'color': Color(0xFFF06292)},
@@ -45,7 +53,11 @@ class ExploreScreen extends StatelessWidget {
             children: [
               const Text(
                 'Browse by Category',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
               ),
               const SizedBox(height: 4),
               const Text(
@@ -60,8 +72,8 @@ class ExploreScreen extends StatelessWidget {
                   crossAxisCount: MediaQuery.of(context).size.width >= 1100
                       ? 6
                       : MediaQuery.of(context).size.width >= 800
-                          ? 4
-                          : 3,
+                      ? 4
+                      : 3,
                   childAspectRatio: 1,
                   crossAxisSpacing: 10,
                   mainAxisSpacing: 10,
@@ -76,7 +88,7 @@ class ExploreScreen extends StatelessWidget {
                     },
                     child: Container(
                       decoration: BoxDecoration(
-                        color: const AppColors.surfaceVariant,
+                        color: AppColors.surfaceVariant,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: Colors.white10),
                       ),

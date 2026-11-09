@@ -31,7 +31,7 @@ class DevService extends ChangeNotifier {
     const fromDefine = String.fromEnvironment('DEV_ACCESS_CODE');
     if (fromDefine.isNotEmpty) return fromDefine;
     if (dotenv.isInitialized) {
-      final env = dotenv.maybe['DEV_ACCESS_CODE']?.trim();
+      final env = dotenv.env['DEV_ACCESS_CODE']?.trim();
       if (env != null && env.isNotEmpty) return env;
     }
     return 'cinemaflix-dev';
@@ -115,7 +115,12 @@ class DevService extends ChangeNotifier {
   }
 
   void logEvent(String event) {
-    final timestamp = DateTime.now().toIso8601String().split('T').last.split('.').first;
+    final timestamp = DateTime.now()
+        .toIso8601String()
+        .split('T')
+        .last
+        .split('.')
+        .first;
     _eventLog.insert(0, '[$timestamp] $event');
   }
 }

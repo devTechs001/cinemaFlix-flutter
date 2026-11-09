@@ -15,7 +15,7 @@ class ApiConfig {
   static String get baseUrl {
     var url = _defaultBaseUrl;
     if (dotenv.isInitialized) {
-      final env = dotenv.maybe['BACKEND_URL']?.trim();
+      final env = dotenv.env['BACKEND_URL']?.trim();
       if (env != null && env.isNotEmpty) url = env;
     }
     while (url.endsWith('/')) {

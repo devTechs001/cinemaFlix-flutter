@@ -66,7 +66,7 @@ class ShimmerFeatured extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        color: const AppColors.surfaceVariant,
+        color: AppColors.surfaceVariant,
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -110,7 +110,7 @@ class ShimmerTrendingRow extends StatelessWidget {
           margin: const EdgeInsets.symmetric(horizontal: 4),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            color: const AppColors.surfaceVariant,
+            color: AppColors.surfaceVariant,
           ),
         ),
       ),

@@ -72,10 +72,15 @@ class _CinemaLoadingState extends State<CinemaLoading>
                         width: widget.size * 0.7,
                         height: widget.size * 0.7,
                         decoration: BoxDecoration(
-                          color: const AppColors.background,
-                          borderRadius: BorderRadius.circular(widget.size * 0.15),
+                          color: AppColors.background,
+                          borderRadius: BorderRadius.circular(
+                            widget.size * 0.15,
+                          ),
                         ),
-                        child: const Icon(Icons.movie_creation_rounded, color: AppColors.brand),
+                        child: const Icon(
+                          Icons.movie_creation_rounded,
+                          color: AppColors.brand,
+                        ),
                       ),
                     ),
                   ),
@@ -101,8 +106,6 @@ class CinemaPageLoader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: CinemaLoading(message: 'Loading...'),
-    );
+    return const Scaffold(body: CinemaLoading(message: 'Loading...'));
   }
 }
