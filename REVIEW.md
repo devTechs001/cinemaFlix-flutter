@@ -334,3 +334,68 @@ heartbeat → end → list empty ✓. Server log shows full
 files: 0 broken imports, delimiter balance clean (proper tokenizer), test/
 imports resolve. Real Flutter gate remains: `flutter pub get && flutter analyze
 && flutter test` locally.
+
+## 2026-11-09 — Marketplace · seller dashboards · admin system (PR #9)
+
+**Ask:** add the marketplace + seller dashboards (approved by admin), create an
+admin system that manages the whole system and features, admin-only (no regular
+user access), and account for the code/features that had been removed (the
+Marketplace drawer entry was indeed missing — re-added).
+
+### Backend (`backend/systems.js`, `backend/models/systems.js`)
+
+- **Admin-only surface completed** — every `/api/admin/*` route now requires
+  `x-admin-code` (incl. `GET /admin/maintenance`, previously public; the public
+  path remains `GET /api/app/config`). New admin list endpoints:
+  - `GET /api/admin/users` (db + memory modes, `banned` flag)
+  - `GET /api/admin/sellers` (all seller applications)
+  - `GET /api/admin/orders` (last 100)
+- **Marketplace decisions:** `PUT /api/ecommerce/seller/:userId/reject` and
+  `PUT /api/ecommerce/products/:id/reject` (approve now clears `rejected`);
+  `productSchema` gained `rejected: Boolean`.
+- **Seller dashboard feed:** `GET /api/ecommerce/seller/products` returns the
+  seller's own products incl. unapproved/rejected.
+- **Feature flags actually gate features:** `marketplaceGate` (ecommerce flag →
+  403 on list/apply/post/order for non-admins; admins bypass so they can still
+  manage), `liveGate` (live flag → 403 on **create only**; list/join/heartbeat
+  untouched so real_me room maintenance is unaffected). Flags: ecommerce,
+  gaming, ads, dating, live, shorts, walletPoints.
+- **Admin stats** now include `sellers` + `products` counts; ban/unban respond
+  `found:false` for unknown IDs (no more silent "db-managed" lies).
+
+### Flutter
+
+- **`admin_dashboard_screen.dart` rewritten** — ADMIN ONLY: the dev-mode
+  auto-unlock was REMOVED; the only way in is the backend ADMIN_CODE verified
+  against `/admin/stats` on unlock (regular users are stopped at the gate, and
+  the backend 403s everything without the code). Four tabs:
+  - **Overview** — stats grid (users/sellers/products/orders/wallets/gaming/ads),
+    maintenance switch, broadcast announcement, quick links, Lock button.
+  - **Market** — seller applications (approve/reject, pending first) + product
+    listings (approve/reject, review queue first).
+  - **Users** — searchable user directory with ban/unban per row.
+  - **Features** — feature-flag toggles for all 7 flags (this is how removed or
+    retired features are managed: switch them off platform-wide).
+- **`seller_dashboard_screen.dart` (new)** — gate (none/pending/rejected
+  messaging), shop header with admin-approved chip + Live/In-review/Rejected/
+  Total counters, post-product form (title, price USD, stock, category → posts
+  as `approved:false` awaiting admin), product list with per-listing status.
+  Route `/seller-dashboard`.
+- **`ecommerce_screen.dart`** — approved sellers get an "Open Dashboard"
+  entry (replaces the old dead hint).
+- **`app_drawer.dart`** — Marketplace entry restored for everyone (it had been
+  removed); seller-specific nav only via the marketplace after approval.
+
+### Tests — 49/49 effective checks (Node runtime, PORT=3100, ADMIN_CODE=TestAdmin99)
+
+A: 8×403 no-code on all admin routes (+flags PUT, announce) · B: 6×200 with
+code incl. enriched stats/lists · C: apply→pending→admin-sees→approve→status→
+post-201→hidden-until-approved→admin all=true→seller feed→approve→public ·
+D: product reject hides + seller sees rejected + seller reject + can't post ·
+E: ecommerce/live flags 403, admin bypass, real_me list unaffected,
+app/config reflects, restore→201 · F: register→ban found:true→list banned→
+unban→ghost found:false, video 302, health OK.
+
+Static: `node --check` clean (systems.js, models/systems.js, index.js); Dart
+111 files — 0 broken imports, delimiter balance clean. Flutter gate remains
+`flutter pub get && flutter analyze && flutter test` locally.

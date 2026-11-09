@@ -147,7 +147,7 @@ class _EcommerceScreenState extends State<EcommerceScreen> {
                     ),
                   const SizedBox(height: 8),
                   if (_sellerStatus != 'approved') _buildSellerCta(),
-                  if (_sellerStatus == 'approved') _buildApiKeylessHint(),
+                  if (_sellerStatus == 'approved') _buildSellerDashboardEntry(),
                   const SizedBox(height: 16),
                   if (_products.isEmpty)
                     const Padding(
@@ -218,15 +218,32 @@ class _EcommerceScreenState extends State<EcommerceScreen> {
     );
   }
 
-  Widget _buildApiKeylessHint() {
+  Widget _buildSellerDashboardEntry() {
     return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: const Color(0xFF10B981).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
-      child: const Row(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF10B981).withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.35)),
+      ),
+      child: Row(
         children: [
-          Icon(Icons.store, color: Color(0xFF10B981), size: 20),
-          SizedBox(width: 10),
-          Expanded(child: Text('You are an approved seller — post products from your shop dashboard.', style: TextStyle(color: Colors.white70, fontSize: 12))),
+          const Icon(Icons.store, color: Color(0xFF10B981), size: 22),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text('Approved seller — manage listings, stock & approvals in your dashboard.',
+                style: TextStyle(color: Colors.white70, fontSize: 12)),
+          ),
+          const SizedBox(width: 8),
+          FilledButton(
+            onPressed: () => Navigator.pushNamed(context, '/seller-dashboard'),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF10B981),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+            child: const Text('Dashboard'),
+          ),
         ],
       ),
     );

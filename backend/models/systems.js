@@ -50,6 +50,7 @@ const productSchema = new mongoose.Schema({
   priceCents: { type: Number, required: true },
   stock: { type: Number, default: 1 },
   approved: { type: Boolean, default: false },
+  rejected: { type: Boolean, default: false },
   category: { type: String, default: 'General' },
   postedBy: String,
   createdAt: { type: Date, default: Date.now },
