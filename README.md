@@ -2,6 +2,36 @@
 
 A full-featured movie streaming and social app built with Flutter & Supabase.
 
+## Installers
+
+Get the app from GitHub. In-app **Install & Host** uses the same links (Download / Install).
+
+| Platform | Installer |
+|----------|-----------|
+| **Latest release** | [github.com/devTechs001/cinemaFlix-flutter/releases/latest](https://github.com/devTechs001/cinemaFlix-flutter/releases/latest) |
+| **v0.2.0** | [Releases / v0.2.0](https://github.com/devTechs001/cinemaFlix-flutter/releases/tag/v0.2.0) |
+| **Android APK** | Attach a `.apk` to a GitHub release, or use the in-app Download button (falls back to source zip until an APK is published) |
+| **Linux** | [`installers/install-linux.sh`](https://github.com/devTechs001/cinemaFlix-flutter/blob/main/installers/install-linux.sh) · [raw](https://raw.githubusercontent.com/devTechs001/cinemaFlix-flutter/main/installers/install-linux.sh) |
+| **macOS** | [`installers/install-macos.sh`](https://github.com/devTechs001/cinemaFlix-flutter/blob/main/installers/install-macos.sh) · [raw](https://raw.githubusercontent.com/devTechs001/cinemaFlix-flutter/main/installers/install-macos.sh) |
+| **Windows** | [`installers/install-windows.ps1`](https://github.com/devTechs001/cinemaFlix-flutter/blob/main/installers/install-windows.ps1) · [raw](https://raw.githubusercontent.com/devTechs001/cinemaFlix-flutter/main/installers/install-windows.ps1) |
+| **Source zip** | [cinemaFlix-flutter-main.zip](https://github.com/devTechs001/cinemaFlix-flutter/archive/refs/heads/main.zip) |
+| **Clone the repo** | [github.com/devTechs001/cinemaFlix-flutter](https://github.com/devTechs001/cinemaFlix-flutter) |
+
+```bash
+# Linux
+curl -fsSL https://raw.githubusercontent.com/devTechs001/cinemaFlix-flutter/main/installers/install-linux.sh | bash
+
+# macOS
+curl -fsSL https://raw.githubusercontent.com/devTechs001/cinemaFlix-flutter/main/installers/install-macos.sh | bash
+```
+
+```powershell
+# Windows (PowerShell)
+irm https://raw.githubusercontent.com/devTechs001/cinemaFlix-flutter/main/installers/install-windows.ps1 | iex
+```
+
+The in-app updater checks GitHub Releases every 30 minutes (and on resume / reconnect).
+
 ## Core Features
 
 ### Authentication
@@ -89,20 +119,19 @@ A full-featured movie streaming and social app built with Flutter & Supabase.
 - Gradient backgrounds per user
 
 ### Install & Host
-- Install cards (Android APK, iOS, Desktop, Linux)
+- Install cards with **Download** and **Install** (Android, iOS/macOS, Windows, Linux, source zip)
+- Links match the [Installers](#installers) table above
 - Hosting options (Cloud, Self-Hosted, Enterprise)
-- Auto-update toggle with background checks
-- Check for Updates button with progress bar
-- Update dialog with release notes
-- Simulated download with file size info
+- Auto-update toggle with GitHub Releases checks
+- Check for Updates button with real download progress
+- Update dialog with release notes → Download & install
 
 ### Auto-Update System
-- Background periodic checking (every 6 hours)
-- Version comparison logic
-- Download simulation with 10-step progress
-- Release notes display
-- Manual check button
-- Last checked timestamp
+- Background checking every 30 minutes, plus on resume and reconnect
+- Version comparison against GitHub Releases latest
+- Streams the platform asset (or `main.zip`) to disk
+- In-app notification when a newer build is ready
+- Manual check button and last-checked timestamp
 
 ### Profile & Settings
 - Gradient cover banner with avatar
