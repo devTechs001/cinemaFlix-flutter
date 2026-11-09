@@ -39,6 +39,71 @@ class _InstallHostScreenState extends State<InstallHostScreen> {
     if (mounted) setState(() {});
   }
 
+  Future<void> _download(String label, UpdateAsset asset, {bool install = false}) async {
+    HapticFeedback.mediumImpact();
+    final path = await updateService.downloadAsset(asset);
+    if (!mounted) return;
+    if (path == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(updateService.error ?? 'Download failed')),
+      );
+      return;
+    }
+    notificationService.notifyDownload(
+      title: '$label downloaded',
+      body: path.split(RegExp(r'[/\\]')).last,
+      onTap: () => updateService.installLocalFile(path),
+    );
+    if (install) {
+      final ok = await updateService.installLocalFile(path);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(ok ? 'Opening installer…' : 'Saved to $path')),
+      );
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Downloaded ${asset.name}')),
+      );
+    }
+  }
+
+  UpdateAsset _assetFor(String label) {
+    final info = updateService.latestUpdate;
+    final assets = info?.assets ?? const <UpdateAsset>[];
+    bool match(UpdateAsset a, List<String> keys) {
+      final n = a.name.toLowerCase();
+      return keys.any(n.contains);
+    }
+    switch (label) {
+      case 'Android':
+        for (final a in assets) {
+          if (a.isApk) return a;
+        }
+        break;
+      case 'iOS':
+        for (final a in assets) {
+          if (a.isIpa) return a;
+        }
+        break;
+      case 'Windows':
+        for (final a in assets) {
+          if (a.isExe || match(a, ['windows', '.ps1'])) return a;
+        }
+        break;
+      case 'macOS':
+        for (final a in assets) {
+          if (a.isMac) return a;
+        }
+        break;
+      case 'Linux':
+        for (final a in assets) {
+          if (a.isLinux || match(a, ['linux', '.sh'])) return a;
+        }
+        break;
+    }
+    return UpdateService.sourceZipAsset;
+  }
+
   Future<void> _shareInstall(String label, String url) async {
     HapticFeedback.mediumImpact();
     await Clipboard.setData(ClipboardData(text: url));
@@ -49,10 +114,7 @@ class _InstallHostScreenState extends State<InstallHostScreen> {
     );
   }
 
-  String get _androidUrl =>
-      updateService.latestUpdate?.apkUrl ?? UpdateService.releasesUrl;
-  String get _releaseUrl =>
-      updateService.latestUpdate?.downloadUrl ?? UpdateService.releasesUrl;
+
 
   @override
   Widget build(BuildContext context) {
@@ -173,125 +235,145 @@ class _InstallHostScreenState extends State<InstallHostScreen> {
   }
 
   Widget _installCards() {
-    return Column(
-      children: [
-        _installCard(
-          Icons.android,
-          'Android APK',
-          'Direct installer from the GitHub release (shared APK)',
-          'Share Android build',
-          Icons.share,
-          () => _shareInstall('Android APK', _androidUrl),
-        ),
-        _installCard(
-          Icons.apple,
-          'iOS / TestFlight',
-          'Latest GitHub release — share the install page',
-          'Share iOS link',
-          Icons.share,
-          () => _shareInstall('iOS', _releaseUrl),
-        ),
-        _installCard(
-          Icons.laptop_windows,
-          'Windows / macOS',
-          'Desktop build from GitHub Releases',
-          'Share desktop build',
-          Icons.share,
-          () => _shareInstall('Desktop', _releaseUrl),
-        ),
-        _installCard(
-          Icons.terminal,
-          'Linux / source',
-          'Clone or download main.zip and build locally',
-          'Share source zip',
-          Icons.share,
-          () => _shareInstall('Source', UpdateService.sourceZipUrl),
-        ),
-        _installCard(
-          Icons.code,
-          'GitHub repo',
-          UpdateService.repoUrl.replaceFirst('https://', ''),
-          'Share repo',
-          Icons.share,
-          () => _shareInstall('GitHub', UpdateService.repoUrl),
-        ),
-      ],
+    return ListenableBuilder(
+      listenable: updateService,
+      builder: (context, _) {
+        return Column(
+          children: [
+            _installCard(
+              Icons.android,
+              'Android APK',
+              'Download the APK from GitHub and install it on the device',
+              'Android',
+            ),
+            _installCard(
+              Icons.apple,
+              'iOS / macOS',
+              'Download the macOS installer or source build',
+              'macOS',
+            ),
+            _installCard(
+              Icons.laptop_windows,
+              'Windows',
+              'Download the Windows installer script from the latest release',
+              'Windows',
+            ),
+            _installCard(
+              Icons.terminal,
+              'Linux',
+              'Download install-linux.sh and run it to pull the latest build',
+              'Linux',
+            ),
+            _installCard(
+              Icons.folder,
+              'Source zip',
+              'Direct download of the main branch (always available)',
+              'Source',
+            ),
+            if (updateService.isDownloading) ...[
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: updateService.updateProgress == 0 ? null : updateService.updateProgress,
+                        backgroundColor: Colors.white10,
+                        color: const Color(0xFFE50914),
+                        minHeight: 6,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Downloading… ${(updateService.updateProgress * 100).toInt()}%',
+                      style: const TextStyle(color: Colors.white54, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        );
+      },
     );
   }
 
-  Widget _installCard(
-    IconData icon,
-    String title,
-    String description,
-    String buttonText,
-    IconData? qrIcon,
-    VoidCallback onTap,
-  ) {
-    return InteractiveCard(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1F1F1F),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: const Color(0xFFE50914).withAlpha(25),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: const Color(0xFFE50914), size: 24),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    description,
-                    style: const TextStyle(color: Colors.white38, fontSize: 12),
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE50914),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          buttonText,
-                          style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            if (qrIcon != null)
+  Widget _installCard(IconData icon, String title, String description, String label) {
+    final asset = _assetFor(label);
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1F1F1F),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
               Container(
-                width: 40,
-                height: 40,
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
-                  color: Colors.white.withAlpha(10),
-                  borderRadius: BorderRadius.circular(10),
+                  color: const Color(0xFFE50914).withAlpha(25),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(qrIcon, color: Colors.white38, size: 20),
+                child: Icon(icon, color: const Color(0xFFE50914), size: 24),
               ),
-          ],
-        ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 3),
+                    Text(description, style: const TextStyle(color: Colors.white38, fontSize: 12)),
+                    const SizedBox(height: 4),
+                    Text(asset.name, style: const TextStyle(color: Color(0xFFE50914), fontSize: 11)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: updateService.isDownloading ? null : () => _download(label, asset),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFE50914),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                  ),
+                  icon: const Icon(Icons.download, size: 16),
+                  label: const Text('Download', style: TextStyle(fontWeight: FontWeight.w700)),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: updateService.isDownloading ? null : () => _download(label, asset, install: true),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side: const BorderSide(color: Colors.white24),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                  ),
+                  icon: const Icon(Icons.build, size: 16),
+                  label: const Text('Install', style: TextStyle(fontWeight: FontWeight.w700)),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Share link',
+                onPressed: () => _shareInstall(label, asset.url),
+                icon: const Icon(Icons.share, color: Colors.white54, size: 18),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -465,6 +547,10 @@ class _InstallHostScreenState extends State<InstallHostScreen> {
                     HapticFeedback.mediumImpact();
                     final hasUpdate = await updateService.checkForUpdates();
                     if (hasUpdate && mounted) {
+                      notificationService.notifyUpdate(
+                        version: updateService.latestUpdate?.version ?? '',
+                        onTap: _showUpdateDialog,
+                      );
                       _showUpdateDialog();
                     } else if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -555,14 +641,18 @@ class _InstallHostScreenState extends State<InstallHostScreen> {
             child: const Text('Later', style: TextStyle(color: Colors.white38)),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
+              final ok = await updateService.downloadAndInstall();
+              if (!context.mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Downloading update...'), duration: Duration(seconds: 2)),
+                SnackBar(
+                  content: Text(ok ? 'Opening installer…' : (updateService.error ?? 'Download failed')),
+                ),
               );
             },
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE50914)),
-            child: const Text('Update Now', style: TextStyle(color: Colors.white)),
+            child: const Text('Download & install', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),

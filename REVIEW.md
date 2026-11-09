@@ -517,3 +517,23 @@ Static: Dart 114 files — 0 broken imports, balance clean. GitHub latest
 release currently 404 (no tags) — fallback paths covered.
 
 Flutter gate locally: `flutter pub get && flutter analyze && flutter test`.
+
+## 2026-11-09 — Real installers, download/install, in-app update (PR #13)
+
+User ask: real installers with a download button, direct install, check for
+updates, in-app notification.
+
+- `UpdateService.downloadAsset` streams the GitHub asset (or main.zip) to
+  temp with real progress. `installLocalFile` opens it: Android APK via
+  FileProvider + MethodChannel (`cinemaflix/installer`), Linux/macOS/Windows
+  via chmod/xdg-open/open/start.
+- Install & Host cards now have **Download** and **Install** (share is
+  secondary). Check Now / Update dialog call downloadAndInstall.
+- Boot: `startBackgroundCheck` + in-app banner (`notifyUpdate`) that routes
+  to `/install`. Also lands in the notifications list.
+- Android: `REQUEST_INSTALL_PACKAGES` + FileProvider.
+- Platform installer scripts under `installers/` (linux/macos/windows).
+
+Static: Dart 114 files — 0 broken imports, balance clean.
+
+Flutter gate locally: `flutter pub get && flutter analyze && flutter test`.

@@ -158,6 +158,8 @@ Future<void> _initSystemTray() async {
   }
 }
 
+final cinemaNavigatorKey = GlobalKey<NavigatorState>();
+
 class CinemaFlixApp extends StatefulWidget {
   const CinemaFlixApp({super.key});
 
@@ -167,6 +169,7 @@ class CinemaFlixApp extends StatefulWidget {
 
 class _CinemaFlixAppState extends State<CinemaFlixApp> {
   bool _wasOnline = true;
+  bool _updateNotified = false;
 
   @override
   void initState() {
@@ -174,13 +177,26 @@ class _CinemaFlixAppState extends State<CinemaFlixApp> {
     _wasOnline = connectivityService.isOnline;
     connectivityService.addListener(_onConnectivityChanged);
     storageService.addListener(_onStorageChanged);
+    updateService.addListener(_onUpdateService);
+    updateService.startBackgroundCheck();
   }
 
   @override
   void dispose() {
     connectivityService.removeListener(_onConnectivityChanged);
     storageService.removeListener(_onStorageChanged);
+    updateService.removeListener(_onUpdateService);
     super.dispose();
+  }
+
+  void _onUpdateService() {
+    if (_updateNotified || !updateService.hasNewerBuild) return;
+    _updateNotified = true;
+    final version = updateService.latestUpdate?.version ?? '';
+    notificationService.notifyUpdate(
+      version: version,
+      onTap: () => cinemaNavigatorKey.currentState?.pushNamed('/install'),
+    );
   }
 
   void _onConnectivityChanged() {
@@ -212,6 +228,7 @@ class _CinemaFlixAppState extends State<CinemaFlixApp> {
       listenable: themeService,
       builder: (context, _) {
         return MaterialApp(
+      navigatorKey: cinemaNavigatorKey,
       title: 'CinemaFlix',
       debugShowCheckedModeBanner: false,
       theme: themeService.activeTheme,
