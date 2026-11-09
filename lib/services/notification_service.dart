@@ -103,6 +103,33 @@ class NotificationService extends ChangeNotifier {
     notifyListeners();
   }
 
+  void notifyUpdate({required String version, VoidCallback? onTap}) {
+    showAlert(
+      title: 'Update v$version ready',
+      body: 'Tap to download and install CinemaFlix',
+      icon: '⬇️',
+      color: const Color(0xFFE50914),
+      onTap: onTap,
+    );
+    _addNotification(AppNotification(
+      id: 'update_$version',
+      title: 'CinemaFlix v$version',
+      body: 'A new build is ready. Open Install & Host to download.',
+      time: 'just now',
+      type: NotificationType.system,
+    ));
+  }
+
+  void notifyDownload({required String title, required String body, VoidCallback? onTap}) {
+    showAlert(
+      title: title,
+      body: body,
+      icon: '📦',
+      color: const Color(0xFF1E88E5),
+      onTap: onTap,
+    );
+  }
+
   void showAlert({required String title, required String body, required String icon, required Color color, VoidCallback? onTap}) {
     _currentAlert = InAppAlert(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
