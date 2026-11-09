@@ -78,6 +78,7 @@ void main() async {
   ]);
   await themeService.initialize();
   await soundService.initialize();
+  await settingsService.load();
   await SupabaseService().initialize(); // never throws; app runs backend-only on failure
   storageService.checkStorage();
   await lockService.initialize();

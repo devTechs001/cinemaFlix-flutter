@@ -17,23 +17,6 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   final _mediaService = MediaService();
-  bool _hdStreaming = true;
-  bool _autoPlay = true;
-  bool _downloadOnWifi = true;
-  bool _subtitles = true;
-  bool _notificationsEnabled = true;
-  bool _smartDownloads = false;
-  bool _dataSaver = false;
-  bool _privateAccount = false;
-  bool _parentalControls = false;
-  bool _socialShare = true;
-  bool _autoplayNext = true;
-  bool _dolbyAtmos = false;
-  bool _backgroundPlay = false;
-  bool _gestureControls = true;
-  String _streamingQuality = 'Auto';
-  String _downloadQuality = 'HD';
-  String _contentLanguage = 'English';
   double _cacheSize = 1.2;
 
   String _version = '1.0.0';
@@ -44,6 +27,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.initState();
     _loadPackageInfo();
     soundService.initialize();
+    settingsService.bind(userId: authService.currentUser?.id, token: authService.token);
+    settingsService.load().then((_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  Future<void> _save(void Function() mutate) async {
+    await settingsService.patch(mutate);
+    if (mounted) setState(() {});
   }
 
   Future<void> _loadPackageInfo() async {
@@ -68,6 +60,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       onChanged: (v) {
         soundService.setEventEnabled(event, v);
         if (v) soundService.play(event);
+        settingsService.syncSounds();
         setState(() {});
       },
       activeTrackColor: const Color(0xFFE50914),
@@ -96,28 +89,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SnackBar(content: Text('Email preferences coming soon'), duration: Duration(seconds: 1)),
               );
             }),
-            _toggleTile(Icons.visibility_off, 'Private Account', _privateAccount, (v) => setState(() => _privateAccount = v)),
-            _toggleTile(Icons.share, 'Social Sharing', _socialShare, (v) => setState(() => _socialShare = v)),
+            _toggleTile(Icons.visibility_off, 'Private Account', settingsService.privateAccount, (v) => _save(() => settingsService.privateAccount = v)),
+            _toggleTile(Icons.share, 'Social Sharing', settingsService.socialShare, (v) => _save(() => settingsService.socialShare = v)),
           ]),
           const SizedBox(height: 20),
           _section('Playback'),
           _card(children: [
-            _toggleTile(Icons.hd, 'HD Streaming', _hdStreaming, (v) => setState(() => _hdStreaming = v)),
-            _toggleTile(Icons.play_circle_outline, 'Auto-Play Trailers', _autoPlay, (v) => setState(() => _autoPlay = v)),
-            _toggleTile(Icons.skip_next, 'Auto-Play Next Episode', _autoplayNext, (v) => setState(() => _autoplayNext = v)),
-            _toggleTile(Icons.subtitles, 'Subtitles / CC', _subtitles, (v) => setState(() => _subtitles = v)),
-            _toggleTile(Icons.surround_sound, 'Dolby Atmos', _dolbyAtmos, (v) => setState(() => _dolbyAtmos = v)),
-            _toggleTile(Icons.music_video, 'Background Play', _backgroundPlay, (v) => setState(() => _backgroundPlay = v)),
-            _toggleTile(Icons.touch_app, 'Gesture Controls', _gestureControls, (v) => setState(() => _gestureControls = v)),
-            _selectTile(Icons.speed, 'Streaming Quality', _streamingQuality, ['Auto', 'SD', 'HD', 'Full HD', '4K UHD'], (v) => setState(() => _streamingQuality = v)),
+            _toggleTile(Icons.hd, 'HD Streaming', settingsService.hdStreaming, (v) => _save(() => settingsService.hdStreaming = v)),
+            _toggleTile(Icons.play_circle_outline, 'Auto-Play Trailers', settingsService.autoPlay, (v) => _save(() => settingsService.autoPlay = v)),
+            _toggleTile(Icons.skip_next, 'Auto-Play Next Episode', settingsService.autoplayNext, (v) => _save(() => settingsService.autoplayNext = v)),
+            _toggleTile(Icons.subtitles, 'Subtitles / CC', settingsService.subtitles, (v) => _save(() => settingsService.subtitles = v)),
+            _toggleTile(Icons.surround_sound, 'Dolby Atmos', settingsService.dolbyAtmos, (v) => _save(() => settingsService.dolbyAtmos = v)),
+            _toggleTile(Icons.music_video, 'Background Play', settingsService.backgroundPlay, (v) => _save(() => settingsService.backgroundPlay = v)),
+            _toggleTile(Icons.touch_app, 'Gesture Controls', settingsService.gestureControls, (v) => _save(() => settingsService.gestureControls = v)),
+            _selectTile(Icons.speed, 'Streaming Quality', settingsService.streamingQuality, ['Auto', 'SD', 'HD', 'Full HD', '4K UHD'], (v) => _save(() => settingsService.streamingQuality = v)),
           ]),
           const SizedBox(height: 20),
           _section('Data & Storage'),
           _card(children: [
-            _toggleTile(Icons.wifi, 'Download on Wi-Fi Only', _downloadOnWifi, (v) => setState(() => _downloadOnWifi = v)),
-            _toggleTile(Icons.auto_awesome, 'Smart Downloads', _smartDownloads, (v) => setState(() => _smartDownloads = v)),
-            _toggleTile(Icons.data_saver_on, 'Data Saver Mode', _dataSaver, (v) => setState(() => _dataSaver = v)),
-            _selectTile(Icons.download, 'Download Quality', _downloadQuality, ['SD', 'HD', 'Full HD'], (v) => setState(() => _downloadQuality = v)),
+            _toggleTile(Icons.wifi, 'Download on Wi-Fi Only', settingsService.downloadOnWifi, (v) => _save(() => settingsService.downloadOnWifi = v)),
+            _toggleTile(Icons.auto_awesome, 'Smart Downloads', settingsService.smartDownloads, (v) => _save(() => settingsService.smartDownloads = v)),
+            _toggleTile(Icons.data_saver_on, 'Data Saver Mode', settingsService.dataSaver, (v) => _save(() => settingsService.dataSaver = v)),
+            _selectTile(Icons.download, 'Download Quality', settingsService.downloadQuality, ['SD', 'HD', 'Full HD'], (v) => _save(() => settingsService.downloadQuality = v)),
             _settingTile(Icons.download_outlined, 'Manage Downloads', '3 movies downloaded', () {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Downloads management'), duration: Duration(seconds: 1)),
@@ -128,9 +121,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 20),
           _section('Content'),
           _card(children: [
-            _selectTile(Icons.language, 'Content Language', _contentLanguage, ['English', 'Spanish', 'French', 'German', 'Japanese', 'Korean', 'Chinese', 'Hindi', 'Portuguese', 'Arabic'], (v) => setState(() => _contentLanguage = v)),
-            _toggleTile(Icons.family_restroom, 'Parental Controls', _parentalControls, (v) => setState(() => _parentalControls = v)),
-            _settingTile(Icons.flag_outlined, 'Content Region', 'United States', () {
+            _selectTile(Icons.language, 'Content Language', settingsService.language, ['English', 'Spanish', 'French', 'German', 'Japanese', 'Korean', 'Chinese', 'Hindi', 'Portuguese', 'Arabic'], (v) => _save(() => settingsService.language = v)),
+            _toggleTile(Icons.family_restroom, 'Parental Controls', settingsService.parentalControls, (v) => _save(() => settingsService.parentalControls = v)),
+            _settingTile(Icons.flag_outlined, 'Content Region', settingsService.region, () {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Region settings coming soon'), duration: Duration(seconds: 1)),
               );
@@ -153,7 +146,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 20),
           _section('Notifications'),
           _card(children: [
-            _toggleTile(Icons.notifications_outlined, 'Push Notifications', _notificationsEnabled, (v) => setState(() => _notificationsEnabled = v)),
+            _toggleTile(Icons.notifications_outlined, 'Push Notifications', settingsService.pushNotifications, (v) => _save(() => settingsService.pushNotifications = v)),
             _settingTile(Icons.movie_outlined, 'Movie Alerts', 'New releases, trending', () {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Movie alert settings'), duration: Duration(seconds: 1)),
@@ -185,6 +178,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onChanged: (v) {
                 HapticFeedback.lightImpact();
                 soundService.setAllEnabled(v);
+                settingsService.syncSounds();
                 setState(() {});
               },
               activeTrackColor: const Color(0xFFE50914),
@@ -199,7 +193,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 20),
           _section('Accessibility'),
           _card(children: [
-            _toggleTile(Icons.closed_caption, 'Closed Captions', _subtitles, (v) => setState(() => _subtitles = v)),
+            _toggleTile(Icons.closed_caption, 'Closed Captions', settingsService.subtitles, (v) => _save(() => settingsService.subtitles = v)),
             _settingTile(Icons.text_fields, 'Font Size', 'Default', () {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Font size settings'), duration: Duration(seconds: 1)),
@@ -439,7 +433,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           underline: const SizedBox(),
           style: const TextStyle(color: Colors.white, fontSize: 13),
           icon: const Icon(Icons.expand_more, color: Colors.white38, size: 18),
-          items: options.map((o) => DropdownMenuItem(value: o, child: Text(o))).toList(),
+          items: [
+            if (!options.contains(value)) DropdownMenuItem(value: value, child: Text(value)),
+            ...options.map((o) => DropdownMenuItem(value: o, child: Text(o))),
+          ],
           onChanged: (v) { if (v != null) { HapticFeedback.selectionClick(); onChanged(v); } },
         ),
       ),

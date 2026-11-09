@@ -3,6 +3,9 @@ class UserModel {
   final String email;
   final String username;
   final String? avatarUrl;
+  final String bio;
+  final String website;
+  final String location;
   final DateTime createdAt;
 
   UserModel({
@@ -10,6 +13,9 @@ class UserModel {
     required this.email,
     required this.username,
     this.avatarUrl,
+    this.bio = '',
+    this.website = '',
+    this.location = '',
     required this.createdAt,
   });
 
@@ -21,6 +27,9 @@ class UserModel {
       email: (map['email'] ?? '').toString(),
       username: (map['username'] ?? 'Cinema Fan').toString(),
       avatarUrl: (map['avatar_url'] ?? map['avatarUrl'])?.toString(),
+      bio: (map['bio'] ?? '').toString(),
+      website: (map['website'] ?? '').toString(),
+      location: (map['location'] ?? '').toString(),
       createdAt:
           DateTime.tryParse(
             (map['created_at'] ??
@@ -41,6 +50,9 @@ class UserModel {
       'email': email,
       'username': username,
       'avatar_url': avatarUrl,
+      'bio': bio,
+      'website': website,
+      'location': location,
       'created_at': createdAt.toIso8601String(),
     };
   }
@@ -52,6 +64,9 @@ class UserModel {
     String? email,
     String? username,
     String? avatarUrl,
+    String? bio,
+    String? website,
+    String? location,
     DateTime? createdAt,
   }) {
     return UserModel(
@@ -59,6 +74,9 @@ class UserModel {
       email: email ?? this.email,
       username: username ?? this.username,
       avatarUrl: avatarUrl ?? this.avatarUrl,
+      bio: bio ?? this.bio,
+      website: website ?? this.website,
+      location: location ?? this.location,
       createdAt: createdAt ?? this.createdAt,
     );
   }

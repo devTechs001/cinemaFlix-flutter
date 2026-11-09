@@ -6,6 +6,9 @@ const userSchema = new mongoose.Schema({
   username: { type: String, default: 'Cinema Fan' },
   password: { type: String, required: true },
   avatarUrl: { type: String, default: null },
+  bio: { type: String, default: '' },
+  website: { type: String, default: '' },
+  location: { type: String, default: '' },
   createdAt: { type: Date, default: Date.now },
 });
 
@@ -25,6 +28,9 @@ userSchema.methods.toPublic = function () {
     email: this.email,
     username: this.username,
     avatarUrl: this.avatarUrl,
+    bio: this.bio || '',
+    website: this.website || '',
+    location: this.location || '',
     createdAt: this.createdAt,
   };
 };

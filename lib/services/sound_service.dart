@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -50,32 +52,40 @@ class SoundService {
     _initialized = true;
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_prefsKey);
-    if (raw != null) {
-      final map = (raw as Map).cast<String, bool>();
-      for (final e in SoundEvent.values) {
-        if (map.containsKey(e.name)) _enabled[e] = map[e.name]!;
-      }
+    if (raw != null && raw.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is Map) applyFromMap(decoded);
+      } catch (_) {}
     }
+  }
+
+  void applyFromMap(Map map) {
+    if (map.isEmpty) return;
+    for (final e in SoundEvent.values) {
+      final v = map[e.name];
+      if (v is bool) _enabled[e] = v;
+    }
+  }
+
+  Future<void> _persist() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _prefsKey,
+      jsonEncode({for (final e in _enabled.entries) e.key.name: e.value}),
+    );
   }
 
   Future<void> setEventEnabled(SoundEvent event, bool value) async {
     _enabled[event] = value;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-      _prefsKey,
-      _enabled.map((k, v) => MapEntry(k.name, v)).toString(),
-    );
+    await _persist();
   }
 
   Future<void> setAllEnabled(bool value) async {
     for (final e in SoundEvent.values) {
       _enabled[e] = value;
     }
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-      _prefsKey,
-      _enabled.map((k, v) => MapEntry(k.name, v)).toString(),
-    );
+    await _persist();
   }
 
   void setHapticsEnabled(bool value) => _hapticsEnabled = value;

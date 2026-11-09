@@ -136,10 +136,13 @@ app.put('/api/users/:id', requireAuth, async (req, res) => {
   if (!getIsConnected()) return res.status(503).json({ error: 'Database not connected' });
   try {
     if (req.params.id !== req.userId) return res.status(403).json({ error: 'Not authorized' });
-    const { username, avatarUrl } = req.body;
+    const { username, avatarUrl, bio, website, location } = req.body;
     const updates = {};
     if (username) updates.username = username;
     if (avatarUrl !== undefined) updates.avatarUrl = avatarUrl;
+    if (bio !== undefined) updates.bio = bio;
+    if (website !== undefined) updates.website = website;
+    if (location !== undefined) updates.location = location;
     const user = await User.findByIdAndUpdate(req.params.id, updates, { new: true }).select('-password');
     if (!user) return res.status(404).json({ error: 'User not found' });
     res.json(user.toPublic());
