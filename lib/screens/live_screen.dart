@@ -24,6 +24,9 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
   bool _isHost = false;
   bool _isMicOn = true;
   bool _isStreamLive = true;
+  Map<String, dynamic>? _selectedRoom;
+  Timer? _refreshTimer;
+  bool _loadingRooms = false;
 
   // Reactions
   final List<_FloatingReaction> _reactions = [];
@@ -56,6 +59,11 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     _messages.addAll(_sampleChat);
+    // Real rooms from the backend, kept fresh while the screen is open.
+    _loadLiveRooms();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 20), (_) {
+      if (!_showRoomDetail) _loadLiveRooms();
+    });
   }
 
   @override
@@ -63,7 +71,95 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
     _chatController.dispose();
     _scrollController.dispose();
     _reactionTimer?.cancel();
+    _refreshTimer?.cancel();
     super.dispose();
+  }
+
+  /// Loads live rooms created through the backend and merges them into
+  /// the list (existing rooms get refreshed viewer counts; new rooms are
+  /// prepended). Demo rooms stay as offline fallback content.
+  Future<void> _loadLiveRooms() async {
+    if (_loadingRooms) return;
+    _loadingRooms = true;
+    try {
+      final remote = await BackendApiService.getLiveRooms();
+      if (!mounted || remote.isEmpty) return;
+      setState(() {
+        for (final raw in remote) {
+          final id = (raw['callId'] ?? raw['call_id'])?.toString();
+          if (id == null || id.isEmpty) continue;
+          final ui = _adaptRemoteRoom(raw, id);
+          final idx = _liveRooms.indexWhere((r) => r['call_id'] == id);
+          if (idx >= 0) {
+            _liveRooms[idx] = {
+              ..._liveRooms[idx],
+              'viewers': ui['viewers'],
+              'name': ui['name'],
+              'host': ui['host'],
+              'active': ui['active'],
+            };
+          } else {
+            _liveRooms.insert(0, ui);
+          }
+        }
+        // Keep the currently open room object in sync.
+        if (_selectedRoom?['call_id'] != null) {
+          final openId = _selectedRoom!['call_id'];
+          final match = _liveRooms.where((r) => r['call_id'] == openId);
+          if (match.isNotEmpty) _selectedRoom = match.first;
+        }
+      });
+    } finally {
+      _loadingRooms = false;
+    }
+  }
+
+  /// Maps the backend room JSON (see `liveRoomJSON` in systems.js) onto
+  /// the card/detail shape the UI uses.
+  Map<String, dynamic> _adaptRemoteRoom(Map<String, dynamic> raw, String id) {
+    const palette = [
+      Color(0xFFE50914), Color(0xFF1E88E5), Color(0xFF7B1FA2),
+      Color(0xFF43A047), Color(0xFFFF6F00), Color(0xFF00ACC1),
+    ];
+    return {
+      'name': (raw['title'] ?? 'Live room').toString(),
+      'host': (raw['hostName'] ?? 'Host').toString(),
+      'viewers': (raw['viewers'] as num?)?.toInt() ?? 0,
+      'movie': (raw['topic'] ?? raw['movie'] ?? 'Watch party').toString(),
+      'color': palette[id.hashCode.abs() % palette.length],
+      'active': (raw['status'] ?? 'live') == 'live',
+      'tags': ['Live'],
+      'call_id': id,
+      'host_id': (raw['hostId'] ?? raw['host_id'])?.toString(),
+      'requires_approval': raw['requiresApproval'] == true,
+    };
+  }
+
+  /// Ends the host's stream for real: tells the backend (best effort),
+  /// closes the room view and drops the room from the grid.
+  Future<void> _endLiveStream() async {
+    final callId = _selectedRoom?['call_id']?.toString();
+    var ended = true;
+    if (callId != null && callId.isNotEmpty) {
+      ended = await BackendApiService.endLiveRoom(callId);
+    }
+    if (!mounted) return;
+    setState(() {
+      _isStreamLive = false;
+      _showRoomDetail = false;
+      if (ended && callId != null && callId.isNotEmpty) {
+        _liveRooms.removeWhere((r) => r['call_id'] == callId);
+      }
+      _selectedRoom = null;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(ended ? '🔴 Stream ended' : 'Stream ended locally (backend offline)'),
+        backgroundColor: const Color(0xFFE50914),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 1),
+      ),
+    );
   }
 
   void _sendMessage() {
@@ -80,6 +176,10 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
   // ---- Live rooms: join-request / owner approval wiring ----
 
   bool _isRoomOwner(Map<String, dynamic> room) {
+    final hostId = room['host_id']?.toString();
+    if (hostId != null && hostId.isNotEmpty) {
+      return authService.currentUser?.id == hostId;
+    }
     final user = authService.currentUser;
     return room['call_id'] != null && room['host'] == (user?.username ?? 'You');
   }
@@ -283,6 +383,7 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
     final titleController = TextEditingController(text: 'My Live Stream');
     final movieController = TextEditingController();
     String selectedCategory = 'Movies';
+    bool requireApproval = false;
 
     showModalBottomSheet(
       context: context,
@@ -377,6 +478,21 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
                   );
                 }).toList(),
               ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  const Icon(Icons.lock_outline, color: Colors.white54, size: 18),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text('Require approval to join', style: TextStyle(color: Colors.white70, fontSize: 14)),
+                  ),
+                  Switch(
+                    value: requireApproval,
+                    activeThumbColor: const Color(0xFFE50914),
+                    onChanged: (v) => setDialogState(() => requireApproval = v),
+                  ),
+                ],
+              ),
               const SizedBox(height: 20),
               SizedBox(
                 width: double.infinity,
@@ -392,6 +508,7 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
                       title: titleController.text.trim(),
                       userId: user?.id,
                       userName: user?.username ?? 'You',
+                      requiresApproval: requireApproval,
                     );
 
                     final newRoom = {
@@ -567,7 +684,10 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildRoomsGrid() {
-    return GridView.builder(
+    return RefreshIndicator(
+      color: const Color(0xFFE50914),
+      onRefresh: _loadLiveRooms,
+      child: GridView.builder(
       padding: const EdgeInsets.all(12),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
@@ -583,6 +703,8 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
             HapticFeedback.mediumImpact();
             setState(() {
               _currentRoom = room['name'];
+              _selectedRoom = room;
+              _isHost = _isRoomOwner(room);
               _showRoomDetail = true;
             });
           },
@@ -641,6 +763,7 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
           ),
         );
       },
+    );
     );
   }
 
@@ -951,10 +1074,14 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
             InteractiveCard(
               onTap: () {
                 HapticFeedback.heavyImpact();
-                setState(() => _isStreamLive = !_isStreamLive);
+                if (_isStreamLive) {
+                  _endLiveStream();
+                  return;
+                }
+                setState(() => _isStreamLive = true);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text(_isStreamLive ? '🔴 Stream ended' : '🔴 Stream resumed'),
+                    content: Text('🔴 Stream resumed'),
                     backgroundColor: const Color(0xFFE50914),
                     behavior: SnackBarBehavior.floating,
                     duration: const Duration(seconds: 1),

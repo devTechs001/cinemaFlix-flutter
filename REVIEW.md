@@ -193,3 +193,48 @@ the real gate. Move `docs/flutter-ci-workflow.yml` into `.github/workflows/` to 
 follow-up unification pass; most screens still use raw `Color(0xFF…)` literals (token sweep
 was lost in the force-push); live rooms/social content partly demo; rate limiting,
 OAuth/OTP production hardening and test coverage per `DEV_DOC.md` §Remaining.
+
+---
+
+## 2026-11-09 — live system + Netflix splash/onboarding + modern profile
+
+**Live system (functional pass):**
+- Rooms now **load from the backend** (`GET /api/live/rooms`, 20s poll + pull-to-refresh on the
+  grid) and merge into the list: remote rooms get refreshed viewer counts/name, new rooms are
+  prepended with an adapter (`_adaptRemoteRoom`) mapping `liveRoomJSON` → card/detail shape
+  (color palette, `call_id`, `host_id`, `requires_approval`). Demo rooms remain as offline
+  fallback so the screen is never empty.
+- Opening a room now sets `_selectedRoom` **and `_isHost`** — previously `_isHost` was never
+  assigned, so host controls were dead code.
+- Host **End stream** now really ends: calls `POST /api/live/end`, closes the room view and
+  removes the room (graceful local-only end when the backend is offline).
+- Go Live dialog gained a **"Require approval to join"** switch → `requires_approval` sent to
+  `/api/live/create` (backend already supported it; the client never sent it).
+- `_isRoomOwner` prefers backend `host_id` match (falls back to the legacy name compare).
+- Existing flows kept: join + join-request approval sheet, requests inbox, gifts, reactions,
+  share, RealMe bridge card.
+
+**Splash + onboarding — Netflix-style movie-card backgrounds:**
+- New shared `MovieCardWall` widget (`lib/widgets/movie_card_wall.dart`): three tilted rows of
+  poster cards drifting in alternating directions, seamless loop (one catalogue period),
+  reading the live `movieService` catalogue and rendering through `MoviePoster` (gradient
+  fallback when an image fails).
+- Splash: wall sits behind particles/glow/logo (opacity 0.42); the old static bottom strip was
+  removed — it referenced `SampleMovie.effectivePosterUrl`, **a member that exists nowhere**
+  (a compile break in the pushed tree).
+- Onboarding: same wall behind the 4-step PageView with a top/middle/bottom scrim for
+  readability.
+
+**Profile — modern clean + nav bar:**
+- Rebuilt `build()` as `CustomScrollView` with a **pinned SliverAppBar** carrying a new
+  **section nav bar**: Overview · Library · Activity · Account (animated segmented pills,
+  haptics, always visible while scrolling).
+- All previous sections regrouped behind the tabs (nothing dropped): Overview = badges/stats/
+  level/continue-watching/rating chart; Library = favorites/watchlists/reviews/lists; Activity
+  = friends/recent/your-activity; Account = menu tiles + sign out + footer.
+- `MainShell` no longer hides the bottom bar on the Profile tab (`_currentIndex == 4 → null`
+  special case removed) — profile is no longer a navigation dead end.
+
+**Verified (static):** 0 broken imports, delimiter balance OK across `lib`+`test`, helper
+definitions single, `effectivePosterUrl`/`CachedNetworkImage` fully removed. Still no Flutter
+SDK in sandbox — `flutter pub get && flutter analyze && flutter test` remains the real gate.

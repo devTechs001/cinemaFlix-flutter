@@ -108,6 +108,7 @@ class BackendApiService {
     required String title,
     String? userId,
     String? userName,
+    bool requiresApproval = false,
   }) async {
     try {
       final response = await http
@@ -118,7 +119,7 @@ class BackendApiService {
               if (userId != null) 'x-user-id': userId,
               if (userName != null) 'x-user-name': userName,
             },
-            body: jsonEncode({'title': title}),
+            body: jsonEncode({'title': title, 'requires_approval': requiresApproval}),
           )
           .timeout(_timeout);
       if (response.statusCode != 200) return null;

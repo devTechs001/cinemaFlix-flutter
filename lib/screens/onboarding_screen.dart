@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/interactive_card.dart';
+import '../widgets/movie_card_wall.dart';
 import '../services/globals.dart';
 import '../services/sound_service.dart';
 
@@ -70,7 +71,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF141414),
-      body: SafeArea(
+      body: Stack(
+        children: [
+          // Netflix-style drifting movie-card backdrop
+          const MovieCardWall(opacity: 0.30),
+          const Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0xB3141414), Color(0x59141414), Color(0xF2141414)],
+                ),
+              ),
+            ),
+          ),
+          SafeArea(
         child: Column(
           children: [
             if (_currentPage < _steps.length - 1)
@@ -211,6 +227,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             const SizedBox(height: 32),
           ],
         ),
+          ),
+        ],
       ),
     );
   }
