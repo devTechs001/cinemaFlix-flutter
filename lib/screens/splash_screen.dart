@@ -1,11 +1,10 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/globals.dart';
 import '../services/sound_service.dart';
-import '../models/sample_movies.dart';
 import '../widgets/app_logo.dart';
+import '../widgets/movie_card_wall.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -127,6 +126,8 @@ class _SplashScreenState extends State<SplashScreen>
             ),
             child: Stack(
               children: [
+                // Netflix-style drifting movie-card wall (background)
+                const MovieCardWall(opacity: 0.42),
                 ..._particles.map((p) => _buildParticle(p)),
                 AnimatedBuilder(
                   animation: _glowController,
@@ -172,78 +173,6 @@ class _SplashScreenState extends State<SplashScreen>
                         fontSize: 14,
                         letterSpacing: 4,
                         fontWeight: FontWeight.w300,
-                      ),
-                    ),
-                  ),
-                ),
-                // Netflix-style featured movie cards strip
-                Positioned(
-                  bottom: MediaQuery.of(context).size.height * 0.14,
-                  left: 0,
-                  right: 0,
-                  child: FadeTransition(
-                    opacity: _subtitleFade,
-                    child: SizedBox(
-                      height: 120,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: sampleMovies.take(6).length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 10),
-                        itemBuilder: (context, i) {
-                          final movie = sampleMovies[i];
-                          return ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Stack(
-                              children: [
-                                CachedNetworkImage(
-                                  imageUrl: movie.effectivePosterUrl,
-                                  width: 84,
-                                  height: 120,
-                                  fit: BoxFit.cover,
-                                  errorWidget: (_, __, ___) => Container(
-                                    width: 84,
-                                    height: 120,
-                                    color: const Color(0xFF2A2A2A),
-                                    child: const Icon(Icons.movie, color: Colors.white24),
-                                  ),
-                                ),
-                                Positioned(
-                                  bottom: 0,
-                                  left: 0,
-                                  right: 0,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(6),
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        begin: Alignment.topCenter,
-                                        end: Alignment.bottomCenter,
-                                        colors: [Colors.transparent, Colors.black.withValues(alpha: 0.85)],
-                                      ),
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          movie.title,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600),
-                                        ),
-                                        Text(
-                                          '★ ${movie.rating}',
-                                          style: const TextStyle(color: Color(0xFFE50914), fontSize: 9),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
                       ),
                     ),
                   ),

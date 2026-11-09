@@ -383,8 +383,6 @@ class _MainShellState extends State<MainShell> {
               onProfile: () => setState(() => _currentIndex = 4),
               inboxBadge: 3,
             )
-          : _currentIndex == 4
-          ? null
           : Container(
         decoration: const BoxDecoration(
           border: Border(top: BorderSide(color: Color(0xFF2A2A2A), width: 0.5)),

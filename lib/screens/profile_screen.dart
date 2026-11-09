@@ -14,6 +14,7 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _isEditing = false;
+  int _sectionIndex = 0; // pinned section nav: Overview/Library/Activity/Account
   late final TextEditingController _nameController;
   late final TextEditingController _bioController;
   late final TextEditingController _websiteController;
@@ -238,60 +239,131 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profile', style: TextStyle(fontWeight: FontWeight.bold)),
-        actions: [
-          InteractiveCard(
-            onTap: () async {
-              HapticFeedback.mediumImpact();
-              if (_isEditing && authService.currentUser != null) {
-                await authService.updateProfile(username: _nameController.text.trim());
-                if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Profile updated'), duration: Duration(seconds: 1)),
-                );
-              }
-              setState(() => _isEditing = !_isEditing);
-            },
-            scaleAmount: 0.88,
-            child: Padding(
-              padding: const EdgeInsets.all(8),
-              child: Icon(_isEditing ? Icons.check : Icons.edit_outlined, color: Colors.white54),
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          SliverAppBar(
+            pinned: true,
+            elevation: 0,
+            surfaceTintColor: Colors.transparent,
+            title: const Text('Profile', style: TextStyle(fontWeight: FontWeight.bold)),
+            actions: [
+              InteractiveCard(
+                onTap: () async {
+                  HapticFeedback.mediumImpact();
+                  if (_isEditing && authService.currentUser != null) {
+                    await authService.updateProfile(username: _nameController.text.trim());
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Profile updated'), duration: Duration(seconds: 1)),
+                    );
+                  }
+                  setState(() => _isEditing = !_isEditing);
+                },
+                scaleAmount: 0.88,
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Icon(_isEditing ? Icons.check : Icons.edit_outlined, color: Colors.white54),
+                ),
+              ),
+              InteractiveCard(
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  showDialog(
+                    context: context,
+                    builder: (_) => _buildSettingsDialog(context),
+                  );
+                },
+                scaleAmount: 0.88,
+                child: const Padding(
+                  padding: EdgeInsets.all(8),
+                  child: Icon(Icons.settings_outlined, color: Colors.white54),
+                ),
+              ),
+            ],
+            // Modern pinned section nav — stays visible while scrolling.
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(56),
+              child: _buildSectionNavBar(),
             ),
           ),
-          InteractiveCard(
-            onTap: () {
-              HapticFeedback.lightImpact();
-              showDialog(
-                context: context,
-                builder: (_) => _buildSettingsDialog(context),
-              );
-            },
-            scaleAmount: 0.88,
-            child: const Padding(
-              padding: EdgeInsets.all(8),
-              child: Icon(Icons.settings_outlined, color: Colors.white54),
+          SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildCoverBanner(),
+                _buildProfileHeader(),
+                const SizedBox(height: 16),
+                _buildSectionBody(),
+              ],
             ),
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        child: Column(
+    );
+  }
+
+  /// Pinned section nav bar: Overview · Library · Activity · Account.
+  Widget _buildSectionNavBar() {
+    const labels = ['Overview', 'Library', 'Activity', 'Account'];
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 4, 12, 10),
+      child: Row(
+        children: [
+          for (var i = 0; i < labels.length; i++)
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(right: i == labels.length - 1 ? 0 : 6),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      setState(() => _sectionIndex = i);
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      padding: const EdgeInsets.symmetric(vertical: 9),
+                      decoration: BoxDecoration(
+                        color: _sectionIndex == i
+                            ? const Color(0xFFE50914)
+                            : const Color(0xFF1F1F1F),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: _sectionIndex == i
+                              ? const Color(0xFFE50914)
+                              : const Color(0xFF2A2A2A),
+                        ),
+                      ),
+                      child: Text(
+                        labels[i],
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: _sectionIndex == i ? Colors.white : Colors.white60,
+                          fontSize: 12.5,
+                          fontWeight:
+                              _sectionIndex == i ? FontWeight.w700 : FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// The four section bodies — same content as the old single scroll,
+  /// grouped behind the nav bar for a cleaner, modern profile.
+  Widget _buildSectionBody() {
+    switch (_sectionIndex) {
+      case 1: // Library
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildCoverBanner(),
-            _buildProfileHeader(),
-            const SizedBox(height: 16),
-            _buildAchievementBadges(),
-            const SizedBox(height: 20),
-            _buildAnimatedStatRow(),
-            const SizedBox(height: 20),
-            _buildLevelBar(),
-            const SizedBox(height: 24),
-            _buildSectionTitle('Continue Watching'),
-            const SizedBox(height: 8),
-            _buildContinueWatching(),
-            const SizedBox(height: 28),
             _buildSectionTitle('Favorites'),
             const SizedBox(height: 8),
             _buildFavoritesGrid(),
@@ -303,14 +375,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _buildSectionTitle('Reviews by You'),
             _buildReviewsByYou(),
             const SizedBox(height: 28),
-            _buildSectionTitle('Rating Distribution'),
-            const SizedBox(height: 8),
-            _buildRatingChart(),
-            const SizedBox(height: 28),
             _buildSectionTitle('Lists'),
             const SizedBox(height: 8),
             _buildLists(),
             const SizedBox(height: 28),
+            _buildFooter(),
+          ],
+        );
+      case 2: // Activity
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             _buildSectionTitle('Friend Suggestions'),
             const SizedBox(height: 8),
             _buildFriendSuggestions(),
@@ -321,38 +396,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 28),
             _buildSectionTitle('Your Activity'),
             const SizedBox(height: 8),
-            ...List.generate(
-              sampleMovies.take(3).toList().asMap().entries.length,
-              (i) {
-                final entry = sampleMovies.take(3).toList().asMap().entries.elementAt(i);
-                final movie = entry.value;
-                return InteractiveCard(
-                  onTap: () => Navigator.pushNamed(context, '/movie-detail', arguments: movie),
-                  child: ListTile(
-                    leading: Container(
-                      width: 44, height: 44,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(colors: [movie.gradientStart, movie.gradientEnd]),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(Icons.check_circle_outline, color: Colors.white38, size: 22),
-                    ),
-                    title: Text(movie.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 14)),
-                    subtitle: Text('Watched • ★ ${movie.rating}', style: const TextStyle(color: Colors.white38, fontSize: 12)),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: List.generate(5, (star) {
-                        return Icon(
-                          star < 4 ? Icons.star : Icons.star_border,
-                          color: star < 4 ? Colors.amber : Colors.white24,
-                          size: 16,
-                        );
-                      }),
-                    ),
-                  ),
-                );
-              },
-            ),
+            ..._buildWatchedListTiles(),
+            const SizedBox(height: 28),
+            _buildFooter(),
+          ],
+        );
+      case 3: // Account
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             const Divider(color: Color(0xFF2A2A2A), height: 1),
             const SizedBox(height: 8),
             _buildSectionTitle('Account'),
@@ -412,14 +464,79 @@ class _ProfileScreenState extends State<ProfileScreen> {
               HapticFeedback.heavyImpact();
               showDialog(context: context, builder: (_) => _buildSignOutDialog(context));
             }, isDanger: true),
-            const SizedBox(height: 40),
-            const AppLogo(size: 32, showText: false),
-            const SizedBox(height: 6),
-            const Text('CinemaFlix v1.0', style: TextStyle(color: Colors.white24, fontSize: 12)),
-            const SizedBox(height: 20),
+            const SizedBox(height: 8),
+            _buildFooter(),
           ],
-        ),
-      ),
+        );
+      default: // Overview
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildAchievementBadges(),
+            const SizedBox(height: 20),
+            _buildAnimatedStatRow(),
+            const SizedBox(height: 20),
+            _buildLevelBar(),
+            const SizedBox(height: 24),
+            _buildSectionTitle('Continue Watching'),
+            const SizedBox(height: 8),
+            _buildContinueWatching(),
+            const SizedBox(height: 28),
+            _buildSectionTitle('Rating Distribution'),
+            const SizedBox(height: 8),
+            _buildRatingChart(),
+            const SizedBox(height: 28),
+            _buildFooter(),
+          ],
+        );
+    }
+  }
+
+  /// "Your Activity" watched-movie tiles (moved from the old flat list).
+  List<Widget> _buildWatchedListTiles() {
+    final movies = sampleMovies.take(3).toList();
+    return List.generate(
+      movies.length,
+      (i) {
+        final movie = movies[i];
+        return InteractiveCard(
+          onTap: () => Navigator.pushNamed(context, '/movie-detail', arguments: movie),
+          child: ListTile(
+            leading: Container(
+              width: 44, height: 44,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(colors: [movie.gradientStart, movie.gradientEnd]),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.check_circle_outline, color: Colors.white38, size: 22),
+            ),
+            title: Text(movie.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 14)),
+            subtitle: Text('Watched • ★ ${movie.rating}', style: const TextStyle(color: Colors.white38, fontSize: 12)),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: List.generate(5, (star) {
+                return Icon(
+                  star < 4 ? Icons.star : Icons.star_border,
+                  color: star < 4 ? Colors.amber : Colors.white24,
+                  size: 16,
+                );
+              }),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildFooter() {
+    return Column(
+      children: [
+        const SizedBox(height: 4),
+        const AppLogo(size: 32, showText: false),
+        const SizedBox(height: 6),
+        const Text('CinemaFlix v1.0', style: TextStyle(color: Colors.white24, fontSize: 12)),
+        const SizedBox(height: 28),
+      ],
     );
   }
 
