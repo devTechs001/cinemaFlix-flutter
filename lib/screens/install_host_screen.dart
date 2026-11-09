@@ -79,12 +79,12 @@ class _InstallHostScreenState extends State<InstallHostScreen> {
         for (final a in assets) {
           if (a.isApk) return a;
         }
-        break;
+        return UpdateService.androidInstallerAsset;
       case 'iOS':
         for (final a in assets) {
           if (a.isIpa) return a;
         }
-        break;
+        return UpdateService.iosInstallerAsset;
       case 'Windows':
         for (final a in assets) {
           if (a.isExe || match(a, ['windows', '.ps1'])) return a;

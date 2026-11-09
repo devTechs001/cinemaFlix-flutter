@@ -91,6 +91,19 @@ class UpdateService extends ChangeNotifier {
     url: sourceZipUrl,
   );
 
+  static const androidApkUrl =
+      'https://github.com/devTechs001/cinemaFlix-flutter/releases/latest/download/app-release.apk';
+  static final androidInstallerAsset = UpdateAsset(
+    name: 'install-android.sh',
+    url:
+        'https://raw.githubusercontent.com/devTechs001/cinemaFlix-flutter/main/installers/install-android.sh',
+  );
+  static final iosInstallerAsset = UpdateAsset(
+    name: 'install-ios.sh',
+    url:
+        'https://raw.githubusercontent.com/devTechs001/cinemaFlix-flutter/main/installers/install-ios.sh',
+  );
+
   UpdateInfo? _latestUpdate;
   bool _isChecking = false;
   bool _autoUpdate = true;
