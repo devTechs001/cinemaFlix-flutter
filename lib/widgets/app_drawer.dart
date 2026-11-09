@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/globals.dart';
+import '../services/sound_service.dart' show SoundEvent;
 import 'app_logo.dart';
 import 'interactive_card.dart';
+import 'persistent_nav.dart';
 
 class AppDrawer extends StatelessWidget {
   final VoidCallback? onClose;
@@ -26,20 +28,19 @@ class AppDrawer extends StatelessWidget {
                   _sectionTitle('Main'),
                   _drawerItem(Icons.home_rounded, 'Home', () => _navigate(context, '/main')),
                   _drawerItem(Icons.dynamic_feed_rounded, 'Feed', () => _navigate(context, '/main', extra: 1)),
-                  _drawerItem(Icons.live_tv_rounded, 'Live', () => Navigator.pushNamed(context, '/live')),
-                  _drawerItem(Icons.video_library_rounded, 'Shorts', () => _navigate(context, '/main', extra: 2)),
-                  _drawerItem(Icons.chat_rounded, 'Chat', () => _navigate(context, '/main', extra: 3)),
+                  if (featureFlagsService.isEnabled('live'))
+                    _drawerItem(Icons.live_tv_rounded, 'Live', () => Navigator.pushNamed(context, '/live')),
+                  if (featureFlagsService.isEnabled('shorts'))
+                    _drawerItem(Icons.video_library_rounded, 'Shorts', () => _navigate(context, '/main', extra: 2)),
+                  if (featureFlagsService.isEnabled('chat'))
+                    _drawerItem(Icons.chat_rounded, 'Chat', () => _navigate(context, '/main', extra: 3)),
                   _drawerItem(Icons.explore_rounded, 'Explore', () => Navigator.pushNamed(context, '/explore')),
+                  _drawerItem(Icons.search_rounded, 'Search', () => Navigator.pushNamed(context, '/search')),
                   _sectionTitle('Library'),
                   _drawerItem(Icons.bookmark_rounded, 'Watchlist', () => Navigator.pushNamed(context, '/search')),
                   _drawerItem(Icons.favorite_rounded, 'Favorites', () => Navigator.pushNamed(context, '/search')),
                   _drawerItem(Icons.history_rounded, 'History', () => Navigator.pushNamed(context, '/records')),
-                  _drawerItem(Icons.download_rounded, 'Downloads', () {
-                    HapticFeedback.lightImpact();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Downloads: 3 movies offline'), duration: Duration(seconds: 1)),
-                    );
-                  }),
+                  _drawerItem(Icons.download_rounded, 'Downloads', () => Navigator.pushNamed(context, '/downloads')),
                   _sectionTitle('Creator'),
                   _drawerItem(Icons.videocam_rounded, 'Creator Hub', () => Navigator.pushNamed(context, '/creator-hub')),
                   _drawerItem(Icons.add_circle_outline, 'Upload', () => Navigator.pushNamed(context, '/creator-upload')),
@@ -47,9 +48,11 @@ class AppDrawer extends StatelessWidget {
                   _drawerItem(Icons.account_balance_wallet_rounded, 'Wallet', () => Navigator.pushNamed(context, '/wallet')),
                   _drawerItem(Icons.card_giftcard_rounded, 'Gifting', () => Navigator.pushNamed(context, '/gifting')),
                   _drawerItem(Icons.lock_outline, 'Vault', () => Navigator.pushNamed(context, '/vault')),
-                  _drawerItem(Icons.storefront, 'Marketplace', () => Navigator.pushNamed(context, '/ecommerce')),
+                  if (featureFlagsService.isEnabled('ecommerce'))
+                    _drawerItem(Icons.storefront, 'Marketplace', () => Navigator.pushNamed(context, '/ecommerce')),
                   _sectionTitle('Social'),
-                  _drawerItem(Icons.favorite_rounded, 'Dating', () => Navigator.pushNamed(context, '/dating')),
+                  if (featureFlagsService.isEnabled('dating'))
+                    _drawerItem(Icons.favorite_rounded, 'Dating', () => Navigator.pushNamed(context, '/dating')),
                   _drawerItem(Icons.notifications_rounded, 'Notifications', () => Navigator.pushNamed(context, '/notifications'), badge: '3'),
                   _drawerItem(Icons.group_rounded, 'Contacts', () {
                     HapticFeedback.lightImpact();
@@ -57,6 +60,16 @@ class AppDrawer extends StatelessWidget {
                       const SnackBar(content: Text('Contacts feature coming soon'), duration: Duration(seconds: 1)),
                     );
                   }),
+                  _sectionTitle('Entertainment'),
+                  if (featureFlagsService.isEnabled('gaming'))
+                    _drawerItem(Icons.sports_esports, 'Gaming', () => Navigator.pushNamed(context, '/gaming')),
+                  _drawerItem(Icons.group_work, 'Watch Party', () => Navigator.pushNamed(context, '/watch-party', arguments: {'movieId': '', 'movieTitle': 'Watch Party'})),
+                  _drawerItem(Icons.folder, 'Local Media', () => Navigator.pushNamed(context, '/local-media')),
+                  _sectionTitle('Tools'),
+                  _drawerItem(Icons.extension, 'Plugins', () => Navigator.pushNamed(context, '/plugins')),
+                  _drawerItem(Icons.devices, 'Devices', () => Navigator.pushNamed(context, '/devices')),
+                  _drawerItem(Icons.computer, 'Install Host', () => Navigator.pushNamed(context, '/install')),
+                  _drawerItem(Icons.cleaning_services, 'Cache Cleaner', () => Navigator.pushNamed(context, '/cache-cleaner')),
                   _sectionTitle('Settings'),
                   _drawerItem(Icons.settings_rounded, 'Settings', () => Navigator.pushNamed(context, '/settings')),
                   _drawerItem(Icons.palette_rounded, 'Themes', () => Navigator.pushNamed(context, '/themes')),
@@ -164,7 +177,10 @@ class AppDrawer extends StatelessWidget {
 
   Widget _drawerItem(IconData icon, String title, VoidCallback onTap, {String? badge, bool isDanger = false}) {
     return InteractiveCard(
-      onTap: onTap,
+      onTap: () {
+        soundService.play(SoundEvent.navigation);
+        onTap();
+      },
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12),
         child: ListTile(
@@ -246,9 +262,10 @@ class AppDrawer extends StatelessWidget {
   }
 
   void _navigate(BuildContext context, String route, {int extra = 0}) {
-    Navigator.pop(context);
+    Navigator.pop(context); // close the drawer
     if (route == '/main') {
-      Navigator.pushReplacementNamed(context, route, arguments: extra);
+      // Persist the existing shell — switch its tab instead of replacing it.
+      ShellNav.goTab(context, extra);
     } else {
       Navigator.pushNamed(context, route);
     }

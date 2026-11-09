@@ -58,6 +58,8 @@ import 'widgets/desktop_sidebar.dart';
 import 'widgets/offline_banner.dart';
 import 'widgets/notification_alert_overlay.dart';
 import 'widgets/shorts_tiktok_nav.dart';
+import 'widgets/persistent_nav.dart';
+import 'services/sound_service.dart' show SoundEvent;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -78,6 +80,7 @@ void main() async {
   await SupabaseService().initialize(); // never throws; app runs backend-only on failure
   storageService.checkStorage();
   await lockService.initialize();
+  featureFlagsService.load(); // fire-and-forget: admin feature flags
   await localDbService.initialize(); // SQLite — without this everything runs in-memory
   await syncService.initialize();
   await movieDbService.initialize(); // real-time catalogue import
@@ -228,53 +231,55 @@ class _CinemaFlixAppState extends State<CinemaFlixApp> {
           final int index = args is int ? args : 0;
           return MainShell(initialIndex: index);
         },
-        '/shorts': (_) => const ShortsScreen(),
-        '/search': (_) => const SearchScreen(),
-        '/explore': (_) => const ExploreScreen(),
-        '/notifications': (_) => const NotificationsScreen(),
-        '/settings': (_) => const SettingsScreen(),
-        '/dev-panel': (_) => const DevPanelScreen(),
+        '/shorts': (_) => const PersistentNav(child: ShortsScreen()),
+        '/search': (_) => const PersistentNav(child: SearchScreen()),
+        '/explore': (_) => const PersistentNav(child: ExploreScreen()),
+        '/notifications': (_) => const PersistentNav(child: NotificationsScreen()),
+        '/settings': (_) => const PersistentNav(child: SettingsScreen()),
+        '/dev-panel': (_) => const PersistentNav(child: DevPanelScreen()),
         '/admin-dashboard': (_) => const AdminDashboardScreen(),
-        '/ecommerce': (_) => const EcommerceScreen(),
-        '/seller-dashboard': (_) => const SellerDashboardScreen(),
-        '/gaming': (_) => const GamingScreen(),
-        '/gifting': (_) => const GiftingScreen(),
-        '/records': (_) => const RecordsScreen(),
+        '/ecommerce': (_) => const PersistentNav(child: EcommerceScreen()),
+        '/seller-dashboard': (_) => const PersistentNav(child: SellerDashboardScreen()),
+        '/gaming': (_) => const PersistentNav(child: GamingScreen()),
+        '/gifting': (_) => const PersistentNav(child: GiftingScreen()),
+        '/records': (_) => const PersistentNav(child: RecordsScreen()),
         '/recover': (_) => const RecoverScreen(),
-        '/themes': (_) => const ThemesScreen(),
-        '/dating': (_) => const DatingScreen(),
-        '/live': (_) => const LiveScreen(),
-        '/chat': (_) => const ChatScreen(),
-        '/downloads': (_) => const DownloadsScreen(),
-        '/install': (_) => const InstallHostScreen(),
-        '/maintenance': (_) => const MaintenanceScreen(),
-        '/vault': (_) => const VaultScreen(),
-        '/wallet': (_) => const WalletScreen(),
+        '/themes': (_) => const PersistentNav(child: ThemesScreen()),
+        '/dating': (_) => const PersistentNav(child: DatingScreen()),
+        '/live': (_) => const PersistentNav(child: LiveScreen()),
+        '/chat': (_) => const PersistentNav(child: ChatScreen()),
+        '/downloads': (_) => const PersistentNav(child: DownloadsScreen()),
+        '/install': (_) => const PersistentNav(child: InstallHostScreen()),
+        '/maintenance': (_) => const PersistentNav(child: MaintenanceScreen()),
+        '/vault': (_) => const PersistentNav(child: VaultScreen()),
+        '/wallet': (_) => const PersistentNav(child: WalletScreen()),
         '/email-verification': (context) {
           final email = ModalRoute.of(context)?.settings.arguments as String? ?? '';
           return EmailVerificationScreen(email: email);
         },
         '/password-reset': (_) => const PasswordResetScreen(),
-        '/creator-hub': (_) => const CreatorHubScreen(),
-        '/creator-content': (_) => const CreatorContentScreen(),
-        '/creator-analytics': (_) => const CreatorAnalyticsScreen(),
-        '/creator-earnings': (_) => const CreatorEarningsScreen(),
-        '/creator-upload': (_) => const UploadContentScreen(),
-        '/devices': (_) => const ConnectedDevicesScreen(),
-        '/cache-cleaner': (_) => const CacheCleanerScreen(),
-        '/plugins': (_) => const PluginsScreen(),
-        '/local-media': (_) => const LocalMediaScreen(),
+        '/creator-hub': (_) => const PersistentNav(child: CreatorHubScreen()),
+        '/creator-content': (_) => const PersistentNav(child: CreatorContentScreen()),
+        '/creator-analytics': (_) => const PersistentNav(child: CreatorAnalyticsScreen()),
+        '/creator-earnings': (_) => const PersistentNav(child: CreatorEarningsScreen()),
+        '/creator-upload': (_) => const PersistentNav(child: UploadContentScreen()),
+        '/devices': (_) => const PersistentNav(child: ConnectedDevicesScreen()),
+        '/cache-cleaner': (_) => const PersistentNav(child: CacheCleanerScreen()),
+        '/plugins': (_) => const PersistentNav(child: PluginsScreen()),
+        '/local-media': (_) => const PersistentNav(child: LocalMediaScreen()),
         '/local-player': (_) => const LocalMediaPlayerScreen(),
         '/watch-party': (context) {
           final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? {};
-          return WatchPartyScreen(movieId: args['movieId'] ?? '', movieTitle: args['movieTitle'] ?? '');
+          return PersistentNav(
+            child: WatchPartyScreen(movieId: args['movieId'] ?? '', movieTitle: args['movieTitle'] ?? ''),
+          );
         },
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/user-profile') {
           final userId = settings.arguments as String;
           return MaterialPageRoute(
-            builder: (_) => UserProfileScreen(userId: userId),
+            builder: (_) => PersistentNav(child: UserProfileScreen(userId: userId)),
           );
         }
         if (settings.name == '/movie-detail') {
@@ -331,6 +336,15 @@ class _MainShellState extends State<MainShell> {
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
+    ShellNav.register((index) {
+      if (mounted) setState(() => _currentIndex = index);
+    });
+  }
+
+  @override
+  void dispose() {
+    ShellNav.unregister();
+    super.dispose();
   }
 
   final List<Widget> _screens = const [
@@ -343,7 +357,8 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
-    final isDesktop = Platform.isLinux;
+    // Desktop layout at the ≥900dp breakpoint (any platform, incl. web).
+    final isDesktop = MediaQuery.of(context).size.width >= 900;
 
     if (isDesktop) {
       return Row(
@@ -378,31 +393,54 @@ class _MainShellState extends State<MainShell> {
       ),
       bottomNavigationBar: _currentIndex == 2
           ? ShortsTikTokNav(
-              onHome: () => setState(() => _currentIndex = 0),
+              onHome: () {
+                soundService.play(SoundEvent.navigation);
+                setState(() => _currentIndex = 0);
+              },
               onDiscover: () {},
-              onCreate: () => Navigator.pushNamed(context, '/creator-upload'),
-              onInbox: () => setState(() => _currentIndex = 3),
-              onProfile: () => setState(() => _currentIndex = 4),
+              onCreate: () {
+                soundService.play(SoundEvent.navigation);
+                Navigator.pushNamed(context, '/creator-upload');
+              },
+              onInbox: () {
+                soundService.play(SoundEvent.navigation);
+                setState(() => _currentIndex = 3);
+              },
+              onProfile: () {
+                soundService.play(SoundEvent.navigation);
+                setState(() => _currentIndex = 4);
+              },
               inboxBadge: 3,
             )
           : Container(
         decoration: const BoxDecoration(
           border: Border(top: BorderSide(color: Color(0xFF2A2A2A), width: 0.5)),
         ),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: (index) {
-            HapticFeedback.selectionClick();
-            setState(() => _currentIndex = index);
+        child: Builder(
+          builder: (context) {
+            // Tabs can be switched off by the admin (feature flags).
+            final tabs = <(int, BottomNavigationBarItem)>[
+              (0, BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Home')),
+              (1, BottomNavigationBarItem(icon: Icon(Icons.dynamic_feed_outlined), activeIcon: Icon(Icons.dynamic_feed), label: 'Feed')),
+              if (featureFlagsService.isEnabled('shorts'))
+                (2, BottomNavigationBarItem(icon: Icon(Icons.video_library_outlined), activeIcon: Icon(Icons.video_library), label: 'Shorts')),
+              if (featureFlagsService.isEnabled('chat'))
+                (3, BottomNavigationBarItem(icon: Icon(Icons.chat_outlined), activeIcon: Icon(Icons.chat), label: 'Chat')),
+              (4, BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Profile')),
+            ];
+            var pos = tabs.indexWhere((t) => t.$1 == _currentIndex);
+            if (pos < 0) pos = 0;
+            return BottomNavigationBar(
+              currentIndex: pos,
+              onTap: (index) {
+                HapticFeedback.selectionClick();
+                soundService.play(SoundEvent.navigation);
+                setState(() => _currentIndex = tabs[index].$1);
+              },
+              type: BottomNavigationBarType.fixed,
+              items: [for (final t in tabs) t.$2],
+            );
           },
-          type: BottomNavigationBarType.fixed,
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Home'),
-            BottomNavigationBarItem(icon: Icon(Icons.dynamic_feed_outlined), activeIcon: Icon(Icons.dynamic_feed), label: 'Feed'),
-            BottomNavigationBarItem(icon: Icon(Icons.video_library_outlined), activeIcon: Icon(Icons.video_library), label: 'Shorts'),
-            BottomNavigationBarItem(icon: Icon(Icons.chat_outlined), activeIcon: Icon(Icons.chat), label: 'Chat'),
-            BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Profile'),
-          ],
         ),
       ),
     );

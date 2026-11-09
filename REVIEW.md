@@ -399,3 +399,61 @@ unban→ghost found:false, video 302, health OK.
 Static: `node --check` clean (systems.js, models/systems.js, index.js); Dart
 111 files — 0 broken imports, delimiter balance clean. Flutter gate remains
 `flutter pub get && flutter analyze && flutter test` locally.
+
+## 2026-11-09 — Nav links · modern profile · desktop · persistent nav · admin feature control · sound (PR #10)
+
+**Ask:** restore the missing nav links, modernize the profile page, enhance the
+desktop view, make the nav persist across all screens, put ALL system features
+under admin control, and add the sound system.
+
+### Nav links restored
+- **Drawer**: fixed broken Downloads link (was a snackbar → now opens the
+  screen); tab links no longer `pushReplacementNamed` (which reset the shell) —
+  they switch the existing shell via `ShellNav.goTab`; added Search, and new
+  Entertainment (Gaming, Watch Party, Local Media) + Tools (Plugins, Devices,
+  Install Host, Cache Cleaner) sections; Marketplace/Dating/Live/Shorts/Chat
+  hide when the admin flag is off.
+- **Desktop sidebar** rebuilt: 5 tabs + 6 grouped sections (Discover, Watch,
+  Create, Money, System, Admin) ≈ 30 links (was 9), scrollable, admin group
+  only for admin accounts, flag-gated links.
+- **Profile menu**: added Marketplace, Wallet, Live Rooms, Vault, Watch Party.
+
+### Persistent nav (`lib/widgets/persistent_nav.dart` — new)
+- Every pushed content route now wraps in `PersistentNav`: mobile keeps the
+  bottom bar + drawer, desktop (≥900dp) keeps the sidebar — nav never
+  disappears while browsing sub-screens. Tab taps pop back to the existing
+  `/main` shell and switch its index (no shell duplication/state loss).
+- `MainShell` desktop detection switched from `Platform.isLinux` →
+  **width ≥ 900dp** (web/Windows/macOS get the desktop layout too).
+
+### Modern profile
+- Cover: 4-stop brand→purple gradient with radial glows + film-strip dots;
+  avatar wrapped in a red→purple gradient ring with glow; followers/following
+  now sit in a glass stats card with a third **Watched** stat; section pills,
+  edit/share/QR kept.
+
+### Admin controls ALL features
+- Backend gates added: **chat** (`join`/`members` → 403 when off),
+  **walletPoints** (`earn`/`convert` → 403; wallet reads unaffected), on top of
+  the existing ecommerce/live/gaming/ads gates. `getFeatureFlags` exported for
+  index.js. Flag set now: ecommerce, gaming, ads, dating, live, shorts,
+  walletPoints, **chat** (8).
+- Flutter `FeatureFlagsService` (`lib/services/feature_flags.dart`) loads
+  `/api/app/config` at boot (defaults all-enabled, offline-safe) and hides
+  nav links/tabs (bottom-nav Shorts & Chat tabs, drawer, sidebar, profile) live
+  via `ListenableBuilder`-free direct reads (refresh on next build).
+
+### Sound system
+- `SoundEvent.navigation` was defined but **never played anywhere** — now
+  wired into: bottom nav taps, drawer items, desktop sidebar taps, profile
+  menu tiles, Shorts TikTok nav. (Boot sound + per-event toggles in Settings →
+  Sounds already existed and are untouched.)
+
+### Tests — 25/25 runtime checks (Node, PORT=3100, ADMIN_CODE=TestAdmin99)
+8 flags present + writable · chat gate 403/restore · walletPoints gate 403 on
+earn+convert with reads unaffected + restore 200 · ecommerce/live gates still
+green (real_me list unaffected) · admin 403/200 · video 302 · health ·
+app/config flags. Static: `node --check` clean (all backend JS), Dart 113
+files — 0 broken imports, balance clean.
+
+Flutter gate locally: `flutter pub get && flutter analyze && flutter test`.

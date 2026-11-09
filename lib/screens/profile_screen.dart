@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/globals.dart';
+import '../services/sound_service.dart' show SoundEvent;
 import '../widgets/interactive_card.dart';
 import '../widgets/app_logo.dart';
 import '../models/sample_movies.dart';
@@ -412,6 +413,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
               HapticFeedback.mediumImpact();
               Navigator.pushNamed(context, '/creator-hub');
             }),
+            if (featureFlagsService.isEnabled('ecommerce'))
+              _buildMenuTile(Icons.storefront, 'Marketplace', 'Shop & sell — admin-approved', () {
+                HapticFeedback.lightImpact();
+                Navigator.pushNamed(context, '/ecommerce');
+              }),
+            _buildMenuTile(Icons.account_balance_wallet, 'Wallet', 'Diamonds & points', () {
+              HapticFeedback.lightImpact();
+              Navigator.pushNamed(context, '/wallet');
+            }),
+            if (featureFlagsService.isEnabled('live'))
+              _buildMenuTile(Icons.live_tv_rounded, 'Live Rooms', 'Host & watch together', () {
+                HapticFeedback.lightImpact();
+                Navigator.pushNamed(context, '/live');
+              }),
+            _buildMenuTile(Icons.lock_outline, 'Vault', 'Private collection', () {
+              HapticFeedback.lightImpact();
+              Navigator.pushNamed(context, '/vault');
+            }),
+            _buildMenuTile(Icons.group_work, 'Watch Party', 'Sync watches with friends', () {
+              HapticFeedback.lightImpact();
+              Navigator.pushNamed(context, '/watch-party', arguments: {'movieId': '', 'movieTitle': 'Watch Party'});
+            }),
             _buildMenuTile(Icons.settings_outlined, 'Settings', 'App preferences', () {
               HapticFeedback.mediumImpact();
               Navigator.pushNamed(context, '/settings');
@@ -542,35 +565,62 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildCoverBanner() {
     return Container(
-      height: 160,
+      height: 172,
       width: double.infinity,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFFE50914), Color(0xFF831010), Color(0xFF141414)],
+          colors: [
+            Color(0xFFE50914),
+            Color(0xFFB3123B),
+            Color(0xFF5B21B6),
+            Color(0xFF141414),
+          ],
+          stops: [0.0, 0.42, 0.82, 1.0],
         ),
       ),
       child: Stack(
         children: [
           Positioned(
-            top: -30, right: -30,
+            top: -46, right: -24,
             child: Container(
-              width: 150, height: 150,
+              width: 170, height: 170,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withAlpha(10),
+                gradient: RadialGradient(
+                  colors: [Colors.white.withAlpha(30), Colors.white.withAlpha(0)],
+                ),
               ),
             ),
           ),
           Positioned(
-            bottom: -20, left: -20,
+            bottom: -34, left: -18,
             child: Container(
-              width: 100, height: 100,
+              width: 130, height: 130,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withAlpha(8),
+                gradient: RadialGradient(
+                  colors: [const Color(0xFF7C3AED).withAlpha(70), Colors.transparent],
+                ),
               ),
+            ),
+          ),
+          // subtle film-strip dots
+          Positioned(
+            bottom: 14, right: 16,
+            child: Row(
+              children: [
+                for (var i = 0; i < 6; i++)
+                  Container(
+                    width: 6, height: 6,
+                    margin: const EdgeInsets.only(left: 6),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withAlpha(i.isEven ? 70 : 30),
+                    ),
+                  ),
+              ],
             ),
           ),
         ],
@@ -588,11 +638,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           Stack(
             children: [
-              CircleAvatar(
-                radius: 52,
-                backgroundColor: const Color(0xFFE50914).withAlpha(30),
+              Container(
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFE50914), Color(0xFF7C3AED)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  boxShadow: [
+                    BoxShadow(color: const Color(0xFFE50914).withValues(alpha: 0.35), blurRadius: 18),
+                  ],
+                ),
                 child: CircleAvatar(
-                  radius: 48,
+                  radius: 51,
                   backgroundColor: const Color(0xFF2A2A2A),
                   child: _avatarEmoji.isNotEmpty
                       ? Text(_avatarEmoji, style: const TextStyle(fontSize: 40))
@@ -729,19 +789,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ],
           ],
           const SizedBox(height: 16),
-          InkWell(
-            onTap: () => _showFollowersSheet(),
-            borderRadius: BorderRadius.circular(16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildFollowerCount('248', 'Followers'),
-                Container(width: 1, height: 30, color: Colors.white12, margin: const EdgeInsets.symmetric(horizontal: 24)),
-                _buildFollowerCount('186', 'Following'),
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 24),
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF161616),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
+              boxShadow: [
+                BoxShadow(color: Colors.black.withValues(alpha: 0.25), blurRadius: 12, offset: const Offset(0, 4)),
               ],
             ),
+            child: InkWell(
+              onTap: () => _showFollowersSheet(),
+              borderRadius: BorderRadius.circular(18),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildFollowerCount('248', 'Followers'),
+                  Container(width: 1, height: 30, color: Colors.white12),
+                  _buildFollowerCount('186', 'Following'),
+                  Container(width: 1, height: 30, color: Colors.white12),
+                  _buildFollowerCount('126', 'Watched'),
+                ],
+              ),
+            ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -1299,7 +1373,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildMenuTile(IconData icon, String title, String subtitle, VoidCallback onTap, {bool isDanger = false}) {
     return InteractiveCard(
-      onTap: onTap,
+      onTap: () {
+        soundService.play(SoundEvent.navigation);
+        onTap();
+      },
       child: ListTile(
         leading: Icon(icon, color: isDanger ? Colors.red : Colors.white54, size: 22),
         title: Text(title, style: TextStyle(color: isDanger ? Colors.red : Colors.white, fontWeight: FontWeight.w500, fontSize: 15)),
