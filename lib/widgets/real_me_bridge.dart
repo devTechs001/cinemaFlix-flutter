@@ -93,7 +93,7 @@ class _RealMeBridgeState extends State<RealMeBridge> {
                 Text(
                   _rooms == null
                       ? 'Rooms mirror to the real_me companion app.'
-                      : '$_rooms live room(s) available via the bridge.',
+                      : '$_rooms room(s) maintained for real_me · kept alive by host heartbeats',
                   style: const TextStyle(color: Colors.white60, fontSize: 12),
                 ),
               ],

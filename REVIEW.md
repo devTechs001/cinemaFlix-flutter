@@ -238,3 +238,45 @@ OAuth/OTP production hardening and test coverage per `DEV_DOC.md` §Remaining.
 **Verified (static):** 0 broken imports, delimiter balance OK across `lib`+`test`, helper
 definitions single, `effectivePosterUrl`/`CachedNetworkImage` fully removed. Still no Flutter
 SDK in sandbox — `flutter pub get && flutter analyze && flutter test` remains the real gate.
+
+---
+
+## 2026-11-09 — live room maintenance for the real_me companion
+
+**Problem:** backend live rooms lived only in `memory.liveRooms` — a backend restart wiped
+every room, the real_me companion's `GET /api/live/rooms` went empty, and nothing marked a
+host as still present (dead hosts' rooms lingered forever).
+
+**Backend (`backend/systems.js`):**
+- **Durability:** room/request/token state flushes to `backend/data/live_state.json` after
+  every mutation (debounced 250ms write) and is restored on boot — companion keeps seeing
+  rooms across restarts. `backend/data/` added to `.gitignore`.
+- **Heartbeat:** new `PUT /api/live/rooms/:callId/heartbeat` sets `heartbeatAt` (optional
+  `viewers` override; otherwise the server keeps its own count, bumped by viewer-token
+  issuance). Rooms get `heartbeatAt` at creation; `liveRoomJSON` now exposes it.
+- **Stale pruning:** the room-list handler (`/live/rooms` + `/live/list`) marks rooms `ended`
+  when the host's heartbeat is older than `LIVE_STALE_MS` (default 90s) or the stream exceeds
+  `LIVE_MAX_AGE_MS` (default 4h) — the companion only ever sees genuinely live rooms.
+- Persist hooks on create / approval / join-request / decision / end / token issuance.
+
+**Flutter:**
+- `BackendApiService.heartbeatLiveRoom(callId)`.
+- `LiveScreen`: refresh timer now 15s — every tick heartbeats *our* streaming room
+  (`_heartbeatHostRoom`, guarded by `_isHost && _isStreamLive`) and refreshes the grid when
+  not in a room; opening your own room fires an instant first beat.
+- real_me bridge card subtitle now reports maintained rooms ("kept alive by host heartbeats").
+
+**Verified — first runtime integration test of the project** (Node 22 available; npm had to
+be routed off a pinned `registry.npmmirror.com` lockfile URL to the allowed npmjs registry
+for install; lockfile restored afterward):
+1. create → 201, `backends: ['realme-bridge','native']`, `requiresApproval` honored ✓
+2. room appears in companion list with `heartbeatAt` ✓
+3. silent host → pruned after `LIVE_STALE_MS` (log: `[live] pruned room … host heartbeat stale`) ✓
+4. heartbeat beats keep the room alive across the stale window; `viewers` update ✓
+5. `live_state.json` written with correct contents ✓
+6. **server restart → `[live] restored 2 room(s)` → companion list shows the room (viewers 42)** ✓
+7. heartbeat accepted after restart; `/live/end` → status `ended` → leaves companion list ✓
+8. `node --check` clean on `systems.js`/`index.js`; boot log shows random `ADMIN_CODE`
+   generation working; Mongo-less fallback confirmed.
+
+Dart static checks: 0 broken imports, delimiter balance OK.

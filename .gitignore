@@ -62,3 +62,6 @@ README.md
 
 # Local secrets & misc (copy .env.example to .env locally)
 wget-log
+
+# Runtime live-room state (backend restarts restore from here)
+backend/data/
