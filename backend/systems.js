@@ -58,6 +58,57 @@ const memoryMaintenance = {
   allowSpecific: [],
 };
 
+// ---------- live state durability (real_me companion bridge) ----------
+// The real_me companion reads rooms from GET /api/live/rooms. Keep that
+// view truthful across backend restarts by flushing room/request/token
+// state to disk after every mutation and restoring on boot. Hosts mark
+// themselves present with PUT /api/live/rooms/:id/heartbeat — rooms
+// without a recent beat are pruned from the room list.
+const fs = require('fs');
+const path = require('path');
+const LIVE_STATE_FILE = path.join(__dirname, 'data', 'live_state.json');
+const LIVE_STALE_MS = Number(process.env.LIVE_STALE_MS || 90000);
+const LIVE_MAX_AGE_MS = Number(process.env.LIVE_MAX_AGE_MS || 4 * 60 * 60 * 1000);
+let liveFlushTimer = null;
+let liveFlushPending = false;
+
+function loadLiveState() {
+  try {
+    if (!fs.existsSync(LIVE_STATE_FILE)) return;
+    const raw = JSON.parse(fs.readFileSync(LIVE_STATE_FILE, 'utf8'));
+    for (const [k, v] of raw.rooms || []) memory.liveRooms.set(k, v);
+    for (const [k, v] of raw.requests || []) memory.liveRequests.set(k, v);
+    for (const [k, v] of raw.tokens || []) memory.liveTokens.set(k, v);
+    const count = (raw.rooms || []).length;
+    if (count) console.log(`[live] restored ${count} room(s) from ${LIVE_STATE_FILE}`);
+  } catch (e) {
+    console.warn(`[live] state restore failed: ${e.message}`);
+  }
+}
+
+function persistLiveState() {
+  liveFlushPending = true;
+  if (liveFlushTimer) return; // debounce: one write per 250ms window
+  liveFlushTimer = setTimeout(() => {
+    liveFlushTimer = null;
+    if (!liveFlushPending) return;
+    liveFlushPending = false;
+    try {
+      fs.mkdirSync(path.dirname(LIVE_STATE_FILE), { recursive: true });
+      fs.writeFileSync(LIVE_STATE_FILE, JSON.stringify({
+        savedAt: new Date().toISOString(),
+        rooms: [...memory.liveRooms.entries()],
+        requests: [...memory.liveRequests.entries()],
+        tokens: [...memory.liveTokens.entries()],
+      }));
+    } catch (e) {
+      console.warn(`[live] state persist failed: ${e.message}`);
+    }
+  }, 250);
+}
+
+loadLiveState();
+
 function dbConnected() {
   try { return require('./db').getIsConnected(); } catch { return false; }
 }
@@ -328,6 +379,7 @@ function sendSms(phone, text) {
     const token = `dev_${role}_${crypto.randomBytes(16).toString('hex')}`;
     const prev = memory.liveTokens.get(callId) || {};
     memory.liveTokens.set(callId, { ...prev, token, role, at: new Date().toISOString() });
+    persistLiveState();
     return token;
   }
 
@@ -782,6 +834,7 @@ function registerSystemRoutes(app, realtime) {
       gifts: r.gifts || 0,
       startedAt: r.startedAt,
       endedAt: r.endedAt || null,
+      heartbeatAt: r.heartbeatAt || r.startedAt || null,
     };
   }
 
@@ -800,9 +853,11 @@ function registerSystemRoutes(app, realtime) {
       reactions: 0,
       gifts: 0,
       startedAt: new Date().toISOString(),
+      heartbeatAt: new Date().toISOString(),
       endedAt: null,
     };
     memory.liveRooms.set(callId, room);
+    persistLiveState();
     const token = issueLiveToken(callId, 'host');
     res.status(201).json({
       callId, hostToken: token,
@@ -813,10 +868,43 @@ function registerSystemRoutes(app, realtime) {
   });
 
   const roomListHandler = async (req, res) => {
+    // Maintenance pass — a live room must be actively kept alive by its
+    // host client (heartbeat every ~15s). Prune rooms whose host stopped
+    // beating (LIVE_STALE_MS) or that exceeded the max stream age so the
+    // real_me companion only ever sees genuinely live rooms.
+    const now = Date.now();
+    let pruned = false;
+    for (const r of [...memory.liveRooms.values()]) {
+      if (r.status !== 'live') continue;
+      const lastBeat = Date.parse(r.heartbeatAt || r.startedAt || '') || now;
+      const started = Date.parse(r.startedAt || '');
+      const tooOld = Number.isFinite(started) && now - started > LIVE_MAX_AGE_MS;
+      if (now - lastBeat > LIVE_STALE_MS || tooOld) {
+        r.status = 'ended';
+        r.endedAt = new Date().toISOString();
+        pruned = true;
+        console.log(`[live] pruned room ${r.callId} (host heartbeat stale)`);
+      }
+    }
+    if (pruned) persistLiveState();
     res.json({ rooms: activeLiveRooms().map(liveRoomJSON) });
   };
   app.get('/api/live/rooms', roomListHandler);
   app.get('/api/live/list', roomListHandler);
+
+  // Host heartbeat: marks the room as alive for the real_me companion.
+  // (Optional `viewers` lets the host report its count; otherwise the
+  // server keeps its own, bumped by viewer-token issuance.)
+  app.put('/api/live/rooms/:callId/heartbeat', async (req, res) => {
+    const room = liveRoom(req.params.callId);
+    if (!room) return res.status(404).json({ error: 'Live room not found' });
+    if (room.status !== 'live') return res.status(409).json({ error: 'Room is not live anymore' });
+    room.heartbeatAt = new Date().toISOString();
+    const viewers = Number(req.body?.viewers);
+    if (Number.isFinite(viewers) && viewers >= 0) room.viewers = Math.round(viewers);
+    persistLiveState();
+    res.json({ ok: true, heartbeatAt: room.heartbeatAt, viewers: room.viewers || 0 });
+  });
 
   app.get('/api/live/rooms/:callId', async (req, res) => {
     const room = liveRoom(req.params.callId);
@@ -830,6 +918,7 @@ function registerSystemRoutes(app, realtime) {
     if (!room) return res.status(404).json({ error: 'Live room not found' });
     if (room.hostId && req.userId && room.hostId !== req.userId) return res.status(403).json({ error: 'Only the room owner can change approval settings' });
     if (req.body?.requiresApproval !== undefined) room.requiresApproval = !!req.body.requiresApproval;
+    persistLiveState();
     res.json({ room: liveRoomJSON(room) });
   });
 
@@ -854,6 +943,7 @@ function registerSystemRoutes(app, realtime) {
       at: new Date().toISOString(),
     };
     memory.liveRequests.set(request.id, request);
+    persistLiveState();
     notify({ title: 'New join request', body: `${viewerName} wants to join "${room.title}"` });
     res.status(202).json({ requestId: request.id, status: 'pending' });
   });
@@ -877,6 +967,7 @@ function registerSystemRoutes(app, realtime) {
     if (room?.hostId && req.userId && room.hostId !== req.userId) return res.status(403).json({ error: 'Only the room owner can decide join requests' });
     request.status = decision;
     request.decidedAt = new Date().toISOString();
+    persistLiveState();
     let viewerToken;
     if (decision === 'approved') {
       viewerToken = issueLiveToken(request.callId, 'viewer');
@@ -919,6 +1010,7 @@ function registerSystemRoutes(app, realtime) {
     } else {
       memory.liveTokens.delete(callId);
     }
+    persistLiveState();
     res.json({ ok: true, room: liveRoomJSON(room) });
   };
   app.post('/api/live/end', endLiveHandler);

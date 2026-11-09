@@ -61,7 +61,8 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
     _messages.addAll(_sampleChat);
     // Real rooms from the backend, kept fresh while the screen is open.
     _loadLiveRooms();
-    _refreshTimer = Timer.periodic(const Duration(seconds: 20), (_) {
+    _refreshTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      _heartbeatHostRoom();
       if (!_showRoomDetail) _loadLiveRooms();
     });
   }
@@ -160,6 +161,15 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
         duration: const Duration(seconds: 1),
       ),
     );
+  }
+
+  /// Pings the backend to keep *our* streaming room alive for the
+  /// real_me companion (server prunes rooms without a beat for 90s).
+  Future<void> _heartbeatHostRoom() async {
+    if (!_isHost || !_isStreamLive) return;
+    final callId = _selectedRoom?['call_id']?.toString();
+    if (callId == null || callId.isEmpty) return;
+    await BackendApiService.heartbeatLiveRoom(callId);
   }
 
   void _sendMessage() {
@@ -707,6 +717,10 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
               _isHost = _isRoomOwner(room);
               _showRoomDetail = true;
             });
+            // First beat immediately so the companion sees us as alive.
+            if (_isHost && room['call_id'] != null) {
+              BackendApiService.heartbeatLiveRoom(room['call_id'].toString());
+            }
           },
           child: Container(
             padding: const EdgeInsets.all(14),

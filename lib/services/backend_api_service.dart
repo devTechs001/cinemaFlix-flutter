@@ -162,6 +162,25 @@ class BackendApiService {
     }
   }
 
+  /// Keeps a host's live room marked alive on the backend (the server
+  /// prunes rooms whose heartbeat goes stale so the real_me companion
+  /// only sees genuinely live rooms). Host clients ping every ~15s.
+  static Future<bool> heartbeatLiveRoom(String callId) async {
+    try {
+      final response = await http
+          .put(
+            Uri.parse(ApiConfig.apiPath('/live/rooms/$callId/heartbeat')),
+            headers: const {'Content-Type': 'application/json'},
+            body: jsonEncode(<String, dynamic>{}),
+          )
+          .timeout(_timeout);
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('Live heartbeat failed: $e');
+      return false;
+    }
+  }
+
   // ---- Live rooms approval flow + creator insights ----
 
   /// Returns {approved: true,...} when the room is open, otherwise the
