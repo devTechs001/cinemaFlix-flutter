@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 import 'package:share_plus/share_plus.dart';
 import '../widgets/interactive_card.dart';
+import '../widgets/cinema_app_bar.dart';
 import '../models/sample_movies.dart';
 import '../services/realtime_messaging_service.dart';
 import '../services/video_url_resolver.dart';
@@ -837,15 +838,10 @@ class _ShortsScreenState extends State<ShortsScreen> with TickerProviderStateMix
             left: 0, right: 0,
             child: Row(
               children: [
-                InteractiveCard(
-                  onTap: () {
-                    HapticFeedback.lightImpact();
-                    Scaffold.of(context).openDrawer();
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 12, right: 8),
-                    child: Icon(Icons.menu_rounded, color: Colors.white, size: 24, shadows: const [Shadow(color: Colors.black87, blurRadius: 8)]),
-                  ),
+                IconButton(
+                  tooltip: 'Menu',
+                  onPressed: () => openParentDrawer(context),
+                  icon: const Icon(Icons.menu, color: Colors.white, size: 24, shadows: [Shadow(color: Colors.black87, blurRadius: 8)]),
                 ),
                 const Spacer(),
                 _topTab('Following', _activeTab == 'Following', () => setState(() => _activeTab = 'Following')),

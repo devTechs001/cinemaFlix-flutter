@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../widgets/interactive_card.dart';
+import '../widgets/real_me_bridge.dart';
+import '../widgets/cinema_app_bar.dart';
 
 class DatingScreen extends StatefulWidget {
   const DatingScreen({super.key});
@@ -153,52 +155,27 @@ class _DatingScreenState extends State<DatingScreen>
     return Scaffold(
       backgroundColor: const Color(0xFF141414),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF141414),
+        backgroundColor: const Color(0xFF0F0F0F),
         elevation: 0,
-        title: Row(
-          children: [
-            Container(
-              width: 32, height: 32,
-              decoration: BoxDecoration(
-                color: const Color(0xFFE50914).withAlpha(30),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.favorite, color: Color(0xFFE50914), size: 18),
+        automaticallyImplyLeading: false,
+        leading: IconButton(
+          tooltip: 'Menu',
+          onPressed: () => openParentDrawer(context),
+          icon: Container(
+            width: 36, height: 36,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Colors.white.withAlpha(14),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.white12),
             ),
-            const SizedBox(width: 10),
-            const Text('Date Night', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
-          ],
+            child: const Icon(Icons.menu, color: Colors.white, size: 20),
+          ),
         ),
+        title: const Text('Date Night', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20)),
         actions: [
-          InteractiveCard(
-            onTap: _showFilters,
-            child: Container(
-              margin: const EdgeInsets.only(right: 8),
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white.withAlpha(10),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.tune, color: Colors.white54, size: 20),
-            ),
-          ),
-          InteractiveCard(
-            onTap: () {
-              HapticFeedback.lightImpact();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Profile settings coming soon'), backgroundColor: Color(0xFFE50914), behavior: SnackBarBehavior.floating),
-              );
-            },
-            child: Container(
-              margin: const EdgeInsets.only(right: 8),
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white.withAlpha(10),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.settings_outlined, color: Colors.white54, size: 20),
-            ),
-          ),
+          IconButton(onPressed: _connectRealMe, tooltip: 'Connect to Real Me', icon: const Icon(Icons.favorite, color: Color(0xFFE50914))),
+          IconButton(onPressed: _showFilters, icon: const Icon(Icons.tune, color: Colors.white70)),
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(48),
@@ -279,6 +256,89 @@ class _DatingScreenState extends State<DatingScreen>
     );
   }
 
+  void _connectRealMe() {
+    HapticFeedback.mediumImpact();
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF161616),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(8, 12, 8, 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(4))),
+            const SizedBox(height: 16),
+            const Text('Connect to Real Me', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 6),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                'Mirror Date Night rooms into the real_me companion so matches stay live across both apps.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white54, fontSize: 13),
+              ),
+            ),
+            const SizedBox(height: 12),
+            const RealMeBridge(),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFE50914),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    Navigator.pushNamed(context, '/live');
+                  },
+                  child: const Text('Open Real Me live rooms', style: TextStyle(fontWeight: FontWeight.w700)),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRealMeConnectBar() {
+    return InteractiveCard(
+      onTap: _connectRealMe,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(colors: [Color(0xFF6C2BD9), Color(0xFFE50914)]),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: const Row(
+          children: [
+            Icon(Icons.favorite, color: Colors.white, size: 20),
+            SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Connect to Real Me', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14)),
+                  Text('Live matches in the companion app', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                ],
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios, color: Colors.white, size: 14),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildDiscoverTab() {
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -328,7 +388,9 @@ class _DatingScreenState extends State<DatingScreen>
               },
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
+          _buildRealMeConnectBar(),
+          const SizedBox(height: 12),
           Expanded(child: _buildSwipeStack()),
         ],
       ),
@@ -768,8 +830,8 @@ class _SwipeCardState extends State<_SwipeCard> {
                         ),
                         child: Text(
                           isRight ? 'LIKE' : 'PASS',
-                          style: TextStyle(
-                            color: isRight ? const Color(0xFF43A047) : const Color(0xFFE50914),
+                          style: const TextStyle(
+                            color: Colors.white,
                             fontWeight: FontWeight.bold,
                             fontSize: 18,
                             letterSpacing: 2,
@@ -829,7 +891,23 @@ class _SwipeCardState extends State<_SwipeCard> {
                                 child: const Icon(Icons.close, color: Color(0xFFE50914), size: 28),
                               ),
                             ),
-                            const SizedBox(width: 40),
+                            const SizedBox(width: 22),
+                            InteractiveCard(
+                              onTap: () {
+                                HapticFeedback.heavyImpact();
+                                widget.onLike();
+                              },
+                              child: Container(
+                                width: 48, height: 48,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF1A237E),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: const Color(0xFF82B1FF), width: 2),
+                                ),
+                                child: const Icon(Icons.star, color: Color(0xFF82B1FF), size: 22),
+                              ),
+                            ),
+                            const SizedBox(width: 22),
                             InteractiveCard(
                               onTap: widget.onLike,
                               child: Container(

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:share_plus/share_plus.dart';
 import '../widgets/interactive_card.dart';
 import '../services/globals.dart';
+import '../services/update_service.dart';
 
 class InstallHostScreen extends StatefulWidget {
   const InstallHostScreen({super.key});
@@ -33,7 +35,24 @@ class _InstallHostScreenState extends State<InstallHostScreen> {
     } catch (e) {
       debugPrint('Error loading package info: $e');
     }
+    await updateService.checkForUpdates();
+    if (mounted) setState(() {});
   }
+
+  Future<void> _shareInstall(String label, String url) async {
+    HapticFeedback.mediumImpact();
+    await Clipboard.setData(ClipboardData(text: url));
+    await Share.share('Install CinemaFlix ($label)\n$url\n\nSource: ${UpdateService.repoUrl}');
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('$label link copied and ready to share'), duration: const Duration(seconds: 2)),
+    );
+  }
+
+  String get _androidUrl =>
+      updateService.latestUpdate?.apkUrl ?? UpdateService.releasesUrl;
+  String get _releaseUrl =>
+      updateService.latestUpdate?.downloadUrl ?? UpdateService.releasesUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -124,7 +143,7 @@ class _InstallHostScreenState extends State<InstallHostScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Install on any device • Host your own backend',
+                  'Share a GitHub build • update from the latest release',
                   style: TextStyle(
                     color: Colors.white.withAlpha(180),
                     fontSize: 13,
@@ -159,30 +178,42 @@ class _InstallHostScreenState extends State<InstallHostScreen> {
         _installCard(
           Icons.android,
           'Android APK',
-          'Direct APK installer for all Android devices',
-          'Get it on Android',
-          Icons.qr_code,
+          'Direct installer from the GitHub release (shared APK)',
+          'Share Android build',
+          Icons.share,
+          () => _shareInstall('Android APK', _androidUrl),
         ),
         _installCard(
           Icons.apple,
-          'iOS App Store',
-          'Available on the App Store for iPhone and iPad',
-          'Get it on App Store',
-          Icons.qr_code,
+          'iOS / TestFlight',
+          'Latest GitHub release — share the install page',
+          'Share iOS link',
+          Icons.share,
+          () => _shareInstall('iOS', _releaseUrl),
         ),
         _installCard(
           Icons.laptop_windows,
           'Windows / macOS',
-          'Desktop application for Windows and macOS',
-          'Get Desktop Version',
-          null,
+          'Desktop build from GitHub Releases',
+          'Share desktop build',
+          Icons.share,
+          () => _shareInstall('Desktop', _releaseUrl),
         ),
         _installCard(
           Icons.terminal,
-          'Linux Package',
-          'Installer packages for major Linux distributions',
-          'Get Linux Package',
-          null,
+          'Linux / source',
+          'Clone or download main.zip and build locally',
+          'Share source zip',
+          Icons.share,
+          () => _shareInstall('Source', UpdateService.sourceZipUrl),
+        ),
+        _installCard(
+          Icons.code,
+          'GitHub repo',
+          UpdateService.repoUrl.replaceFirst('https://', ''),
+          'Share repo',
+          Icons.share,
+          () => _shareInstall('GitHub', UpdateService.repoUrl),
         ),
       ],
     );
@@ -194,8 +225,10 @@ class _InstallHostScreenState extends State<InstallHostScreen> {
     String description,
     String buttonText,
     IconData? qrIcon,
+    VoidCallback onTap,
   ) {
     return InteractiveCard(
+      onTap: onTap,
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         padding: const EdgeInsets.all(16),

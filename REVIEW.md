@@ -477,3 +477,43 @@ User ask: "want a modern profile card (tiktok style)".
 Static: Dart 113 files — 0 broken imports, balance clean. No backend change.
 
 Flutter gate locally: `flutter pub get && flutter analyze && flutter test`.
+
+## 2026-11-09 — Dating · Real Me · local player · GitHub installers · top bar · profile (PR #12)
+
+User ask: modern dating + Connect to Real Me, local MP4/MP3 player (vertical
+scroll, more controls), direct installers from the GitHub repo (shareable),
+restyle top bar / menu icon so clicks work, rebuild the profile card.
+
+### Dating
+- Connect to Real Me banner on Discover plus a sheet with `RealMeBridge`
+  (copies the companion endpoint, opens live rooms).
+- Restyled Date Night app bar with a working menu; super-like on swipe cards.
+
+### Local media
+- Browser starts in Movies/Music/Download, requests storage/video/audio
+  permissions, filters MP4/MP3, Play-all FAB.
+- Player is a vertical PageView. Each page binds `VideoPlayerController.file`
+  (mp4) or `AudioPlayer` + `DeviceFileSource` (mp3). Controls: seek, ±10s,
+  next/prev, speed, loop, mute, volume, like, share.
+
+### Installers
+- `UpdateService.checkForUpdates()` hits GitHub Releases latest
+  (`devTechs001/cinemaFlix-flutter`). 404 (no tag yet) still exposes the repo
+  / source zip / releases page.
+- Install & Host cards share a real link (APK asset if present, else releases
+  page, source zip, repo) via share_plus + clipboard.
+
+### Top bar
+- Nested Scaffolds made `Scaffold.of(context).openDrawer()` a no-op on Home,
+  Shorts, Profile, Dating. `openParentDrawer` walks ancestors until a scaffold
+  with a drawer. `CinemaAppBar` restyles the hamburger into a tappable tile.
+
+### Profile
+- Removed the floating Transform card (it left a hole under the cover).
+- Hero is cover + overlapping gradient-ring avatar + @handle + stats + Edit
+  profile pill. No layout gap.
+
+Static: Dart 114 files — 0 broken imports, balance clean. GitHub latest
+release currently 404 (no tags) — fallback paths covered.
+
+Flutter gate locally: `flutter pub get && flutter analyze && flutter test`.

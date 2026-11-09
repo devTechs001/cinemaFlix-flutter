@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../widgets/cinema_app_bar.dart';
 import '../services/globals.dart';
 import '../widgets/interactive_card.dart';
 import '../models/sample_movies.dart';
@@ -785,13 +786,13 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with TickerProvider
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF141414),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF141414),
-        title: const Text('Community Feed', style: TextStyle(fontWeight: FontWeight.bold)),
+      appBar: CinemaAppBar(
+        title: 'Community Feed',
         actions: [
-          IconButton(
-            icon: const Icon(Icons.add_box_outlined),
-            onPressed: () => _showCreatePostDialog(),
+          CinemaAppBarIcon(
+            icon: Icons.add_box_outlined,
+            tooltip: 'New post',
+            onTap: () => _showCreatePostDialog(),
           ),
         ],
       ),

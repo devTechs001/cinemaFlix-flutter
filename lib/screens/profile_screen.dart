@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../services/globals.dart';
 import '../services/sound_service.dart' show SoundEvent;
 import '../widgets/interactive_card.dart';
+import '../widgets/cinema_app_bar.dart';
 import '../widgets/app_logo.dart';
 import '../models/sample_movies.dart';
 
@@ -246,8 +247,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
           SliverAppBar(
             pinned: true,
             elevation: 0,
+            backgroundColor: const Color(0xFF0F0F0F),
             surfaceTintColor: Colors.transparent,
-            title: const Text('Profile', style: TextStyle(fontWeight: FontWeight.bold)),
+            automaticallyImplyLeading: false,
+            leading: IconButton(
+              tooltip: 'Menu',
+              onPressed: () => openParentDrawer(context),
+              icon: Container(
+                width: 36, height: 36,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: Colors.white.withAlpha(14),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.white12),
+                ),
+                child: const Icon(Icons.menu, color: Colors.white, size: 20),
+              ),
+            ),
+            title: const Text('Profile', style: TextStyle(fontWeight: FontWeight.w800)),
             actions: [
               InteractiveCard(
                 onTap: () {
@@ -285,8 +302,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildCoverBanner(),
-                _buildProfileHeader(),
+                _buildProfileHero(),
                 const SizedBox(height: 16),
                 _buildSectionBody(),
               ],
@@ -556,281 +572,154 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildCoverBanner() {
-    return Container(
-      height: 172,
-      width: double.infinity,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFFE50914),
-            Color(0xFFB3123B),
-            Color(0xFF5B21B6),
-            Color(0xFF141414),
-          ],
-          stops: [0.0, 0.42, 0.82, 1.0],
-        ),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            top: -46, right: -24,
-            child: Container(
-              width: 170, height: 170,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [Colors.white.withAlpha(30), Colors.white.withAlpha(0)],
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: -34, left: -18,
-            child: Container(
-              width: 130, height: 130,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [const Color(0xFF7C3AED).withAlpha(70), Colors.transparent],
-                ),
-              ),
-            ),
-          ),
-          // subtle film-strip dots
-          Positioned(
-            bottom: 14, right: 16,
-            child: Row(
-              children: [
-                for (var i = 0; i < 6; i++)
-                  Container(
-                    width: 6, height: 6,
-                    margin: const EdgeInsets.only(left: 6),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white.withAlpha(i.isEven ? 70 : 30),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProfileHeader() {
+  Widget _buildProfileHero() {
     final joinDate = authService.currentUser?.createdAt ?? DateTime.now();
     final joinDateStr = '${joinDate.month}/${joinDate.year}';
 
-    return Transform.translate(
-      offset: const Offset(0, -52),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Container(
-          decoration: BoxDecoration(
-            color: const Color(0xFF161616),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
-            boxShadow: [
-              BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 20, offset: const Offset(0, 10)),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
+    return Column(
+      children: [
+        SizedBox(
+          height: 200,
+          child: Stack(
+            clipBehavior: Clip.none,
             children: [
-              Container(
-                height: 3,
-                decoration: const BoxDecoration(
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-                  gradient: LinearGradient(colors: [Color(0xFFE50914), Color(0xFF7C3AED), Color(0xFF25F4EE)]),
-                ),
-              ),
-              const SizedBox(height: 14),
-              Stack(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(3),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFE50914), Color(0xFF7C3AED)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  boxShadow: [
-                    BoxShadow(color: const Color(0xFFE50914).withValues(alpha: 0.35), blurRadius: 18),
-                  ],
-                ),
-                child: CircleAvatar(
-                  radius: 51,
-                  backgroundColor: const Color(0xFF2A2A2A),
-                  child: _avatarEmoji.isNotEmpty
-                      ? Text(_avatarEmoji, style: const TextStyle(fontSize: 40))
-                      : (_isEditing
-                          ? IconButton(
-                              icon: const Icon(Icons.camera_alt, color: Colors.white38, size: 28),
-                              onPressed: _showAvatarPicker,
-                            )
-                          : const Icon(Icons.person, size: 48, color: Color(0xFFE50914))),
-                ),
+              Positioned(
+                top: 0, left: 0, right: 0, height: 148,
+                child: _buildCoverBanner(),
               ),
               Positioned(
-                bottom: 4, right: 4,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF43A047),
-                    shape: BoxShape.circle,
-                    border: Border.fromBorderSide(BorderSide(color: Color(0xFF141414), width: 2)),
-                  ),
-                  child: const Icon(Icons.check, color: Colors.white, size: 14),
-                ),
+                left: 0, right: 0, bottom: 0,
+                child: Center(child: _buildAvatarRing()),
               ),
             ],
           ),
-          const SizedBox(height: 14),
-          // TikTok-style flat stats — the signature of the new profile card.
-          InkWell(
+        ),
+        const SizedBox(height: 12),
+        if (_isEditing)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: TextField(
+              controller: _nameController,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+              decoration: const InputDecoration(
+                hintText: 'Your name',
+                hintStyle: TextStyle(color: Colors.white38),
+                border: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFE50914))),
+                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
+                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFE50914))),
+              ),
+            ),
+          )
+        else ...[
+          Text(
+            '@${_handleSlug()}',
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.3),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            _nameController.text,
+            style: const TextStyle(color: Colors.white60, fontSize: 14),
+          ),
+        ],
+        const SizedBox(height: 14),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: InkWell(
             onTap: () => _showFollowersSheet(),
             borderRadius: BorderRadius.circular(12),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _buildFollowerCount('186', 'Following'),
-                  Container(width: 1, height: 26, color: Colors.white12),
-                  _buildFollowerCount('248', 'Followers'),
-                  Container(width: 1, height: 26, color: Colors.white12),
-                  _buildFollowerCount('1.2M', 'Likes'),
-                ],
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildFollowerCount('186', 'Following'),
+                Container(width: 1, height: 28, color: Colors.white12),
+                _buildFollowerCount('248', 'Followers'),
+                Container(width: 1, height: 28, color: Colors.white12),
+                _buildFollowerCount('1.2M', 'Likes'),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        if (_isEditing)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: TextField(
+              controller: _bioController,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white54, fontSize: 14),
+              decoration: const InputDecoration(
+                hintText: 'Your bio',
+                hintStyle: TextStyle(color: Colors.white38),
+                border: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
+                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
+                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFE50914))),
+              ),
+            ),
+          )
+        else
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 28),
+            child: Text(
+              _bioController.text,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.35),
+            ),
+          ),
+        if (_isEditing) ...[
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: TextField(
+              controller: _websiteController,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white54, fontSize: 14),
+              decoration: const InputDecoration(
+                hintText: 'Website',
+                hintStyle: TextStyle(color: Colors.white38),
+                border: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
+                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
+                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFE50914))),
               ),
             ),
           ),
-          const SizedBox(height: 10),
-          if (_isEditing)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 40),
-              child: TextField(
-                controller: _nameController,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-                decoration: const InputDecoration(
-                  hintText: 'Your name',
-                  hintStyle: TextStyle(color: Colors.white38),
-                  border: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFE50914))),
-                  enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-                  focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFE50914))),
-                ),
-              ),
-            )
-          else ...[
-            Text(
-              '@${_handleSlug()}',
-              style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: Colors.white),
-            ),
-            const SizedBox(height: 3),
-            Text(
-              _nameController.text,
-              style: const TextStyle(color: Colors.white54, fontSize: 13),
-            ),
-          ],
-          const SizedBox(height: 4),
-          if (_isEditing)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 40),
-              child: TextField(
-                controller: _bioController,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white54, fontSize: 14),
-                decoration: const InputDecoration(
-                  hintText: 'Your bio',
-                  hintStyle: TextStyle(color: Colors.white38),
-                  border: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-                  enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-                  focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFE50914))),
-                ),
-              ),
-            )
-          else
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Text(_bioController.text, style: const TextStyle(color: Colors.white54, fontSize: 14)),
-            ),
-          if (_isEditing) ...[
-            const SizedBox(height: 12),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 40),
-              child: TextField(
-                controller: _websiteController,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white54, fontSize: 14),
-                decoration: const InputDecoration(
-                  hintText: 'Website',
-                  hintStyle: TextStyle(color: Colors.white38),
-                  border: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-                  enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-                  focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFE50914))),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 40),
-              child: TextField(
-                controller: _locationController,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white54, fontSize: 14),
-                decoration: const InputDecoration(
-                  hintText: 'Location',
-                  hintStyle: TextStyle(color: Colors.white38),
-                  border: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-                  enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-                  focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFE50914))),
-                ),
-              ),
-            ),
-          ] else ...[
-            const SizedBox(height: 6),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.calendar_today, color: Colors.white38, size: 14),
-                const SizedBox(width: 4),
-                Text('Joined $joinDateStr', style: const TextStyle(color: Colors.white38, fontSize: 13)),
-              ],
-            ),
-            if (_locationController.text.isNotEmpty) ...[
-              const SizedBox(height: 4),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.location_on, color: Colors.white38, size: 14),
-                  const SizedBox(width: 4),
-                  Text(_locationController.text, style: const TextStyle(color: Colors.white38, fontSize: 13)),
-                ],
-              ),
-            ],
-            if (_websiteController.text.isNotEmpty) ...[
-              const SizedBox(height: 4),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.link, color: Colors.white38, size: 14),
-                  const SizedBox(width: 4),
-                  Text(_websiteController.text, style: const TextStyle(color: Color(0xFFE50914), fontSize: 13)),
-                ],
-              ),
-            ],
-          ],
-          const SizedBox(height: 16),
-          // TikTok-style action row: wide primary pill + compact icon squares.
+          const SizedBox(height: 12),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 18),
-            child: Row(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: TextField(
+              controller: _locationController,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white54, fontSize: 14),
+              decoration: const InputDecoration(
+                hintText: 'Location',
+                hintStyle: TextStyle(color: Colors.white38),
+                border: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
+                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
+                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFE50914))),
+              ),
+            ),
+          ),
+        ] else ...[
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.calendar_today, color: Colors.white38, size: 13),
+              const SizedBox(width: 4),
+              Text('Joined $joinDateStr', style: const TextStyle(color: Colors.white38, fontSize: 12)),
+              if (_locationController.text.isNotEmpty) ...[
+                const SizedBox(width: 10),
+                const Icon(Icons.location_on, color: Colors.white38, size: 13),
+                const SizedBox(width: 2),
+                Text(_locationController.text, style: const TextStyle(color: Colors.white38, fontSize: 12)),
+              ],
+            ],
+          ),
+        ],
+        const SizedBox(height: 16),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: Row(
             children: [
               Expanded(
                 child: InteractiveCard(
@@ -872,18 +761,102 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(width: 8),
               _squareAction(Icons.qr_code, 'QR code', () {
                 HapticFeedback.lightImpact();
-                showDialog(
-                  context: context,
-                  builder: (_) => _buildQRDialog(context),
-                );
+                showDialog(context: context, builder: (_) => _buildQRDialog(context));
               }),
             ],
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAvatarRing() {
+    return Stack(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(3),
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
+              colors: [Color(0xFFE50914), Color(0xFF7C3AED), Color(0xFF25F4EE)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
           ),
+          child: CircleAvatar(
+            radius: 48,
+            backgroundColor: const Color(0xFF1A1A1A),
+            child: _avatarEmoji.isNotEmpty
+                ? Text(_avatarEmoji, style: const TextStyle(fontSize: 38))
+                : (_isEditing
+                    ? IconButton(
+                        icon: const Icon(Icons.camera_alt, color: Colors.white38, size: 26),
+                        onPressed: _showAvatarPicker,
+                      )
+                    : const Icon(Icons.person, size: 44, color: Color(0xFFE50914))),
+          ),
+        ),
+        Positioned(
+          bottom: 4, right: 4,
+          child: Container(
+            padding: const EdgeInsets.all(4),
+            decoration: const BoxDecoration(
+              color: Color(0xFF43A047),
+              shape: BoxShape.circle,
+              border: Border.fromBorderSide(BorderSide(color: Color(0xFF141414), width: 2)),
+            ),
+            child: const Icon(Icons.check, color: Colors.white, size: 12),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCoverBanner() {
+    return Container(
+      height: 148,
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFFE50914),
+            Color(0xFFB3123B),
+            Color(0xFF5B21B6),
+            Color(0xFF141414),
           ],
+          stops: [0.0, 0.42, 0.82, 1.0],
         ),
       ),
-    ),
+      child: Stack(
+        children: [
+          Positioned(
+            top: -40, right: -20,
+            child: Container(
+              width: 160, height: 160,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [Colors.white.withAlpha(28), Colors.white.withAlpha(0)],
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 0, left: 0, right: 0, height: 48,
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.transparent, Color(0xFF141414)],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
