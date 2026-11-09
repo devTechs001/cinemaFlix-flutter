@@ -22,6 +22,7 @@ import 'screens/settings_screen.dart';
 import 'screens/dev_panel_screen.dart';
 import 'screens/admin_dashboard_screen.dart';
 import 'screens/ecommerce_screen.dart';
+import 'screens/seller_dashboard_screen.dart';
 import 'screens/gaming_screen.dart';
 import 'screens/gifting_screen.dart';
 import 'screens/records_screen.dart';
@@ -235,6 +236,7 @@ class _CinemaFlixAppState extends State<CinemaFlixApp> {
         '/dev-panel': (_) => const DevPanelScreen(),
         '/admin-dashboard': (_) => const AdminDashboardScreen(),
         '/ecommerce': (_) => const EcommerceScreen(),
+        '/seller-dashboard': (_) => const SellerDashboardScreen(),
         '/gaming': (_) => const GamingScreen(),
         '/gifting': (_) => const GiftingScreen(),
         '/records': (_) => const RecordsScreen(),

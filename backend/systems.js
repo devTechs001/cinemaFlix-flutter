@@ -463,6 +463,8 @@ function registerSystemRoutes(app, realtime) {
       adImpressions: (await adEventStats()).filter((e) => e.type === 'impression').length,
       adClicks: (await adEventStats()).filter((e) => e.type === 'click').length,
       gamingSessions: dbConnected() ? await models.GameSession.countDocuments() : memory.sessions.length,
+      sellers: dbConnected() ? await models.SellerApplication.countDocuments() : memory.sellerApplications.size,
+      products: dbConnected() ? await models.Product.countDocuments() : memory.products.length,
       featureFlags: await getFeatureFlags(),
       maintenance: await getMaintenance(),
       storage: dbConnected() ? 'mongo' : 'memory',
@@ -485,7 +487,10 @@ function registerSystemRoutes(app, realtime) {
     res.json(await setFeatureFlags(req.body || {}));
   });
 
-  app.get('/api/admin/maintenance', async (req, res) => res.json(await getMaintenance()));
+  app.get('/api/admin/maintenance', async (req, res) => {
+    if (!requireAdmin(req)) return res.status(403).json({ error: 'Admin code required' });
+    res.json(await getMaintenance());
+  });
 
   app.put('/api/admin/maintenance', async (req, res) => {
     if (!requireAdmin(req)) return res.status(403).json({ error: 'Admin code required' });
@@ -504,7 +509,7 @@ function registerSystemRoutes(app, realtime) {
 
   app.put('/api/admin/users/:id/ban', async (req, res) => {
     if (!requireAdmin(req)) return res.status(403).json({ error: 'Admin code required' });
-    let status = 'db-managed';
+    let status = 'not-found';
     if (dbConnected()) {
       const User = require('./models/User');
       const user = await User.findById(req.params.id);
@@ -512,12 +517,12 @@ function registerSystemRoutes(app, realtime) {
     }
     const local = memory.usersIndex.get(req.params.id);
     if (local) { local.banned = true; status = 'banned'; }
-    res.json({ ok: true, status, userId: req.params.id });
+    res.json({ ok: true, status, found: status !== 'not-found', userId: req.params.id });
   });
 
   app.put('/api/admin/users/:id/unban', async (req, res) => {
     if (!requireAdmin(req)) return res.status(403).json({ error: 'Admin code required' });
-    let status = 'db-managed';
+    let status = 'not-found';
     if (dbConnected()) {
       const User = require('./models/User');
       const user = await User.findById(req.params.id);
@@ -525,7 +530,39 @@ function registerSystemRoutes(app, realtime) {
     }
     const local = memory.usersIndex.get(req.params.id);
     if (local) { local.banned = false; status = 'unbanned'; }
-    res.json({ ok: true, status, userId: req.params.id });
+    res.json({ ok: true, status, found: status !== 'not-found', userId: req.params.id });
+  });
+
+  // ---- ADMIN: full-system management lists (admin code required) ----
+  app.get('/api/admin/users', async (req, res) => {
+    if (!requireAdmin(req)) return res.status(403).json({ error: 'Admin code required' });
+    if (dbConnected()) {
+      const docs = await require('./models/User').find().select('-password').sort({ createdAt: -1 }).limit(200);
+      return res.json({
+        users: docs.map((d) => ({ id: d._id.toString(), username: d.username, email: d.email, banned: !!d.banned, createdAt: d.createdAt })),
+      });
+    }
+    res.json({
+      users: [...memory.usersIndex.values()].map((u) => ({ id: u.id, username: u.username, email: u.email, banned: !!u.banned, createdAt: u.createdAt })),
+    });
+  });
+
+  app.get('/api/admin/sellers', async (req, res) => {
+    if (!requireAdmin(req)) return res.status(403).json({ error: 'Admin code required' });
+    if (dbConnected()) {
+      const docs = await models.SellerApplication.find().sort({ at: -1 });
+      return res.json({ sellers: docs.map((d) => { const o = d.toObject(); o._id = undefined; o.__v = undefined; return o; }) });
+    }
+    res.json({ sellers: [...memory.sellerApplications.entries()].map(([userId, rec]) => ({ userId, ...rec })) });
+  });
+
+  app.get('/api/admin/orders', async (req, res) => {
+    if (!requireAdmin(req)) return res.status(403).json({ error: 'Admin code required' });
+    if (dbConnected()) {
+      const docs = await models.Order.find().sort({ at: -1 }).limit(100);
+      return res.json({ orders: docs.map((d) => { const o = d.toObject(); o._id = undefined; o.__v = undefined; return o; }) });
+    }
+    res.json({ orders: [...memory.orders].slice(-100).reverse() });
   });
 
   // Public status any client reads at boot (no admin rights needed)
@@ -719,12 +756,28 @@ function registerSystemRoutes(app, realtime) {
   });
 
   // ---- ECOMMERCE (admin-approved sellers) ----
-  app.get('/api/ecommerce/products', async (req, res) => {
+  // Admin feature flag `ecommerce` switches the marketplace off wholesale.
+  // Admins bypass the gate so they can keep managing listings either way.
+  const marketplaceGate = async (req, res, next) => {
+    if (requireAdmin(req)) return next();
+    const flags = await getFeatureFlags();
+    if (flags.ecommerce === false) return res.status(403).json({ error: 'Marketplace is disabled by admin' });
+    next();
+  };
+
+  app.get('/api/ecommerce/products', marketplaceGate, async (req, res) => {
     const includeUnapproved = req.query.all === 'true' && requireAdmin(req);
     res.json({ products: await listProducts({ includeUnapproved }) });
   });
 
-  app.post('/api/ecommerce/seller/apply', async (req, res) => {
+  // Own products incl. unapproved/rejected — powers the seller dashboard.
+  app.get('/api/ecommerce/seller/products', async (req, res) => {
+    if (!req.userId) return res.status(401).json({ error: 'Auth required' });
+    const all = await listProducts({ includeUnapproved: true });
+    res.json({ products: all.filter((p) => p.sellerId === req.userId) });
+  });
+
+  app.post('/api/ecommerce/seller/apply', marketplaceGate, async (req, res) => {
     if (!req.userId) return res.status(401).json({ error: 'Auth required' });
     const { shopName, category } = req.body || {};
     if (!shopName) return res.status(400).json({ error: 'shopName required' });
@@ -746,23 +799,50 @@ function registerSystemRoutes(app, realtime) {
     res.json({ ok: true, application: saved });
   });
 
+  app.put('/api/ecommerce/seller/:userId/reject', async (req, res) => {
+    if (!requireAdmin(req)) return res.status(403).json({ error: 'Admin code required' });
+    const prev = await sellerApplication(req.params.userId);
+    if (!prev) return res.status(404).json({ error: 'No application from this user' });
+    const saved = await setSellerApplication(req.params.userId, { ...prev, status: 'rejected' });
+    res.json({ ok: true, application: saved });
+  });
+
   app.put('/api/ecommerce/products/:id/approve', async (req, res) => {
     if (!requireAdmin(req)) return res.status(403).json({ error: 'Admin code required' });
     if (dbConnected()) {
       const doc = await models.Product.findOne({ id: req.params.id });
       if (!doc) return res.status(404).json({ error: 'Product not found' });
       doc.approved = true;
+      doc.rejected = false;
       await doc.save();
     } else {
       const product = memory.products.find((p) => p.id === req.params.id);
       if (!product) return res.status(404).json({ error: 'Product not found' });
       product.approved = true;
+      product.rejected = false;
     }
     notify({ title: 'Product approved', body: 'A new listing is now in the marketplace' });
     res.json({ ok: true, productId: req.params.id });
   });
 
-  app.post('/api/ecommerce/products', async (req, res) => {
+  app.put('/api/ecommerce/products/:id/reject', async (req, res) => {
+    if (!requireAdmin(req)) return res.status(403).json({ error: 'Admin code required' });
+    if (dbConnected()) {
+      const doc = await models.Product.findOne({ id: req.params.id });
+      if (!doc) return res.status(404).json({ error: 'Product not found' });
+      doc.approved = false;
+      doc.rejected = true;
+      await doc.save();
+    } else {
+      const product = memory.products.find((p) => p.id === req.params.id);
+      if (!product) return res.status(404).json({ error: 'Product not found' });
+      product.approved = false;
+      product.rejected = true;
+    }
+    res.json({ ok: true, productId: req.params.id });
+  });
+
+  app.post('/api/ecommerce/products', marketplaceGate, async (req, res) => {
     if (!req.userId) return res.status(401).json({ error: 'Auth required' });
     const rec = await sellerApplication(req.userId);
     if (!rec || rec.status !== 'approved') return res.status(403).json({ error: 'Only approved sellers can post products' });
@@ -781,7 +861,7 @@ function registerSystemRoutes(app, realtime) {
     res.status(201).json({ product, note: 'Posted — awaiting admin approval before the marketplace/feed shows it' });
   });
 
-  app.post('/api/ecommerce/orders', async (req, res) => {
+  app.post('/api/ecommerce/orders', marketplaceGate, async (req, res) => {
     if (!req.userId) return res.status(401).json({ error: 'Auth required' });
     const { productId } = req.body || {};
     const product = await findProduct(productId);
@@ -838,7 +918,14 @@ function registerSystemRoutes(app, realtime) {
     };
   }
 
-  app.post('/api/live/create', async (req, res) => {
+  // Admin feature flag `live` blocks NEW room creation only — existing
+  // rooms stay readable so real_me companion maintenance is unaffected.
+  const liveGate = async (req, res, next) => {
+    const flags = await getFeatureFlags();
+    if (flags.live === false) return res.status(403).json({ error: 'Live streaming is disabled by admin' });
+    next();
+  };
+  app.post('/api/live/create', liveGate, async (req, res) => {
     if (!req.userId) return res.status(401).json({ error: 'Auth required' });
     const { title, requires_approval: requiresApprovalBody } = req.body || {};
     const callId = `live_${crypto.randomUUID().slice(0, 10)}`;
