@@ -7,7 +7,18 @@ require('dotenv').config();
 
 const { connectDB, getIsConnected } = require('./db');
 const { generateToken, authMiddleware, requireAuth } = require('./auth');
-const { registerSystemRoutes } = require('./systems');
+const { registerSystemRoutes, getFeatureFlags } = require('./systems');
+
+// Admin flag `chat` switches chat rooms/members off platform-wide.
+async function chatGate(req, res, next) {
+  try {
+    const flags = await getFeatureFlags();
+    if (flags.chat === false) return res.status(403).json({ error: 'Chat is disabled by admin' });
+    next();
+  } catch (e) {
+    next();
+  }
+}
 const { registerAuthVerifyRoute } = require('./auth_verify');
 
 const User = require('./models/User');
@@ -506,7 +517,7 @@ app.post('/api/gifts', requireAuth, async (req, res) => {
 
 // ---------- CHAT ROOMS ----------
 
-app.post('/api/chat/rooms/join', requireAuth, async (req, res) => {
+app.post('/api/chat/rooms/join', chatGate, requireAuth, async (req, res) => {
   if (!getIsConnected()) return res.status(503).json({ error: 'Database not connected' });
   try {
     // The Flutter client sends `room_id`; accept both spellings so the
@@ -523,7 +534,7 @@ app.post('/api/chat/rooms/join', requireAuth, async (req, res) => {
   }
 });
 
-app.get('/api/chat/rooms/:id/members', async (req, res) => {
+app.get('/api/chat/rooms/:id/members', chatGate, async (req, res) => {
   if (!getIsConnected()) return res.status(503).json({ error: 'Database not connected' });
   try {
     const members = await ChatRoomMember.find({ roomId: req.params.id }).lean();

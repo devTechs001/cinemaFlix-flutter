@@ -11,11 +11,13 @@ import 'cache_service.dart';
 import 'sync_service.dart';
 import 'feed_service.dart';
 import 'social_service.dart';
+import 'feature_flags.dart';
 export 'movie_service.dart' show movieService;
 import 'local_db_service.dart';
 
 final authService = AuthService();
 final soundService = SoundService();
+final featureFlagsService = FeatureFlagsService();
 final databaseService = DatabaseService();
 final realtimeService = RealtimeService();
 final guestService = GuestService();

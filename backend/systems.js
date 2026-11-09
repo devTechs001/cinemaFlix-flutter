@@ -50,6 +50,7 @@ const memoryFlags = {
   live: true,
   shorts: true,
   walletPoints: true,
+  chat: true,
 };
 const memoryMaintenance = {
   enabled: false,
@@ -599,7 +600,15 @@ function registerSystemRoutes(app, realtime) {
     res.json(walletJSON(wallet));
   });
 
-  app.post('/api/wallet/:userId/earn', async (req, res) => {
+  // Admin flag `walletPoints` switches point earning/conversion off
+  // platform-wide (diamonds keep working).
+  const pointsGate = async (req, res, next) => {
+    const flags = await getFeatureFlags();
+    if (flags.walletPoints === false) return res.status(403).json({ error: 'Wallet points are disabled by admin' });
+    next();
+  };
+
+  app.post('/api/wallet/:userId/earn', pointsGate, async (req, res) => {
     const { currency, amount, note } = req.body || {};
     const amt = parseInt(amount, 10);
     if (!['diamonds', 'points', 'usdCents'].includes(currency) || !Number.isFinite(amt) || amt <= 0) {
@@ -612,7 +621,7 @@ function registerSystemRoutes(app, realtime) {
     res.json(walletJSON(wallet));
   });
 
-  app.post('/api/wallet/:userId/convert', async (req, res) => {
+  app.post('/api/wallet/:userId/convert', pointsGate, async (req, res) => {
     const { from, amount } = req.body || {};
     const amt = parseInt(amount, 10);
     const RATES = { points: 10, diamonds: 1 }; // 1 diamond = 10 points
@@ -1170,4 +1179,4 @@ function registerSystemRoutes(app, realtime) {
   });
 }
 
-module.exports = { registerSystemRoutes, memory, ADMIN_CODE, OAUTH_DEV_MODE };
+module.exports = { registerSystemRoutes, memory, ADMIN_CODE, OAUTH_DEV_MODE, getFeatureFlags };
