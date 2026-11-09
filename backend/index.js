@@ -509,7 +509,11 @@ app.post('/api/gifts', requireAuth, async (req, res) => {
 app.post('/api/chat/rooms/join', requireAuth, async (req, res) => {
   if (!getIsConnected()) return res.status(503).json({ error: 'Database not connected' });
   try {
-    const { roomId } = req.body;
+    // The Flutter client sends `room_id`; accept both spellings so the
+    // membership row is written against the right room (schema requires
+    // roomId — a missing value used to fail with a validation 500).
+    const roomId = req.body.roomId ?? req.body.room_id;
+    if (!roomId) return res.status(400).json({ error: 'roomId required' });
     const existing = await ChatRoomMember.findOne({ roomId, userId: req.userId });
     if (existing) return res.json({ joined: true, message: 'Already joined' });
     await ChatRoomMember.create({ roomId, userId: req.userId });

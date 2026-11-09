@@ -882,8 +882,11 @@ function registerSystemRoutes(app, realtime) {
       if (now - lastBeat > LIVE_STALE_MS || tooOld) {
         r.status = 'ended';
         r.endedAt = new Date().toISOString();
+        // 'stale' rooms can be revived by a returning host heartbeat;
+        // 'age' (max stream age) and host-ended rooms stay terminal.
+        r.endedReason = tooOld ? 'age' : 'stale';
         pruned = true;
-        console.log(`[live] pruned room ${r.callId} (host heartbeat stale)`);
+        console.log(`[live] pruned room ${r.callId} (${tooOld ? 'max age exceeded' : 'host heartbeat stale'})`);
       }
     }
     if (pruned) persistLiveState();
@@ -898,7 +901,19 @@ function registerSystemRoutes(app, realtime) {
   app.put('/api/live/rooms/:callId/heartbeat', async (req, res) => {
     const room = liveRoom(req.params.callId);
     if (!room) return res.status(404).json({ error: 'Live room not found' });
-    if (room.status !== 'live') return res.status(409).json({ error: 'Room is not live anymore' });
+    if (room.status !== 'live') {
+      // Self-healing: a stale-pruned room returns to life when its host
+      // resumes beating (app backgrounded / network blip). Host-ended
+      // and max-age rooms remain terminal.
+      const started = Date.parse(room.startedAt || '');
+      const tooOld = Number.isFinite(started) && Date.now() - started > LIVE_MAX_AGE_MS;
+      const revivable = room.endedReason === 'stale' && !tooOld;
+      if (!revivable) return res.status(409).json({ error: 'Room is not live anymore' });
+      room.status = 'live';
+      room.endedAt = null;
+      room.endedReason = null;
+      console.log(`[live] revived room ${room.callId} (host heartbeat returned)`);
+    }
     room.heartbeatAt = new Date().toISOString();
     const viewers = Number(req.body?.viewers);
     if (Number.isFinite(viewers) && viewers >= 0) room.viewers = Math.round(viewers);
@@ -1006,6 +1021,7 @@ function registerSystemRoutes(app, realtime) {
       if (room.hostId && req.userId && room.hostId !== req.userId) return res.status(403).json({ error: 'Only the room owner can end the room' });
       room.status = 'ended';
       room.endedAt = new Date().toISOString();
+      room.endedReason = 'host'; // never revivable via heartbeat
       notify({ title: 'Live ended', body: `"${room.title}" has ended` });
     } else {
       memory.liveTokens.delete(callId);

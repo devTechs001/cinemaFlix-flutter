@@ -84,24 +84,39 @@ class _LiveScreenState extends State<LiveScreen> with TickerProviderStateMixin {
     _loadingRooms = true;
     try {
       final remote = await BackendApiService.getLiveRooms();
-      if (!mounted || remote.isEmpty) return;
+      // null = backend unreachable — keep the list we already have.
+      if (!mounted || remote == null) return;
       setState(() {
-        for (final raw in remote) {
-          final id = (raw['callId'] ?? raw['call_id'])?.toString();
-          if (id == null || id.isEmpty) continue;
-          final ui = _adaptRemoteRoom(raw, id);
-          final idx = _liveRooms.indexWhere((r) => r['call_id'] == id);
-          if (idx >= 0) {
-            _liveRooms[idx] = {
-              ..._liveRooms[idx],
-              'viewers': ui['viewers'],
-              'name': ui['name'],
-              'host': ui['host'],
-              'active': ui['active'],
-            };
-          } else {
-            _liveRooms.insert(0, ui);
+        if (remote.isEmpty) {
+          // Server says nothing is live: drop rooms that came from it
+          // (demo fallback rooms have no call_id and stay put).
+          _liveRooms.removeWhere((r) => r['call_id'] != null);
+        } else {
+          final seen = <String>{};
+          for (final raw in remote) {
+            final id = (raw['callId'] ?? raw['call_id'])?.toString();
+            if (id == null || id.isEmpty) continue;
+            seen.add(id);
+            final ui = _adaptRemoteRoom(raw, id);
+            final idx = _liveRooms.indexWhere((r) => r['call_id'] == id);
+            if (idx >= 0) {
+              _liveRooms[idx] = {
+                ..._liveRooms[idx],
+                'viewers': ui['viewers'],
+                'name': ui['name'],
+                'host': ui['host'],
+                'active': ui['active'],
+                'host_id': ui['host_id'],
+                'requires_approval': ui['requires_approval'],
+              };
+            } else {
+              _liveRooms.insert(0, ui);
+            }
           }
+          // Rooms the server no longer lists (ended/pruned) leave the grid.
+          _liveRooms.removeWhere(
+            (r) => r['call_id'] != null && !seen.contains(r['call_id']),
+          );
         }
         // Keep the currently open room object in sync.
         if (_selectedRoom?['call_id'] != null) {

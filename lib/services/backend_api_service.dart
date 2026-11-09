@@ -89,18 +89,21 @@ class BackendApiService {
     return jsonDecode(response.body) as Map<String, dynamic>;
   }
 
-  static Future<List<Map<String, dynamic>>> getLiveRooms() async {
+  /// Returns the backend's live rooms, or `null` when the backend is
+  /// unreachable/errored (callers keep whatever list they already have).
+  /// A real `[]` means: nothing is live right now.
+  static Future<List<Map<String, dynamic>>?> getLiveRooms() async {
     try {
       final response = await http
           .get(Uri.parse(ApiConfig.apiPath('/live/list')))
           .timeout(_timeout);
-      if (response.statusCode != 200) return [];
+      if (response.statusCode != 200) return null;
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       return (data['rooms'] as List<dynamic>? ?? [])
           .cast<Map<String, dynamic>>();
     } catch (e) {
       debugPrint('Live rooms fetch failed: $e');
-      return [];
+      return null;
     }
   }
 
@@ -122,7 +125,8 @@ class BackendApiService {
             body: jsonEncode({'title': title, 'requires_approval': requiresApproval}),
           )
           .timeout(_timeout);
-      if (response.statusCode != 200) return null;
+      // The backend answers 201 Created — accept any 2xx.
+      if (response.statusCode < 200 || response.statusCode >= 300) return null;
       return jsonDecode(response.body) as Map<String, dynamic>;
     } catch (e) {
       debugPrint('Create live room failed: $e');

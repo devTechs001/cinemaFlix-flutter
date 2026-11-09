@@ -29,7 +29,7 @@ class _RealMeBridgeState extends State<RealMeBridge> {
     int? rooms;
     if (up) {
       try {
-        rooms = (await BackendApiService.getLiveRooms()).length;
+        rooms = (await BackendApiService.getLiveRooms())?.length;
       } catch (_) {
         rooms = null;
       }
