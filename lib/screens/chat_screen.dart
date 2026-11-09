@@ -1817,9 +1817,14 @@ class _ChatScreenState extends State<ChatScreen>
                   // Join the backend WS gateway so room traffic relays live.
                   realtimeMessagingService.connect();
                   realtimeMessagingService.joinRoom(room.id);
-                  if (response.statusCode == 200) {
-                    setState(() => _currentRoom = room);
+                  // Membership is best-effort (backend may be offline or
+                  // running without a database) — always open the room,
+                  // the same way the catch fallback below does.
+                  if (response.statusCode != 200) {
+                    debugPrint(
+                        'Chat join returned ${response.statusCode} — opening room locally');
                   }
+                  setState(() => _currentRoom = room);
                 } catch (_) {
                   realtimeMessagingService.connect();
                   realtimeMessagingService.joinRoom(room.id);

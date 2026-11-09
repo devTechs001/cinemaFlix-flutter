@@ -280,3 +280,57 @@ for install; lockfile restored afterward):
    generation working; Mongo-less fallback confirmed.
 
 Dart static checks: 0 broken imports, delimiter balance OK.
+
+## 2026-11-09 — Build & run test round (PR #8)
+
+**Goal:** test whether the app can run/build and fix potential issues.
+
+**Environment:** no Flutter/Dart SDK in the sandbox (SDK hosts blocked) → Dart side
+verified with static suite; Node 22 available → backend fully runtime-tested.
+
+**Issues found & fixed (7 files, +80/−36):**
+
+1. `backend/video-sources.js` — **syntax error**: object keys with dots were
+   unquoted (`BigBuckBunny.mp4:`) and `VIDEO_CDN_MAP.BigBuckBunny.mp4` member
+   access. File is lazily `require`d by `/api/video/:filename`, so the server
+   booted but every video request threw `SyntaxError` → 500. Quoted all keys,
+   fixed the lookup. Now `302 → CDN` for known and unknown filenames (fallback).
+2. `lib/services/backend_api_service.dart` `createLiveRoom` — checked
+   `statusCode == 200` but the backend answers **201 Created**, so room creation
+   from the app always returned `null` ("backend unavailable" snackbar, no
+   `call_id`, heartbeats never fired). Now accepts any 2xx.
+3. `backend/systems.js` — stale-pruned rooms were **dead forever** (heartbeat →
+   409): a host app backgrounded >90s lost its room permanently even after
+   resuming. Added `endedReason` (`stale`/`age`/`host`); heartbeat now revives
+   `stale` rooms (unless max-age exceeded), host-ended/age rooms stay terminal.
+4. `backend/index.js` chat join — Flutter sends `room_id`, handler read only
+   `roomId`; schema requires it → membership writes failed with validation 500
+   (and `findOne` could match the wrong room). Accepts both spellings + 400 when
+   missing.
+5. `lib/screens/chat_screen.dart` — room only opened on HTTP 200, so offline /
+   no-DB (503) / 401 responses made chat-room taps dead clicks. Membership is
+   best-effort: always open the room (mirrors the existing catch fallback).
+6. `lib/services/backend_api_service.dart` + `lib/screens/live_screen.dart` +
+   `lib/widgets/real_me_bridge.dart` — `getLiveRooms` now distinguishes
+   "backend unreachable" (`null` → keep list) from "nothing live" (`[]` →
+   backend rooms leave the grid, demo rooms stay); merge now also syncs
+   `host_id`/`requires_approval`.
+7. Fresh-clone build note: `pubspec.yaml` lists `- .env` as an asset and
+   flutter_tools fails the build when it's missing ("No file or variants found
+   for asset") — README step 3 (`cp .env.example .env`) covers it; a local
+   `.env` (untracked) was created for this checkout.
+
+**Runtime test log (PORT=3100, `LIVE_STALE_MS=1500`): 17/17 passed**
+create→201 (backends `realme-bridge`+`native`, approval echoed) · list +
+`heartbeatAt` · heartbeat `viewers:42` · join-request→202 · approve→viewerToken
+· approved viewer join→200 · unapproved→403 · stale prune ✓ · **heartbeat
+revives stale room (200 + back in list)** ✓ · host-end terminal (409) ✓ ·
+video→302 CDN + fallback ✓ · chat join 401/503 auth contract ✓ · health OK ·
+restart → `[live] restored 3 room(s)` → only live room listed → post-restart
+heartbeat → end → list empty ✓. Server log shows full
+`pruned (host heartbeat stale) → revived (host heartbeat returned)` cycle.
+
+**Static checks:** `node --check` clean on all backend JS; Dart suite over 110
+files: 0 broken imports, delimiter balance clean (proper tokenizer), test/
+imports resolve. Real Flutter gate remains: `flutter pub get && flutter analyze
+&& flutter test` locally.
