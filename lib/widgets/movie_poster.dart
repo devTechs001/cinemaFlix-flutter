@@ -58,8 +58,20 @@ class MoviePoster extends StatelessWidget {
                 url,
                 fit: BoxFit.cover,
                 semanticLabel: '${movie.title} poster',
-                loadingBuilder: (context, child, progress) =>
-                    progress == null ? child : _fallback(),
+                loadingBuilder: (context, child, progress) {
+                  if (progress == null) return child;
+                  final total = progress.expectedTotalBytes;
+                  final t = total == null || total == 0
+                      ? 0.2
+                      : (progress.cumulativeBytesLoaded / total).clamp(0.0, 1.0);
+                  return Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      _fallback(),
+                      Opacity(opacity: t, child: child),
+                    ],
+                  );
+                },
                 errorBuilder: (context, error, stackTrace) => _fallback(),
               ),
             if (scrim)

@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/globals.dart';
 import '../services/sound_service.dart';
@@ -15,77 +16,86 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with TickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _fadeIn;
-  late Animation<double> _scale;
+  late AnimationController _intro;
   late AnimationController _particleController;
   late AnimationController _glowController;
-  late AnimationController _loadingDotsController;
+  late AnimationController _progress;
+  late Animation<double> _fadeIn;
+  late Animation<double> _scale;
+  late Animation<double> _wordmark;
   late Animation<double> _subtitleFade;
 
   final List<_Particle> _particles = [];
   final Random _random = Random();
 
+  static const _hold = Duration(milliseconds: 4200);
+
+  static const _beats = [
+    'Loading posters',
+    'Cueing your catalogue',
+    'Warming the projector',
+    'Almost ready',
+  ];
+
   @override
   void initState() {
     super.initState();
+    try {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    } catch (_) {}
     soundService.initialize().then((_) => soundService.playAsset(SoundService.bootAsset));
 
-    for (int i = 0; i < 20; i++) {
+    for (int i = 0; i < 28; i++) {
       _particles.add(_Particle(
         x: _random.nextDouble(),
         y: _random.nextDouble(),
-        size: 2 + _random.nextDouble() * 4,
-        speed: 0.002 + _random.nextDouble() * 0.004,
-        opacity: 0.2 + _random.nextDouble() * 0.5,
+        size: 1.4 + _random.nextDouble() * 3.4,
+        speed: 0.003 + _random.nextDouble() * 0.008,
+        opacity: 0.18 + _random.nextDouble() * 0.55,
+        red: _random.nextDouble() > 0.72,
       ));
     }
 
-    _controller = AnimationController(
+    _intro = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 1700),
     );
     _fadeIn = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+      CurvedAnimation(parent: _intro, curve: const Interval(0.0, 0.55, curve: Curves.easeOut)),
     );
-    _scale = Tween<double>(begin: 0.6, end: 1).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
+    _scale = Tween<double>(begin: 0.55, end: 1).animate(
+      CurvedAnimation(parent: _intro, curve: const Interval(0.0, 0.7, curve: Curves.elasticOut)),
     );
-    _controller.forward();
+    _wordmark = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _intro, curve: const Interval(0.35, 0.85, curve: Curves.easeOutCubic)),
+    );
+    _subtitleFade = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _intro, curve: const Interval(0.55, 1.0, curve: Curves.easeIn)),
+    );
+    _intro.forward();
 
     _particleController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 8),
+      duration: const Duration(seconds: 7),
     )..repeat();
 
     _glowController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 2),
+      duration: const Duration(milliseconds: 1800),
     )..repeat(reverse: true);
 
-    _loadingDotsController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    )..repeat();
-
-    _subtitleFade = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.6, 1.0, curve: Curves.easeIn),
-      ),
-    );
+    _progress = AnimationController(vsync: this, duration: _hold)..forward();
 
     _navigateAfterDelay();
   }
 
   Future<void> _navigateAfterDelay() async {
-    await Future.delayed(const Duration(seconds: 3));
+    await Future.delayed(_hold);
     if (!mounted) return;
     if (devService.maintenanceMode) {
       Navigator.pushReplacementNamed(context, '/maintenance');
       return;
     }
-    // Show the preference onboarding only ONCE (one-time onboarding display).
     final prefs = await SharedPreferences.getInstance();
     final seenOnboarding = prefs.getBool('onboarding_complete') ?? false;
     Navigator.pushReplacementNamed(context, seenOnboarding ? '/main' : '/onboarding');
@@ -93,156 +103,216 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   void dispose() {
-    _controller.dispose();
+    _intro.dispose();
     _particleController.dispose();
     _glowController.dispose();
-    _loadingDotsController.dispose();
+    _progress.dispose();
     super.dispose();
+  }
+
+  String get _beat {
+    var i = (_progress.value * _beats.length).floor();
+    if (i < 0) i = 0;
+    if (i >= _beats.length) i = _beats.length - 1;
+    return _beats[i];
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF141414),
+      backgroundColor: const Color(0xFF090909),
       body: AnimatedBuilder(
-        animation: Listenable.merge([_particleController, _glowController, _loadingDotsController]),
+        animation: Listenable.merge([
+          _particleController,
+          _glowController,
+          _progress,
+          _intro,
+        ]),
         builder: (context, _) {
-          return Container(
-            width: double.infinity,
-            height: double.infinity,
-            decoration: BoxDecoration(
-              gradient: RadialGradient(
-                center: Alignment.center,
-                radius: 1.2 + _glowController.value * 0.1,
-                colors: [
-                  Color.lerp(
-                    const Color(0xFF2D0A0A),
-                    const Color(0xFF1A0000),
-                    _glowController.value,
-                  )!,
-                  const Color(0xFF141414),
-                ],
+          final glow = _glowController.value;
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              const MovieCardWall(
+                opacity: 0.62,
+                angle: -0.18,
+                cardWidth: 104,
+                cardHeight: 156,
+                duration: Duration(seconds: 16),
+                appearDuration: Duration(milliseconds: 1500),
               ),
-            ),
-            child: Stack(
-              children: [
-                // Netflix-style drifting movie-card wall (background)
-                const MovieCardWall(opacity: 0.42),
-                ..._particles.map((p) => _buildParticle(p)),
-                AnimatedBuilder(
-                  animation: _glowController,
-                  builder: (context, _) {
-                    return Center(
-                      child: Container(
-                        width: 180,
-                        height: 180,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFFE50914).withAlpha(
-                                (80 + (_glowController.value * 60)).toInt(),
-                              ),
-                              blurRadius: 30 + _glowController.value * 20,
-                              spreadRadius: 5 + _glowController.value * 10,
-                            ),
-                          ],
-                        ),
-                        child: FadeTransition(
-                          opacity: _fadeIn,
-                          child: ScaleTransition(
-                            scale: _scale,
-                            child: const AppLogo(size: 80),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-                Positioned(
-                  bottom: MediaQuery.of(context).size.height * 0.22,
-                  left: 0,
-                  right: 0,
-                  child: FadeTransition(
-                    opacity: _subtitleFade,
-                    child: Text(
-                      'Your Movie World',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.white.withAlpha(180),
-                        fontSize: 14,
-                        letterSpacing: 4,
-                        fontWeight: FontWeight.w300,
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  bottom: 60,
-                  left: 0,
-                  right: 0,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text(
-                        'Loading',
-                        style: TextStyle(color: Colors.white38, fontSize: 13),
-                      ),
-                      AnimatedBuilder(
-                        animation: _loadingDotsController,
-                        builder: (context, _) {
-                          return Text(
-                            List.generate(
-                              3,
-                              (i) => (_loadingDotsController.value * 3).floor() >= i + 1 ? '.' : ' ',
-                            ).join(),
-                            style: const TextStyle(
-                              color: Color(0xFFE50914),
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          );
-                        },
-                      ),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: const Alignment(0, -0.1),
+                    radius: 1.05 + glow * 0.12,
+                    colors: [
+                      Color.lerp(const Color(0xCC1A0000), const Color(0xAA3B0508), glow)!,
+                      const Color(0xE6090909),
                     ],
                   ),
                 ),
-                Positioned(
-                  bottom: 30,
-                  left: 0,
-                  right: 0,
-                  child: Text(
-                    'v1.0',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white.withAlpha(40), fontSize: 11, letterSpacing: 2),
+              ),
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Color(0xCC000000),
+                      Color(0x55000000),
+                      Color(0xDD000000),
+                    ],
+                    stops: [0.0, 0.45, 1.0],
                   ),
                 ),
-              ],
-            ),
+              ),
+              ..._particles.map(_buildParticle),
+              Center(child: _brand(glow)),
+              Positioned(
+                left: 36,
+                right: 36,
+                bottom: 48,
+                child: FadeTransition(
+                  opacity: _subtitleFade,
+                  child: _loadingDock(),
+                ),
+              ),
+            ],
           );
         },
       ),
     );
   }
 
-  Widget _buildParticle(_Particle p) {
-    return AnimatedBuilder(
-      animation: _particleController,
-      builder: (context, _) {
-        final yPos = (p.y + _particleController.value * p.speed) % 1.0;
-        return Positioned(
-          left: p.x * MediaQuery.of(context).size.width,
-          top: yPos * MediaQuery.of(context).size.height,
-          child: Container(
-            width: p.size,
-            height: p.size,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.white.withAlpha((p.opacity * 255).toInt()),
+  Widget _brand(double glow) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        FadeTransition(
+          opacity: _fadeIn,
+          child: ScaleTransition(
+            scale: _scale,
+            child: Container(
+              width: 108,
+              height: 108,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFE50914).withAlpha((70 + glow * 90).toInt()),
+                    blurRadius: 36 + glow * 28,
+                    spreadRadius: 4 + glow * 10,
+                  ),
+                ],
+              ),
+              child: const AppLogo(size: 92, showText: false),
             ),
           ),
-        );
-      },
+        ),
+        const SizedBox(height: 22),
+        FadeTransition(
+          opacity: _wordmark,
+          child: Transform.translate(
+            offset: Offset(0, (1 - _wordmark.value) * 12),
+            child: Column(
+              children: [
+                Text(
+                  'CINEMAFLIX',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 26,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 4 + (1 - _wordmark.value) * 10,
+                    height: 1,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                FadeTransition(
+                  opacity: _subtitleFade,
+                  child: Text(
+                    'YOUR MOVIE WORLD',
+                    style: TextStyle(
+                      color: Colors.white.withAlpha(170),
+                      fontSize: 11,
+                      letterSpacing: 4.5,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _loadingDock() {
+    final p = Curves.easeInOut.transform(_progress.value);
+    return Column(
+      children: [
+        Text(
+          _beat,
+          style: const TextStyle(
+            color: Colors.white54,
+            fontSize: 12,
+            letterSpacing: 1.4,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 14),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(99),
+          child: SizedBox(
+            height: 3,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                const ColoredBox(color: Color(0x33FFFFFF)),
+                FractionallySizedBox(
+                  alignment: Alignment.centerLeft,
+                  widthFactor: p,
+                  child: const DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Color(0xFFE50914), Color(0xFFFF6B6B)],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          '${(p * 100).clamp(0.0, 100.0).round()}%',
+          style: TextStyle(
+            color: Colors.white.withAlpha(70),
+            fontSize: 11,
+            letterSpacing: 1.2,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildParticle(_Particle p) {
+    final yPos = (p.y + _particleController.value * p.speed * 18) % 1.0;
+    final pulse = 0.55 + 0.45 * sin((_particleController.value + p.x) * pi * 2);
+    return Positioned(
+      left: p.x * MediaQuery.of(context).size.width,
+      top: yPos * MediaQuery.of(context).size.height,
+      child: Container(
+        width: p.size,
+        height: p.size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: (p.red ? const Color(0xFFE50914) : Colors.white)
+              .withAlpha(((p.opacity * pulse * 255).clamp(0.0, 255.0)).round()),
+        ),
+      ),
     );
   }
 }
@@ -253,6 +323,7 @@ class _Particle {
   final double size;
   final double speed;
   final double opacity;
+  final bool red;
 
   const _Particle({
     required this.x,
@@ -260,5 +331,6 @@ class _Particle {
     required this.size,
     required this.speed,
     required this.opacity,
+    required this.red,
   });
 }
