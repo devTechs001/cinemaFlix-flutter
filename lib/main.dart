@@ -77,6 +77,7 @@ void main() async {
     DeviceOrientation.landscapeRight,
   ]);
   await themeService.initialize();
+  await soundService.initialize();
   await SupabaseService().initialize(); // never throws; app runs backend-only on failure
   storageService.checkStorage();
   await lockService.initialize();
@@ -167,13 +168,14 @@ class CinemaFlixApp extends StatefulWidget {
   State<CinemaFlixApp> createState() => _CinemaFlixAppState();
 }
 
-class _CinemaFlixAppState extends State<CinemaFlixApp> {
+class _CinemaFlixAppState extends State<CinemaFlixApp> with WidgetsBindingObserver {
   bool _wasOnline = true;
   bool _updateNotified = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _wasOnline = connectivityService.isOnline;
     connectivityService.addListener(_onConnectivityChanged);
     storageService.addListener(_onStorageChanged);
@@ -183,10 +185,18 @@ class _CinemaFlixAppState extends State<CinemaFlixApp> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     connectivityService.removeListener(_onConnectivityChanged);
     storageService.removeListener(_onStorageChanged);
     updateService.removeListener(_onUpdateService);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      updateService.checkForUpdates();
+    }
   }
 
   void _onUpdateService() {
@@ -210,6 +220,7 @@ class _CinemaFlixAppState extends State<CinemaFlixApp> {
           icon: '📶',
           color: const Color(0xFF10B981),
         );
+        updateService.checkForUpdates();
       } else {
         notificationService.showConnectivityAlert(false, '');
       }

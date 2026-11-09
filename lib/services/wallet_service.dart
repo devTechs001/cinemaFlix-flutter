@@ -28,6 +28,7 @@ class WalletService extends ChangeNotifier {
   int _diamonds = 500;
   int _points = 0;
   int _dailyStreak = 3;
+  DateTime? _lastCheckIn;
   final List<Transaction> _transactions = [
     Transaction(id: 'tx1', type: 'bonus', description: 'Welcome bonus', amount: 500, date: DateTime(2026, 6, 1)),
   ];
@@ -36,6 +37,12 @@ class WalletService extends ChangeNotifier {
   int get points => _points;
   int get dailyStreak => _dailyStreak;
   List<Transaction> get transactions => List.unmodifiable(_transactions);
+  bool get canCheckIn {
+    final last = _lastCheckIn;
+    if (last == null) return true;
+    final now = DateTime.now();
+    return last.year != now.year || last.month != now.month || last.day != now.day;
+  }
 
   bool spendDiamonds(int amount, String description, {String? relatedUserId}) {
     if (_diamonds < amount) return false;
@@ -79,9 +86,34 @@ class WalletService extends ChangeNotifier {
     notifyListeners();
   }
 
-  void claimDailyBonus() {
+  bool claimDailyBonus() {
+    if (!canCheckIn) return false;
+    _lastCheckIn = DateTime.now();
     _dailyStreak++;
     addPoints(5, 'Daily check-in (streak: $_dailyStreak)');
+    addDiamonds(2, 'Daily diamond drop');
+    return true;
+  }
+
+  void applyRemote(Map<String, dynamic> w) {
+    _diamonds = (w['diamonds'] as num?)?.toInt() ?? _diamonds;
+    _points = (w['points'] as num?)?.toInt() ?? _points;
+    notifyListeners();
+  }
+
+  Future<void> syncFromServer() async {
+    try {
+      final userId = await _currentUserId();
+      if (userId == null) return;
+      final res = await http
+          .get(Uri.parse(ApiConfig.apiPath('/wallet/$userId')))
+          .timeout(const Duration(seconds: 6));
+      if (res.statusCode >= 400) return;
+      final decoded = jsonDecode(res.body);
+      if (decoded is Map<String, dynamic>) applyRemote(decoded);
+    } catch (e) {
+      debugPrint('WalletService: sync skipped: $e');
+    }
   }
 
   void convertPointsToDiamonds() {

@@ -1,4 +1,6 @@
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'wallet_service.dart';
 
 class CreatorVideo {
   final String id;
@@ -49,18 +51,68 @@ class CreatorStats {
 class CreatorService extends ChangeNotifier {
   bool _isCreator = false;
   bool _onboarded = false;
+  int _pendingPayout = 12450;
+  bool _ready = false;
 
   bool get isCreator => _isCreator;
   bool get onboarded => _onboarded;
+  int get pendingPayout => _pendingPayout;
+
+  Future<void> initialize() async {
+    if (_ready) return;
+    _ready = true;
+    final prefs = await SharedPreferences.getInstance();
+    _isCreator = prefs.getBool('creator_mode') ?? false;
+    _onboarded = _isCreator;
+    _pendingPayout = prefs.getInt('creator_payout') ?? 12450;
+    notifyListeners();
+  }
+
+  Future<void> _persist() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('creator_mode', _isCreator);
+    await prefs.setInt('creator_payout', _pendingPayout);
+  }
 
   void enableCreatorMode() {
     _isCreator = true;
     _onboarded = true;
+    _persist();
     notifyListeners();
   }
 
   void disableCreatorMode() {
     _isCreator = false;
+    _persist();
+    notifyListeners();
+  }
+
+  int cashOutToWallet() {
+    if (_pendingPayout <= 0) return 0;
+    final diamonds = (_pendingPayout ~/ 10).clamp(1, 5000);
+    walletService.addDiamonds(diamonds, 'Creator payout');
+    _pendingPayout = 0;
+    _persist();
+    notifyListeners();
+    return diamonds;
+  }
+
+  void publishVideo(String id) {
+    final i = videos.indexWhere((v) => v.id == id);
+    if (i < 0) return;
+    final v = videos[i];
+    videos[i] = CreatorVideo(
+      id: v.id,
+      title: v.title,
+      thumbnail: v.thumbnail,
+      views: v.views,
+      likes: v.likes,
+      comments: v.comments,
+      uploadedAt: v.uploadedAt,
+      duration: v.duration,
+      category: v.category,
+      isPublished: true,
+    );
     notifyListeners();
   }
 

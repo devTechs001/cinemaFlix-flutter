@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/globals.dart';
+import '../services/sound_service.dart' show SoundEvent;
 
 class NotificationAlertOverlay extends StatefulWidget {
   final Widget child;
@@ -33,6 +34,7 @@ class _NotificationAlertOverlayState extends State<NotificationAlertOverlay>
 
   void _onAlert() {
     if (notificationService.currentAlert != null) {
+      soundService.play(SoundEvent.notification);
       _controller.forward();
       Future.delayed(const Duration(seconds: 5), () {
         if (mounted) _controller.reverse();

@@ -537,3 +537,19 @@ updates, in-app notification.
 Static: Dart 114 files — 0 broken imports, balance clean.
 
 Flutter gate locally: `flutter pub get && flutter analyze && flutter test`.
+
+## 2026-11-09 — In-app sounds, regular update checks, wallet/arcade/creator (PR #14)
+
+- Notifications play `SoundEvent.notification` on the in-app banner. Tapping a
+  row can route (update → /install, wallet → /wallet, creator → /creator-hub).
+  Leaving the notifications screen no longer `dispose()`s the singleton.
+- `soundService.initialize()` runs at boot. Update checks every **30 minutes**,
+  on app resume, and when the device comes back online.
+- Wallet: daily check-in (streak + pts + diamonds), send-gift, purchase/convert
+  sounds + banners, sync from `/api/wallet/:userId`.
+- Arcade: diamond balance in the app bar, fallback games, local-wallet play
+  when the API is down, win banners.
+- Creator: mode persisted, cash-out to wallet, Channel/Settings routes wired.
+
+Static: Dart 114 files — 0 broken imports, balance clean.
+Flutter gate locally: `flutter pub get && flutter analyze && flutter test`.

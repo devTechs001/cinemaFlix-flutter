@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cinemaflix/services/creator_service.dart';
 import 'package:cinemaflix/widgets/interactive_card.dart';
+import '../services/globals.dart';
+import '../services/sound_service.dart' show SoundEvent;
 
 class CreatorHubScreen extends StatefulWidget {
   const CreatorHubScreen({super.key});
@@ -11,6 +13,12 @@ class CreatorHubScreen extends StatefulWidget {
 }
 
 class _CreatorHubScreenState extends State<CreatorHubScreen> {
+  @override
+  void initState() {
+    super.initState();
+    creatorService.initialize();
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!creatorService.isCreator) return _buildOnboarding();
@@ -97,7 +105,12 @@ class _CreatorHubScreenState extends State<CreatorHubScreen> {
                 child: ElevatedButton(
                   onPressed: () {
                     HapticFeedback.mediumImpact();
+                    soundService.play(SoundEvent.success);
                     creatorService.enableCreatorMode();
+                    notificationService.notifyCreator(
+                      title: 'Creator mode on',
+                      body: 'Upload, earn, and cash out to your wallet',
+                    );
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFE50914),
@@ -174,8 +187,30 @@ class _CreatorHubScreenState extends State<CreatorHubScreen> {
             children: [
               _statItem('+${s.viewsToday}', 'Today', Icons.trending_up),
               _statItem('+${s.subscribersToday}', 'New Subs', Icons.person_add),
-              _statItem('\$${s.totalEarnings}', 'Earnings', Icons.attach_money),
+              _statItem('${creatorService.pendingPayout} USD', 'Earnings', Icons.attach_money),
             ],
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: creatorService.pendingPayout <= 0
+                  ? null
+                  : () {
+                      soundService.play(SoundEvent.transaction);
+                      final d = creatorService.cashOutToWallet();
+                      notificationService.notifyCreator(
+                        title: 'Payout sent',
+                        body: '+$d diamonds landed in your wallet',
+                      );
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: const Color(0xFFE50914),
+              ),
+              icon: const Icon(Icons.account_balance_wallet, size: 18),
+              label: Text(creatorService.pendingPayout <= 0 ? 'All caught up' : 'Cash out to wallet'),
+            ),
           ),
         ],
       ),
@@ -199,8 +234,8 @@ class _CreatorHubScreenState extends State<CreatorHubScreen> {
       {'icon': Icons.video_library, 'label': 'Content', 'color': const Color(0xFF7B1FA2), 'route': '/creator-content'},
       {'icon': Icons.analytics, 'label': 'Analytics', 'color': const Color(0xFFFFB300), 'route': '/creator-analytics'},
       {'icon': Icons.attach_money, 'label': 'Earnings', 'color': const Color(0xFF10B981), 'route': '/creator-earnings'},
-      {'icon': Icons.person, 'label': 'Channel', 'color': const Color(0xFF6366F1), 'route': null},
-      {'icon': Icons.settings, 'label': 'Settings', 'color': Colors.white54, 'route': null},
+      {'icon': Icons.person, 'label': 'Channel', 'color': const Color(0xFF6366F1), 'route': '/profile'},
+      {'icon': Icons.settings, 'label': 'Settings', 'color': Colors.white54, 'route': '/settings'},
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

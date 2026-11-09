@@ -132,7 +132,7 @@ class UpdateService extends ChangeNotifier {
 
   void _startPeriodicCheck() {
     _periodicCheck?.cancel();
-    _periodicCheck = Timer.periodic(const Duration(hours: 6), (_) {
+    _periodicCheck = Timer.periodic(const Duration(minutes: 30), (_) {
       checkForUpdates();
     });
   }

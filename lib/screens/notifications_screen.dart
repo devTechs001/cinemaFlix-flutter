@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/notification_model.dart';
 import '../services/globals.dart';
+import '../services/sound_service.dart' show SoundEvent;
 import '../widgets/interactive_card.dart';
 
 class NotificationsScreen extends StatefulWidget {
@@ -26,7 +27,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   void dispose() {
     _notificationService.removeListener(_onChange);
-    _notificationService.dispose();
     super.dispose();
   }
 
@@ -83,7 +83,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       return InteractiveCard(
                         onTap: () {
                           HapticFeedback.lightImpact();
+                          soundService.play(SoundEvent.navigation);
                           _notificationService.markAsRead(notif.id);
+                          final route = notif.route;
+                          if (route != null) Navigator.pushNamed(context, route);
                         },
                         child: ListTile(
                           leading: _buildIcon(notif.type, notif.read),
