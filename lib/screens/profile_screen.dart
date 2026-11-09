@@ -241,13 +241,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     return Scaffold(
+      backgroundColor: const Color(0xFF0B0B0B),
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
           SliverAppBar(
             pinned: true,
+            stretch: true,
             elevation: 0,
-            backgroundColor: const Color(0xFF0F0F0F),
+            expandedHeight: 176,
+            backgroundColor: const Color(0xFF0B0B0B),
             surfaceTintColor: Colors.transparent,
             automaticallyImplyLeading: false,
             leading: IconButton(
@@ -257,45 +260,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 width: 36, height: 36,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: Colors.white.withAlpha(14),
+                  color: Colors.black.withAlpha(90),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.white12),
                 ),
                 child: const Icon(Icons.menu, color: Colors.white, size: 20),
               ),
             ),
-            title: const Text('Profile', style: TextStyle(fontWeight: FontWeight.w800)),
+            title: Text(
+              _nameController.text,
+              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+            ),
             actions: [
-              InteractiveCard(
-                onTap: () {
+              IconButton(
+                tooltip: _isEditing ? 'Save' : 'Edit',
+                onPressed: () {
                   HapticFeedback.mediumImpact();
                   _toggleEdit();
                 },
-                scaleAmount: 0.88,
-                child: Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Icon(_isEditing ? Icons.check : Icons.edit_outlined, color: Colors.white54),
-                ),
+                icon: Icon(_isEditing ? Icons.check : Icons.edit, color: Colors.white),
               ),
-              InteractiveCard(
-                onTap: () {
+              IconButton(
+                tooltip: 'Settings',
+                onPressed: () {
                   HapticFeedback.lightImpact();
-                  showDialog(
-                    context: context,
-                    builder: (_) => _buildSettingsDialog(context),
-                  );
+                  showDialog(context: context, builder: (_) => _buildSettingsDialog(context));
                 },
-                scaleAmount: 0.88,
-                child: const Padding(
-                  padding: EdgeInsets.all(8),
-                  child: Icon(Icons.settings_outlined, color: Colors.white54),
-                ),
+                icon: const Icon(Icons.settings, color: Colors.white),
               ),
             ],
-            // Modern pinned section nav — stays visible while scrolling.
-            bottom: PreferredSize(
-              preferredSize: const Size.fromHeight(56),
-              child: _buildSectionNavBar(),
+            flexibleSpace: FlexibleSpaceBar(
+              collapseMode: CollapseMode.parallax,
+              background: _buildCoverBanner(),
             ),
           ),
           SliverToBoxAdapter(
@@ -303,7 +298,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildProfileHero(),
-                const SizedBox(height: 16),
+                _buildSectionNavBar(),
+                const SizedBox(height: 8),
                 _buildSectionBody(),
               ],
             ),
@@ -576,197 +572,152 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final joinDate = authService.currentUser?.createdAt ?? DateTime.now();
     final joinDateStr = '${joinDate.month}/${joinDate.year}';
 
-    return Column(
-      children: [
-        SizedBox(
-          height: 200,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Positioned(
-                top: 0, left: 0, right: 0, height: 148,
-                child: _buildCoverBanner(),
-              ),
-              Positioned(
-                left: 0, right: 0, bottom: 0,
-                child: Center(child: _buildAvatarRing()),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        if (_isEditing)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 40),
-            child: TextField(
-              controller: _nameController,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-              decoration: const InputDecoration(
-                hintText: 'Your name',
-                hintStyle: TextStyle(color: Colors.white38),
-                border: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFE50914))),
-                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFE50914))),
-              ),
-            ),
-          )
-        else ...[
-          Text(
-            '@${_handleSlug()}',
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.3),
-          ),
-          const SizedBox(height: 3),
-          Text(
-            _nameController.text,
-            style: const TextStyle(color: Colors.white60, fontSize: 14),
-          ),
-        ],
-        const SizedBox(height: 14),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: InkWell(
-            onTap: () => _showFollowersSheet(),
-            borderRadius: BorderRadius.circular(12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+    return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                _buildFollowerCount('186', 'Following'),
-                Container(width: 1, height: 28, color: Colors.white12),
-                _buildFollowerCount('248', 'Followers'),
-                Container(width: 1, height: 28, color: Colors.white12),
-                _buildFollowerCount('1.2M', 'Likes'),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 10),
-        if (_isEditing)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 40),
-            child: TextField(
-              controller: _bioController,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white54, fontSize: 14),
-              decoration: const InputDecoration(
-                hintText: 'Your bio',
-                hintStyle: TextStyle(color: Colors.white38),
-                border: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFE50914))),
-              ),
-            ),
-          )
-        else
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 28),
-            child: Text(
-              _bioController.text,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.35),
-            ),
-          ),
-        if (_isEditing) ...[
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 40),
-            child: TextField(
-              controller: _websiteController,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white54, fontSize: 14),
-              decoration: const InputDecoration(
-                hintText: 'Website',
-                hintStyle: TextStyle(color: Colors.white38),
-                border: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFE50914))),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 40),
-            child: TextField(
-              controller: _locationController,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white54, fontSize: 14),
-              decoration: const InputDecoration(
-                hintText: 'Location',
-                hintStyle: TextStyle(color: Colors.white38),
-                border: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFE50914))),
-              ),
-            ),
-          ),
-        ] else ...[
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.calendar_today, color: Colors.white38, size: 13),
-              const SizedBox(width: 4),
-              Text('Joined $joinDateStr', style: const TextStyle(color: Colors.white38, fontSize: 12)),
-              if (_locationController.text.isNotEmpty) ...[
-                const SizedBox(width: 10),
-                const Icon(Icons.location_on, color: Colors.white38, size: 13),
-                const SizedBox(width: 2),
-                Text(_locationController.text, style: const TextStyle(color: Colors.white38, fontSize: 12)),
-              ],
-            ],
-          ),
-        ],
-        const SizedBox(height: 16),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-          child: Row(
-            children: [
-              Expanded(
-                child: InteractiveCard(
-                  onTap: () {
-                    HapticFeedback.lightImpact();
-                    _toggleEdit();
-                  },
-                  scaleAmount: 0.94,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 11),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: _isEditing ? const Color(0xFFE50914) : Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      _isEditing ? 'Save' : 'Edit profile',
-                      style: TextStyle(
-                        color: _isEditing ? Colors.white : Colors.black,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14.5,
+                _buildAvatarRing(),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: InkWell(
+                      onTap: () => _showFollowersSheet(),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          _buildFollowerCount('248', 'Followers'),
+                          _buildFollowerCount('186', 'Following'),
+                          _buildFollowerCount('126', 'Watched'),
+                        ],
                       ),
                     ),
                   ),
                 ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (_isEditing)
+              TextField(
+                controller: _nameController,
+                style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                decoration: const InputDecoration(
+                  hintText: 'Your name',
+                  hintStyle: TextStyle(color: Colors.white38),
+                  isDense: true,
+                  border: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFE50914))),
+                ),
+              )
+            else ...[
+              Text(
+                _nameController.text,
+                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.3),
               ),
-              const SizedBox(width: 8),
-              _squareAction(Icons.person_add_outlined, 'Add friends', () {
-                HapticFeedback.lightImpact();
-                _showFollowersSheet();
-              }),
-              const SizedBox(width: 8),
-              _squareAction(Icons.share, 'Share', () {
-                HapticFeedback.lightImpact();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Share link copied!'), duration: Duration(seconds: 1)),
-                );
-              }),
-              const SizedBox(width: 8),
-              _squareAction(Icons.qr_code, 'QR code', () {
-                HapticFeedback.lightImpact();
-                showDialog(context: context, builder: (_) => _buildQRDialog(context));
-              }),
+              const SizedBox(height: 2),
+              Text(
+                '@${_handleSlug()}',
+                style: const TextStyle(color: Colors.white54, fontSize: 14, fontWeight: FontWeight.w600),
+              ),
             ],
-          ),
+            const SizedBox(height: 8),
+            if (_isEditing)
+              TextField(
+                controller: _bioController,
+                maxLines: 3,
+                style: const TextStyle(color: Colors.white70, fontSize: 14),
+                decoration: const InputDecoration(
+                  hintText: 'Bio',
+                  hintStyle: TextStyle(color: Colors.white38),
+                  isDense: true,
+                  border: UnderlineInputBorder(),
+                ),
+              )
+            else
+              Text(
+                _bioController.text,
+                style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.35),
+              ),
+            if (_isEditing) ...[
+              const SizedBox(height: 8),
+              TextField(
+                controller: _locationController,
+                style: const TextStyle(color: Colors.white54, fontSize: 14),
+                decoration: const InputDecoration(hintText: 'Location', hintStyle: TextStyle(color: Colors.white38), isDense: true),
+              ),
+              TextField(
+                controller: _websiteController,
+                style: const TextStyle(color: Colors.white54, fontSize: 14),
+                decoration: const InputDecoration(hintText: 'Website', hintStyle: TextStyle(color: Colors.white38), isDense: true),
+              ),
+            ] else ...[
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 12,
+                runSpacing: 4,
+                children: [
+                  Row(mainAxisSize: MainAxisSize.min, children: [
+                    const Icon(Icons.calendar_today, color: Colors.white38, size: 13),
+                    const SizedBox(width: 4),
+                    Text('Joined $joinDateStr', style: const TextStyle(color: Colors.white38, fontSize: 12)),
+                  ]),
+                  if (_locationController.text.isNotEmpty)
+                    Row(mainAxisSize: MainAxisSize.min, children: [
+                      const Icon(Icons.location_on, color: Colors.white38, size: 13),
+                      const SizedBox(width: 4),
+                      Text(_locationController.text, style: const TextStyle(color: Colors.white38, fontSize: 12)),
+                    ]),
+                  if (_websiteController.text.isNotEmpty)
+                    Row(mainAxisSize: MainAxisSize.min, children: [
+                      const Icon(Icons.link, color: Color(0xFFE50914), size: 13),
+                      const SizedBox(width: 4),
+                      Text(_websiteController.text, style: const TextStyle(color: Color(0xFFE50914), fontSize: 12)),
+                    ]),
+                ],
+              ),
+            ],
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: FilledButton(
+                    onPressed: () {
+                      HapticFeedback.lightImpact();
+                      _toggleEdit();
+                    },
+                    style: FilledButton.styleFrom(
+                      backgroundColor: _isEditing ? const Color(0xFFE50914) : Colors.white,
+                      foregroundColor: _isEditing ? Colors.white : Colors.black,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    child: Text(_isEditing ? 'Save' : 'Edit profile', style: const TextStyle(fontWeight: FontWeight.w800)),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                _squareAction(Icons.person_add, 'Add friends', () {
+                  HapticFeedback.lightImpact();
+                  _showFollowersSheet();
+                }),
+                const SizedBox(width: 8),
+                _squareAction(Icons.share, 'Share', () {
+                  HapticFeedback.lightImpact();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Share link copied!'), duration: Duration(seconds: 1)),
+                  );
+                }),
+                const SizedBox(width: 8),
+                _squareAction(Icons.qr_code, 'QR code', () {
+                  HapticFeedback.lightImpact();
+                  showDialog(context: context, builder: (_) => _buildQRDialog(context));
+                }),
+              ],
+            ),
+          ],
         ),
-      ],
     );
   }
 
