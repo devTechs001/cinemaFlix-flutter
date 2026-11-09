@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cinemaflix/services/wallet_service.dart';
+import '../services/globals.dart';
+import '../services/sound_service.dart' show SoundEvent;
 
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
@@ -16,6 +18,7 @@ class _WalletScreenState extends State<WalletScreen> with SingleTickerProviderSt
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    walletService.syncFromServer();
   }
 
   @override
@@ -41,9 +44,9 @@ class _WalletScreenState extends State<WalletScreen> with SingleTickerProviderSt
               labelColor: const Color(0xFFE50914),
               unselectedLabelColor: Colors.white38,
               tabs: const [
-                Tab(icon: Icon(Icons.account_balance_wallet_outlined), text: 'Balance'),
-                Tab(icon: Icon(Icons.diamond_outlined), text: 'Shop'),
-                Tab(icon: Icon(Icons.receipt_long_outlined), text: 'History'),
+                Tab(icon: Icon(Icons.account_balance_wallet), text: 'Balance'),
+                Tab(icon: Icon(Icons.diamond), text: 'Shop'),
+                Tab(icon: Icon(Icons.receipt_long), text: 'History'),
               ],
             ),
           ),
@@ -118,7 +121,12 @@ class _WalletScreenState extends State<WalletScreen> with SingleTickerProviderSt
                       TextButton.icon(
                         onPressed: () {
                           HapticFeedback.selectionClick();
+                          soundService.play(SoundEvent.transaction);
                           walletService.convertPointsToDiamonds();
+                          notificationService.notifyWallet(
+                            title: 'Converted to diamonds',
+                            body: 'Points swapped into your diamond balance',
+                          );
                         },
                         icon: const Icon(Icons.swap_horiz, color: Color(0xFFE50914)),
                         label: const Text('Convert to Diamonds', style: TextStyle(color: Color(0xFFE50914))),
@@ -128,6 +136,61 @@ class _WalletScreenState extends State<WalletScreen> with SingleTickerProviderSt
                 const SizedBox(height: 8),
                 Text('100 points = 1 diamond', style: TextStyle(color: Colors.white.withAlpha(100), fontSize: 13)),
               ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1F1F1F),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.local_fire_department, color: Color(0xFFFF6D00), size: 32),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('${walletService.dailyStreak} day streak', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16)),
+                      Text(
+                        walletService.canCheckIn ? 'Claim today for +5 pts and 2 diamonds' : 'Come back tomorrow',
+                        style: const TextStyle(color: Colors.white54, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+                FilledButton(
+                  onPressed: walletService.canCheckIn
+                      ? () {
+                          soundService.play(SoundEvent.celebrate);
+                          walletService.claimDailyBonus();
+                          notificationService.notifyWallet(
+                            title: 'Daily bonus claimed',
+                            body: 'Streak ${walletService.dailyStreak} · +5 pts · +2 diamonds',
+                          );
+                        }
+                      : null,
+                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFFE50914)),
+                  child: Text(walletService.canCheckIn ? 'Check in' : 'Done'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _sendGift,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.white,
+                side: const BorderSide(color: Colors.white24),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              icon: const Icon(Icons.card_giftcard, size: 18),
+              label: const Text('Send a gift'),
             ),
           ),
           const SizedBox(height: 16),
@@ -143,7 +206,7 @@ class _WalletScreenState extends State<WalletScreen> with SingleTickerProviderSt
               children: [
                 Row(
                   children: [
-                    Icon(Icons.emoji_events_outlined, color: Colors.amber.withAlpha(180)),
+                    Icon(Icons.emoji_events, color: Colors.amber.withAlpha(180)),
                     const SizedBox(width: 8),
                     const Text('Earning Activities', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
                   ],
@@ -256,6 +319,42 @@ class _WalletScreenState extends State<WalletScreen> with SingleTickerProviderSt
     );
   }
 
+  void _sendGift() {
+    final ctrl = TextEditingController();
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1F1F1F),
+        title: const Text('Send a gift', style: TextStyle(color: Colors.white)),
+        content: TextField(
+          controller: ctrl,
+          style: const TextStyle(color: Colors.white),
+          decoration: const InputDecoration(
+            hintText: 'Friend user id',
+            hintStyle: TextStyle(color: Colors.white38),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              final to = ctrl.text.trim().isEmpty ? 'friend' : ctrl.text.trim();
+              final ok = walletService.sendGift(10, 'Cinema popcorn', to);
+              soundService.play(ok ? SoundEvent.gift : SoundEvent.popups);
+              notificationService.notifyWallet(
+                title: ok ? 'Gift sent' : 'Not enough diamonds',
+                body: ok ? 'Sent popcorn (10 ◆) to $to' : 'Need 10 diamonds to gift',
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE50914)),
+            child: const Text('Send 10 ◆'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _purchasePackage(String name, int diamonds, String price) {
     showDialog(
       context: context,
@@ -278,7 +377,13 @@ class _WalletScreenState extends State<WalletScreen> with SingleTickerProviderSt
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(ctx);
+              soundService.play(SoundEvent.transaction);
               await walletService.purchaseDiamonds(diamonds);
+              notificationService.notifyWallet(
+                title: 'Diamonds added',
+                body: '+$diamonds from $name',
+              );
+              if (!context.mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text('Purchased $diamonds diamonds!'),

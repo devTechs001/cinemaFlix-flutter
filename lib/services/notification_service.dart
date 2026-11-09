@@ -117,6 +117,42 @@ class NotificationService extends ChangeNotifier {
       body: 'A new build is ready. Open Install & Host to download.',
       time: 'just now',
       type: NotificationType.system,
+      route: '/install',
+    ));
+  }
+
+  void notifyWallet({required String title, required String body, VoidCallback? onTap}) {
+    showAlert(
+      title: title,
+      body: body,
+      icon: '💎',
+      color: const Color(0xFFFFD700),
+      onTap: onTap,
+    );
+    _addNotification(AppNotification(
+      id: 'wallet_${DateTime.now().millisecondsSinceEpoch}',
+      title: title,
+      body: body,
+      time: 'just now',
+      type: NotificationType.system,
+      route: '/wallet',
+    ));
+  }
+
+  void notifyCreator({required String title, required String body}) {
+    showAlert(
+      title: title,
+      body: body,
+      icon: '🎬',
+      color: const Color(0xFFE50914),
+    );
+    _addNotification(AppNotification(
+      id: 'creator_${DateTime.now().millisecondsSinceEpoch}',
+      title: title,
+      body: body,
+      time: 'just now',
+      type: NotificationType.review,
+      route: '/creator-hub',
     ));
   }
 

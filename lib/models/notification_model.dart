@@ -6,6 +6,7 @@ class AppNotification {
   final String? imageUrl;
   final NotificationType type;
   final bool read;
+  final String? route;
 
   const AppNotification({
     required this.id,
@@ -15,9 +16,10 @@ class AppNotification {
     this.imageUrl,
     required this.type,
     this.read = false,
+    this.route,
   });
 
-  AppNotification copyWith({bool? read}) {
+  AppNotification copyWith({bool? read, String? route}) {
     return AppNotification(
       id: id,
       title: title,
@@ -26,6 +28,7 @@ class AppNotification {
       imageUrl: imageUrl,
       type: type,
       read: read ?? this.read,
+      route: route ?? this.route,
     );
   }
 }

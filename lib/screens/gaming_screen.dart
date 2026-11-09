@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import '../services/api_config.dart';
 import '../services/globals.dart';
 import '../services/sound_service.dart';
+import 'package:cinemaflix/services/wallet_service.dart';
 
 /// Gaming system — casual games paid with wallet diamonds, with payouts wired
 /// straight back into the user's wallet (per bugs.txt "gaming system as well
@@ -46,16 +47,20 @@ class _GamingScreenState extends State<GamingScreen> {
     } catch (e) {
       _error = e.toString().replaceAll('Exception: ', '');
     }
+    if (_games.isEmpty) {
+      _games = [
+        {'id': 'quiz_blitz', 'name': 'CineQuiz Blitz', 'entryDiamonds': 2, 'description': 'Answer movie trivia fast for diamonds'},
+        {'id': 'spin_reel', 'name': 'Reel Spinner', 'entryDiamonds': 5, 'description': 'Spin the reel — win diamonds up to 10x'},
+        {'id': 'guess_frames', 'name': 'Guess the Frames', 'entryDiamonds': 3, 'description': 'Guess the movie from blurred frames'},
+      ];
+    }
     setState(() => _loading = false);
   }
 
   Future<void> _play(Map<String, dynamic> game) async {
     final userId = authService.currentUser?.id;
-    if (userId == null) {
-      _showSnack('Sign in to play — winnings go to your wallet');
-      return;
-    }
-    setState(() => _playing = true);      soundService.play(SoundEvent.success);
+    setState(() => _playing = true);
+    soundService.play(SoundEvent.success);
     try {
       final res = await http
           .post(
@@ -63,7 +68,7 @@ class _GamingScreenState extends State<GamingScreen> {
             headers: {
               'Content-Type': 'application/json',
               'Authorization': 'Bearer ${authService.token ?? ''}',
-              'x-user-id': userId,
+              'x-user-id': userId ?? '',
             },
             body: jsonEncode({'username': authService.currentUser?.username}),
           )
@@ -73,11 +78,34 @@ class _GamingScreenState extends State<GamingScreen> {
       _lastResult = decoded;
       final win = decoded['outcome'] == 'win';
       soundService.play(win ? SoundEvent.celebrate : SoundEvent.popups);
+      final remote = decoded['wallet'];
+      if (remote is Map<String, dynamic>) walletService.applyRemote(remote);
+      if (win) {
+        notificationService.notifyWallet(
+          title: 'Arcade win',
+          body: '+◆ ${decoded['reward']} on ${game['name']}',
+        );
+      }
       await _refresh();
       if (!mounted) return;
       _showSnack(win ? '🎉 You won ◆ ${decoded['reward']}' : 'Round lost — ◆ ${(decoded['reward'] as num?)?.toInt() ?? 0} won');
     } catch (e) {
-      _showSnack(e.toString().replaceAll('Exception: ', ''));
+      // Offline / unauth: play against the local wallet so arcade still works.
+      final entry = (game['entryDiamonds'] as num?)?.toInt() ?? 2;
+      if (!walletService.spendDiamonds(entry, 'Arcade: ${game['name']}')) {
+        _showSnack('Need ◆ $entry to play');
+      } else {
+        final roll = DateTime.now().millisecond % 100;
+        final win = roll < 40;
+        final reward = win ? entry * (roll < 8 ? 10 : 2) : 0;
+        if (reward > 0) walletService.addDiamonds(reward, 'Arcade win: ${game['name']}');
+        _lastResult = {'outcome': win ? 'win' : 'lose', 'reward': reward, 'multiplier': win ? reward / entry : 0};
+        soundService.play(win ? SoundEvent.celebrate : SoundEvent.popups);
+        if (win) {
+          notificationService.notifyWallet(title: 'Arcade win', body: '+◆ $reward on ${game['name']}');
+        }
+        _showSnack(win ? '🎉 You won ◆ $reward' : 'Round lost');
+      }
     } finally {
       if (mounted) setState(() => _playing = false);
     }
@@ -103,6 +131,18 @@ class _GamingScreenState extends State<GamingScreen> {
           SizedBox(width: 8),
           Text('Arcade', style: TextStyle(fontWeight: FontWeight.bold)),
         ]),
+        actions: [
+          ListenableBuilder(
+            listenable: walletService,
+            builder: (_, _) => Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Center(
+                child: Text('◆ ${walletService.diamonds}',
+                    style: const TextStyle(color: Color(0xFFFFD700), fontWeight: FontWeight.w800)),
+              ),
+            ),
+          ),
+        ],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: Color(0xFFE50914)))
