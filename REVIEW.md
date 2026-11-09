@@ -553,3 +553,9 @@ Flutter gate locally: `flutter pub get && flutter analyze && flutter test`.
 
 Static: Dart 114 files — 0 broken imports, balance clean.
 Flutter gate locally: `flutter pub get && flutter analyze && flutter test`.
+
+## 2026-11-09 — README installer links (PR #15)
+
+Added an Installers section to README.md with GitHub latest/v0.2.0, Linux /
+macOS / Windows script links (blob + raw), source zip, clone URL, and curl/irm
+one-liners. Updated the Install & Host / Auto-Update bullets to match.
