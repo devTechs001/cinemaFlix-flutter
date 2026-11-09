@@ -10,14 +10,23 @@ Get the app from GitHub. In-app **Install & Host** uses the same links (Download
 |----------|-----------|
 | **Latest release** | [github.com/devTechs001/cinemaFlix-flutter/releases/latest](https://github.com/devTechs001/cinemaFlix-flutter/releases/latest) |
 | **v0.2.0** | [Releases / v0.2.0](https://github.com/devTechs001/cinemaFlix-flutter/releases/tag/v0.2.0) |
-| **Android APK** | Attach a `.apk` to a GitHub release, or use the in-app Download button (falls back to source zip until an APK is published) |
+| **Android (phone)** | [`installers/install-android.sh`](https://github.com/devTechs001/cinemaFlix-flutter/blob/main/installers/install-android.sh) · [raw](https://raw.githubusercontent.com/devTechs001/cinemaFlix-flutter/main/installers/install-android.sh) · [APK (latest)](https://github.com/devTechs001/cinemaFlix-flutter/releases/latest/download/app-release.apk) |
+| **iOS (iPhone / iPad)** | [`installers/install-ios.sh`](https://github.com/devTechs001/cinemaFlix-flutter/blob/main/installers/install-ios.sh) · [raw](https://raw.githubusercontent.com/devTechs001/cinemaFlix-flutter/main/installers/install-ios.sh) · [latest release](https://github.com/devTechs001/cinemaFlix-flutter/releases/latest) |
 | **Linux** | [`installers/install-linux.sh`](https://github.com/devTechs001/cinemaFlix-flutter/blob/main/installers/install-linux.sh) · [raw](https://raw.githubusercontent.com/devTechs001/cinemaFlix-flutter/main/installers/install-linux.sh) |
 | **macOS** | [`installers/install-macos.sh`](https://github.com/devTechs001/cinemaFlix-flutter/blob/main/installers/install-macos.sh) · [raw](https://raw.githubusercontent.com/devTechs001/cinemaFlix-flutter/main/installers/install-macos.sh) |
 | **Windows** | [`installers/install-windows.ps1`](https://github.com/devTechs001/cinemaFlix-flutter/blob/main/installers/install-windows.ps1) · [raw](https://raw.githubusercontent.com/devTechs001/cinemaFlix-flutter/main/installers/install-windows.ps1) |
 | **Source zip** | [cinemaFlix-flutter-main.zip](https://github.com/devTechs001/cinemaFlix-flutter/archive/refs/heads/main.zip) |
 | **Clone the repo** | [github.com/devTechs001/cinemaFlix-flutter](https://github.com/devTechs001/cinemaFlix-flutter) |
 
+**On a phone:** open [Releases latest](https://github.com/devTechs001/cinemaFlix-flutter/releases/latest) in the browser. Android: download `app-release.apk` (allow unknown sources) or run the Android installer below. iOS: use the iOS installer on a Mac, then install to the device from Xcode / TestFlight.
+
 ```bash
+# Android (from a machine with Flutter, or share the APK link to the phone)
+curl -fsSL https://raw.githubusercontent.com/devTechs001/cinemaFlix-flutter/main/installers/install-android.sh | bash
+
+# iOS (Mac with Xcode)
+curl -fsSL https://raw.githubusercontent.com/devTechs001/cinemaFlix-flutter/main/installers/install-ios.sh | bash
+
 # Linux
 curl -fsSL https://raw.githubusercontent.com/devTechs001/cinemaFlix-flutter/main/installers/install-linux.sh | bash
 

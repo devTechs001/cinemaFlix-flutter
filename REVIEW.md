@@ -559,3 +559,9 @@ Flutter gate locally: `flutter pub get && flutter analyze && flutter test`.
 Added an Installers section to README.md with GitHub latest/v0.2.0, Linux /
 macOS / Windows script links (blob + raw), source zip, clone URL, and curl/irm
 one-liners. Updated the Install & Host / Auto-Update bullets to match.
+
+## 2026-11-09 — Mobile installer links in README (PR #16)
+
+Android and iOS installer scripts + README rows (blob, raw, APK latest URL)
+and curl one-liners. In-app Install & Host falls back to those scripts when
+no APK/IPA is on the GitHub release.
