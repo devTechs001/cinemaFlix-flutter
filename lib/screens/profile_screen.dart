@@ -250,16 +250,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             title: const Text('Profile', style: TextStyle(fontWeight: FontWeight.bold)),
             actions: [
               InteractiveCard(
-                onTap: () async {
+                onTap: () {
                   HapticFeedback.mediumImpact();
-                  if (_isEditing && authService.currentUser != null) {
-                    await authService.updateProfile(username: _nameController.text.trim());
-                    if (!mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Profile updated'), duration: Duration(seconds: 1)),
-                    );
-                  }
-                  setState(() => _isEditing = !_isEditing);
+                  _toggleEdit();
                 },
                 scaleAmount: 0.88,
                 child: Padding(
@@ -633,10 +626,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final joinDateStr = '${joinDate.month}/${joinDate.year}';
 
     return Transform.translate(
-      offset: const Offset(0, -50),
-      child: Column(
-        children: [
-          Stack(
+      offset: const Offset(0, -52),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFF161616),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 20, offset: const Offset(0, 10)),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                height: 3,
+                decoration: const BoxDecoration(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                  gradient: LinearGradient(colors: [Color(0xFFE50914), Color(0xFF7C3AED), Color(0xFF25F4EE)]),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Stack(
             children: [
               Container(
                 padding: const EdgeInsets.all(3),
@@ -678,7 +691,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
+          // TikTok-style flat stats — the signature of the new profile card.
+          InkWell(
+            onTap: () => _showFollowersSheet(),
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildFollowerCount('186', 'Following'),
+                  Container(width: 1, height: 26, color: Colors.white12),
+                  _buildFollowerCount('248', 'Followers'),
+                  Container(width: 1, height: 26, color: Colors.white12),
+                  _buildFollowerCount('1.2M', 'Likes'),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
           if (_isEditing)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -695,11 +727,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
             )
-          else
+          else ...[
+            Text(
+              '@${_handleSlug()}',
+              style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: Colors.white),
+            ),
+            const SizedBox(height: 3),
             Text(
               _nameController.text,
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+              style: const TextStyle(color: Colors.white54, fontSize: 13),
             ),
+          ],
           const SizedBox(height: 4),
           if (_isEditing)
             Padding(
@@ -789,44 +827,102 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ],
           ],
           const SizedBox(height: 16),
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 24),
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            decoration: BoxDecoration(
-              color: const Color(0xFF161616),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
-              boxShadow: [
-                BoxShadow(color: Colors.black.withValues(alpha: 0.25), blurRadius: 12, offset: const Offset(0, 4)),
-              ],
-            ),
-            child: InkWell(
-              onTap: () => _showFollowersSheet(),
-              borderRadius: BorderRadius.circular(18),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _buildFollowerCount('248', 'Followers'),
-                  Container(width: 1, height: 30, color: Colors.white12),
-                  _buildFollowerCount('186', 'Following'),
-                  Container(width: 1, height: 30, color: Colors.white12),
-                  _buildFollowerCount('126', 'Watched'),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          // TikTok-style action row: wide primary pill + compact icon squares.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 18),
+            child: Row(
             children: [
-              _buildShareProfileButton(),
-              const SizedBox(width: 12),
-              _buildQRButton(),
+              Expanded(
+                child: InteractiveCard(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    _toggleEdit();
+                  },
+                  scaleAmount: 0.94,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 11),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: _isEditing ? const Color(0xFFE50914) : Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      _isEditing ? 'Save' : 'Edit profile',
+                      style: TextStyle(
+                        color: _isEditing ? Colors.white : Colors.black,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14.5,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              _squareAction(Icons.person_add_outlined, 'Add friends', () {
+                HapticFeedback.lightImpact();
+                _showFollowersSheet();
+              }),
+              const SizedBox(width: 8),
+              _squareAction(Icons.share, 'Share', () {
+                HapticFeedback.lightImpact();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Share link copied!'), duration: Duration(seconds: 1)),
+                );
+              }),
+              const SizedBox(width: 8),
+              _squareAction(Icons.qr_code, 'QR code', () {
+                HapticFeedback.lightImpact();
+                showDialog(
+                  context: context,
+                  builder: (_) => _buildQRDialog(context),
+                );
+              }),
             ],
           ),
-        ],
+          ),
+          ],
+        ),
+      ),
+    ),
+    );
+  }
+
+  Widget _squareAction(IconData icon, String tooltip, VoidCallback onTap) {
+    return InteractiveCard(
+      onTap: onTap,
+      scaleAmount: 0.9,
+      child: Tooltip(
+        message: tooltip,
+        child: Container(
+          width: 42,
+          height: 42,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: Colors.white.withAlpha(14),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.white10),
+          ),
+          child: Icon(icon, color: Colors.white70, size: 19),
+        ),
       ),
     );
+  }
+
+  Future<void> _toggleEdit() async {
+    if (_isEditing && authService.currentUser != null) {
+      await authService.updateProfile(username: _nameController.text.trim());
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile updated'), duration: Duration(seconds: 1)),
+      );
+    }
+    if (!mounted) return;
+    setState(() => _isEditing = !_isEditing);
+  }
+
+  String _handleSlug() {
+    final raw = _nameController.text.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9._]'), '');
+    return raw.isEmpty ? 'cinemaflix' : raw;
   }
 
   Widget _buildAnimatedStatRow() {
@@ -1178,63 +1274,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildFollowerCount(String count, String label) {
     return Column(
       children: [
-        Text(count, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+        Text(count, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Colors.white, height: 1.05, letterSpacing: -0.3)),
         const SizedBox(height: 2),
-        Text(label, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+        Text(label, style: const TextStyle(color: Colors.white54, fontSize: 12, fontWeight: FontWeight.w500)),
       ],
-    );
-  }
-
-  Widget _buildShareProfileButton() {
-    return InteractiveCard(
-      onTap: () {
-        HapticFeedback.lightImpact();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Share link copied!'), duration: Duration(seconds: 1)),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.white24),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.share, color: Colors.white70, size: 16),
-            SizedBox(width: 6),
-            Text('Share Profile', style: TextStyle(color: Colors.white70, fontSize: 13)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQRButton() {
-    return InteractiveCard(
-      onTap: () {
-        HapticFeedback.lightImpact();
-        showDialog(
-          context: context,
-          builder: (_) => _buildQRDialog(context),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.white24),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.qr_code, color: Colors.white70, size: 16),
-            SizedBox(width: 6),
-            Text('QR Code', style: TextStyle(color: Colors.white70, fontSize: 13)),
-          ],
-        ),
-      ),
     );
   }
 

@@ -457,3 +457,23 @@ app/config flags. Static: `node --check` clean (all backend JS), Dart 113
 files — 0 broken imports, balance clean.
 
 Flutter gate locally: `flutter pub get && flutter analyze && flutter test`.
+
+## 2026-11-09 — TikTok-style profile card (PR #11)
+
+User ask: "want a modern profile card (tiktok style)".
+
+`_buildProfileHeader` is now a floating card overlapping the cover (offset -52):
+- Dark glass card (`#161616`, 24dp radius, hairline border, drop shadow)
+- 3px red→purple→cyan (`#25F4EE`) accent strip along the top (TikTok cyan)
+- Avatar still has the red→purple gradient ring + online check
+- Signature TikTok stats row under the avatar: **Following / Followers / Likes**
+  (flat, no enclosing glass box; tap opens the followers sheet)
+- Bold `@handle` as the primary name, display name as a secondary line
+- Action row: full-width **Edit profile** pill (white, turns red **Save** while
+  editing) + three 42×42 icon squares (add friends, share, QR) — the classic
+  TikTok profile chrome
+- Edit/save is shared via `_toggleEdit()` (app bar pencil + card pill)
+
+Static: Dart 113 files — 0 broken imports, balance clean. No backend change.
+
+Flutter gate locally: `flutter pub get && flutter analyze && flutter test`.
