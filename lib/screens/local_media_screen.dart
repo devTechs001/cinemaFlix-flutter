@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -13,26 +14,35 @@ class LocalMediaScreen extends StatefulWidget {
 }
 
 class _LocalMediaScreenState extends State<LocalMediaScreen> {
-  List<FileSystemEntity> _items = [];
+  final List<File> _library = [];
+  List<FileSystemEntity> _folders = [];
   String _currentPath = '';
   bool _loading = true;
   String _searchQuery = '';
-  String _filter = 'all'; // all | video | audio
+  String _filter = 'all';
   String? _permHint;
 
-  final Set<String> _supportedVideo = {'.mp4', '.mkv', '.avi', '.mov', '.webm'};
-  final Set<String> _supportedAudio = {'.mp3', '.wav', '.aac', '.flac', '.ogg', '.m4a'};
-  final Set<String> _supportedImage = {'.jpg', '.jpeg', '.png', '.gif', '.webp'};
+  final Set<String> _supportedVideo = {'.mp4', '.mkv', '.avi', '.mov', '.webm', '.m4v', '.3gp'};
+  final Set<String> _supportedAudio = {'.mp3', '.wav', '.aac', '.flac', '.ogg', '.m4a', '.wma'};
+  final Set<String> _supportedImage = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.heic'};
 
   static const _candidateRoots = [
     '/storage/emulated/0/Movies',
     '/storage/emulated/0/Music',
     '/storage/emulated/0/Download',
+    '/storage/emulated/0/Downloads',
     '/storage/emulated/0/DCIM',
-    '/storage/emulated/0',
+    '/storage/emulated/0/Pictures',
+    '/storage/emulated/0/Documents',
     '/sdcard/Movies',
     '/sdcard/Music',
     '/sdcard/Download',
+    '/sdcard/DCIM',
+    '/home/user/Videos',
+    '/home/user/Music',
+    '/home/user/Downloads',
+    '/home/user',
+    '/storage/emulated/0',
     '/sdcard',
     '/home',
   ];
@@ -44,30 +54,60 @@ class _LocalMediaScreenState extends State<LocalMediaScreen> {
   }
 
   Future<void> _bootstrap() async {
+    setState(() => _loading = true);
     try {
       await Permission.storage.request();
       await Permission.videos.request();
       await Permission.audio.request();
       await Permission.photos.request();
+      await Permission.manageExternalStorage.request();
     } catch (_) {}
 
+    final found = <String, File>{};
+    String? firstRoot;
     for (final root in _candidateRoots) {
       final dir = Directory(root);
       try {
-        if (dir.existsSync()) {
-          await _loadDirectory(root);
-          return;
+        if (!dir.existsSync()) continue;
+        firstRoot ??= root;
+        for (final f in await _scanMedia(root)) {
+          found[f.path] = f;
         }
       } catch (_) {}
     }
-    await _loadDirectory('/');
+
+    if (mounted) {
+      setState(() {
+        _library
+          ..clear()
+          ..addAll(found.values);
+        _loading = false;
+        _permHint = found.isEmpty
+            ? 'Could not list device folders. Tap Browse files — that uses the system picker and works without full storage access.'
+            : null;
+      });
+    }
+    if (firstRoot != null) await _loadDirectory(firstRoot);
+  }
+
+  Future<List<File>> _scanMedia(String root, {int depth = 0}) async {
+    if (depth > 3) return const [];
+    final out = <File>[];
+    try {
+      await for (final e in Directory(root).list(followLinks: false)) {
+        if (e is Directory) {
+          final name = e.path.split('/').last;
+          if (name.startsWith('.')) continue;
+          out.addAll(await _scanMedia(e.path, depth: depth + 1));
+        } else if (e is File && _isMediaFile(e.path)) {
+          out.add(e);
+        }
+      }
+    } catch (_) {}
+    return out;
   }
 
   Future<void> _loadDirectory(String path) async {
-    setState(() {
-      _loading = true;
-      _permHint = null;
-    });
     try {
       final dir = Directory(path);
       final entities = await dir.list().toList();
@@ -78,51 +118,82 @@ class _LocalMediaScreenState extends State<LocalMediaScreen> {
       });
       if (mounted) {
         setState(() {
-          _items = entities;
+          _folders = entities.whereType<Directory>().toList();
           _currentPath = path;
-          _loading = false;
         });
       }
     } catch (_) {
-      if (mounted) {
-        setState(() {
-          _loading = false;
-          _permHint = 'Allow storage access to read MP4 and MP3 files from this device.';
-        });
+      if (mounted) setState(() => _currentPath = path);
+    }
+  }
+
+  Future<void> _pickFromDevice() async {
+    HapticFeedback.mediumImpact();
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowMultiple: true,
+        allowedExtensions: [
+          'mp4', 'mkv', 'avi', 'mov', 'webm', 'm4v', '3gp',
+          'mp3', 'wav', 'aac', 'flac', 'ogg', 'm4a',
+          'jpg', 'jpeg', 'png', 'gif', 'webp',
+        ],
+      );
+      if (result == null) return;
+      final added = <File>[];
+      for (final f in result.files) {
+        final path = f.path;
+        if (path == null || path.isEmpty) continue;
+        added.add(File(path));
       }
+      if (added.isEmpty) return;
+      setState(() {
+        final seen = {for (final f in _library) f.path};
+        for (final f in added) {
+          if (seen.add(f.path)) _library.add(f);
+        }
+        _permHint = null;
+      });
+      if (added.length == 1) {
+        _openFile(added.first);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not open files: $e')),
+      );
     }
   }
 
   String get _currentDirName {
-    if (_currentPath.isEmpty || _currentPath == '/') return 'Device media';
+    if (_currentPath.isEmpty || _currentPath == '/') return 'On this device';
     final parts = _currentPath.split('/').where((p) => p.isNotEmpty);
-    return parts.isEmpty ? 'Device media' : parts.last;
+    return parts.isEmpty ? 'On this device' : parts.last;
   }
 
-  List<FileSystemEntity> get _filtered {
-    return _items.where((e) {
-      final name = e.path.split('/').last.toLowerCase();
+  List<File> get _visibleLibrary {
+    return _library.where((f) {
+      final name = f.path.split('/').last.toLowerCase();
       if (_searchQuery.isNotEmpty && !name.contains(_searchQuery.toLowerCase())) {
         return false;
       }
-      if (e is Directory) return _filter == 'all';
-      final type = _mediaType(e.path);
+      final type = _mediaType(f.path);
       if (_filter == 'video') return type == 'video';
       if (_filter == 'audio') return type == 'audio';
-      return true;
+      if (_filter == 'image') return type == 'image';
+      return type != 'other';
     }).toList();
   }
 
   List<Map<String, String>> get _playable {
     return [
-      for (final e in _filtered)
-        if (e is File)
-          if (_mediaType(e.path) == 'video' || _mediaType(e.path) == 'audio')
-            {
-              'path': e.path,
-              'type': _mediaType(e.path),
-              'name': e.path.split('/').last,
-            },
+      for (final f in _visibleLibrary)
+        if (_mediaType(f.path) == 'video' || _mediaType(f.path) == 'audio' || _mediaType(f.path) == 'image')
+          {
+            'path': f.path,
+            'type': _mediaType(f.path),
+            'name': f.path.split('/').last,
+          },
     ];
   }
 
@@ -141,9 +212,8 @@ class _LocalMediaScreenState extends State<LocalMediaScreen> {
     return 'other';
   }
 
-  IconData _iconFor(FileSystemEntity entity) {
-    if (entity is Directory) return Icons.folder;
-    switch (_mediaType(entity.path)) {
+  IconData _iconForPath(String path) {
+    switch (_mediaType(path)) {
       case 'video':
         return Icons.videocam;
       case 'audio':
@@ -155,10 +225,9 @@ class _LocalMediaScreenState extends State<LocalMediaScreen> {
     }
   }
 
-  String _sizeFor(FileSystemEntity entity) {
-    if (entity is! File) return '';
+  String _sizeFor(File file) {
     try {
-      final size = entity.lengthSync();
+      final size = file.lengthSync();
       if (size < 1024) return '$size B';
       if (size < 1024 * 1024) return '${(size / 1024).toStringAsFixed(1)} KB';
       if (size < 1024 * 1024 * 1024) return '${(size / (1024 * 1024)).toStringAsFixed(1)} MB';
@@ -168,9 +237,8 @@ class _LocalMediaScreenState extends State<LocalMediaScreen> {
     }
   }
 
-  void _playFile(FileSystemEntity entity) {
-    if (entity is! File) return;
-    final path = entity.path;
+  void _openFile(File file) {
+    final path = file.path;
     final type = _mediaType(path);
     HapticFeedback.mediumImpact();
     final playlist = _playable;
@@ -191,9 +259,7 @@ class _LocalMediaScreenState extends State<LocalMediaScreen> {
   void _playAll() {
     final list = _playable;
     if (list.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No MP4 or MP3 files in this folder')),
-      );
+      _pickFromDevice();
       return;
     }
     HapticFeedback.mediumImpact();
@@ -207,21 +273,18 @@ class _LocalMediaScreenState extends State<LocalMediaScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final files = _visibleLibrary;
     return Scaffold(
-      backgroundColor: const Color(0xFF141414),
+      backgroundColor: const Color(0xFF0B0B0B),
       appBar: CinemaAppBar(
         title: _currentDirName,
-        showMenu: _currentPath.isEmpty || _currentPath == '/',
-        leading: (_currentPath.isNotEmpty && _currentPath != '/')
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () {
-                  final parent = Directory(_currentPath).parent.path;
-                  _loadDirectory(parent);
-                },
-              )
-            : null,
+        showMenu: true,
         actions: [
+          IconButton(
+            tooltip: 'Browse files',
+            onPressed: _pickFromDevice,
+            icon: const Icon(Icons.create_new_folder, color: Colors.white),
+          ),
           IconButton(
             tooltip: 'Play all',
             onPressed: _playAll,
@@ -231,9 +294,9 @@ class _LocalMediaScreenState extends State<LocalMediaScreen> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: const Color(0xFFE50914),
-        onPressed: _playAll,
-        icon: const Icon(Icons.play_arrow, color: Colors.white),
-        label: const Text('Play MP4 / MP3', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+        onPressed: _pickFromDevice,
+        icon: const Icon(Icons.folder_open, color: Colors.white),
+        label: const Text('Browse files', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
       ),
       body: Column(
         children: [
@@ -241,14 +304,14 @@ class _LocalMediaScreenState extends State<LocalMediaScreen> {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
             child: Container(
               decoration: BoxDecoration(
-                color: const Color(0xFF2A2A2A),
+                color: const Color(0xFF1A1A1A),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: TextField(
                 onChanged: (v) => setState(() => _searchQuery = v),
                 style: const TextStyle(color: Colors.white, fontSize: 14),
                 decoration: InputDecoration(
-                  hintText: 'Search MP4, MP3, folders…',
+                  hintText: 'Search MP4, MP3, photos…',
                   hintStyle: TextStyle(color: Colors.white.withAlpha(80)),
                   prefixIcon: Icon(Icons.search, color: Colors.white.withAlpha(80), size: 20),
                   border: InputBorder.none,
@@ -264,8 +327,9 @@ class _LocalMediaScreenState extends State<LocalMediaScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               children: [
                 _filterChip('all', 'All'),
-                _filterChip('video', 'MP4 video'),
-                _filterChip('audio', 'MP3 audio'),
+                _filterChip('video', 'Video'),
+                _filterChip('audio', 'Audio'),
+                _filterChip('image', 'Photos'),
               ],
             ),
           ),
@@ -273,108 +337,128 @@ class _LocalMediaScreenState extends State<LocalMediaScreen> {
           Expanded(
             child: _loading
                 ? const Center(child: CircularProgressIndicator(color: Color(0xFFE50914)))
-                : _permHint != null && _filtered.isEmpty
-                    ? Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.folder_off, size: 56, color: Colors.white38),
-                              const SizedBox(height: 12),
-                              Text(_permHint!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white70)),
-                              const SizedBox(height: 16),
-                              FilledButton(
-                                onPressed: _bootstrap,
-                                style: FilledButton.styleFrom(backgroundColor: const Color(0xFFE50914)),
-                                child: const Text('Grant access'),
-                              ),
-                            ],
+                : RefreshIndicator(
+                    color: const Color(0xFFE50914),
+                    onRefresh: _bootstrap,
+                    child: ListView(
+                      physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 96),
+                      children: [
+                        if (_permHint != null)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Text(_permHint!, style: const TextStyle(color: Colors.white54, fontSize: 13)),
                           ),
+                        if (_folders.isNotEmpty) ...[
+                          const Text('FOLDERS', style: TextStyle(color: Colors.white38, fontSize: 11, letterSpacing: 1.1, fontWeight: FontWeight.w700)),
+                          const SizedBox(height: 8),
+                          ..._folders.take(12).map(_folderTile),
+                          const SizedBox(height: 16),
+                        ],
+                        Text(
+                          'LIBRARY · ${files.length}',
+                          style: const TextStyle(color: Colors.white38, fontSize: 11, letterSpacing: 1.1, fontWeight: FontWeight.w700),
                         ),
-                      )
-                    : _filtered.isEmpty
-                        ? Center(
-                            child: Text('No files here', style: TextStyle(color: Colors.white.withAlpha(80))),
-                          )
-                        : ListView.separated(
-                            physics: const BouncingScrollPhysics(),
-                            padding: const EdgeInsets.fromLTRB(12, 0, 12, 88),
-                            itemCount: _filtered.length,
-                            separatorBuilder: (_, _) => const SizedBox(height: 2),
-                            itemBuilder: (context, index) {
-                              final entity = _filtered[index];
-                              final name = entity.path.split('/').last;
-                              final isDir = entity is Directory;
-                              final isMedia = _isMediaFile(entity.path);
-                              return InteractiveCard(
-                                onTap: isDir
-                                    ? () => _loadDirectory(entity.path)
-                                    : isMedia
-                                        ? () => _playFile(entity)
-                                        : null,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF1F1F1F),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Container(
-                                        width: 40,
-                                        height: 40,
-                                        decoration: BoxDecoration(
-                                          color: isDir
-                                              ? const Color(0xFFFF8F00).withAlpha(20)
-                                              : isMedia
-                                                  ? const Color(0xFFE50914).withAlpha(20)
-                                                  : Colors.white.withAlpha(10),
-                                          borderRadius: BorderRadius.circular(10),
-                                        ),
-                                        child: Icon(
-                                          _iconFor(entity),
-                                          color: isDir
-                                              ? const Color(0xFFFF8F00)
-                                              : isMedia
-                                                  ? const Color(0xFFE50914)
-                                                  : Colors.white38,
-                                          size: 20,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(name, style: const TextStyle(color: Colors.white, fontSize: 14), maxLines: 1, overflow: TextOverflow.ellipsis),
-                                            if (!isDir)
-                                              Text(_sizeFor(entity), style: TextStyle(color: Colors.white.withAlpha(80), fontSize: 11)),
-                                          ],
-                                        ),
-                                      ),
-                                      if (isMedia)
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFFE50914).withAlpha(25),
-                                            borderRadius: BorderRadius.circular(6),
-                                          ),
-                                          child: Text(
-                                            _mediaType(entity.path).toUpperCase(),
-                                            style: const TextStyle(color: Color(0xFFE50914), fontSize: 9, fontWeight: FontWeight.w700),
-                                          ),
-                                        ),
-                                      if (isDir)
-                                        Icon(Icons.chevron_right, color: Colors.white.withAlpha(50), size: 20),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
+                        const SizedBox(height: 8),
+                        if (files.isEmpty)
+                          _emptyState()
+                        else
+                          ...files.map(_fileTile),
+                      ],
+                    ),
+                  ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _emptyState() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 32),
+      child: Column(
+        children: [
+          const Icon(Icons.video_library, size: 56, color: Colors.white24),
+          const SizedBox(height: 12),
+          const Text('No media yet', style: TextStyle(color: Colors.white70, fontSize: 16, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 6),
+          const Text(
+            'Browse the phone or computer and pick MP4, MP3, or photos. They play in a full-screen vertical player.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.white38, fontSize: 13),
+          ),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            onPressed: _pickFromDevice,
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFFE50914)),
+            icon: const Icon(Icons.folder_open),
+            label: const Text('Browse device storage'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _folderTile(FileSystemEntity entity) {
+    final name = entity.path.split('/').last;
+    return InteractiveCard(
+      onTap: () => _loadDirectory(entity.path),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(color: const Color(0xFF161616), borderRadius: BorderRadius.circular(12)),
+        child: Row(
+          children: [
+            const Icon(Icons.folder, color: Color(0xFFFFB300), size: 22),
+            const SizedBox(width: 12),
+            Expanded(child: Text(name, style: const TextStyle(color: Colors.white), maxLines: 1, overflow: TextOverflow.ellipsis)),
+            const Icon(Icons.chevron_right, color: Colors.white24),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _fileTile(File file) {
+    final name = file.path.split('/').last;
+    final type = _mediaType(file.path);
+    return InteractiveCard(
+      onTap: () => _openFile(file),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(color: const Color(0xFF161616), borderRadius: BorderRadius.circular(12)),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE50914).withAlpha(22),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: type == 'image'
+                  ? Image.file(file, fit: BoxFit.cover, errorBuilder: (_, _, _) => Icon(_iconForPath(file.path), color: const Color(0xFFE50914)))
+                  : Icon(_iconForPath(file.path), color: const Color(0xFFE50914)),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(name, style: const TextStyle(color: Colors.white, fontSize: 14), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  Text(_sizeFor(file), style: const TextStyle(color: Colors.white38, fontSize: 11)),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(color: const Color(0xFFE50914).withAlpha(25), borderRadius: BorderRadius.circular(6)),
+              child: Text(type.toUpperCase(), style: const TextStyle(color: Color(0xFFE50914), fontSize: 9, fontWeight: FontWeight.w800)),
+            ),
+          ],
+        ),
       ),
     );
   }

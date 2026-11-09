@@ -155,6 +155,7 @@ class _VerticalMediaPageState extends State<_VerticalMediaPage> {
 
   bool get _isVideo => widget.type == 'video';
   bool get _isAudio => widget.type == 'audio';
+  bool get _isImage => widget.type == 'image';
 
   @override
   void initState() {
@@ -349,7 +350,7 @@ class _VerticalMediaPageState extends State<_VerticalMediaPage> {
           if (_showControls) _topBar(),
           if (_showControls) _sideRail(),
           if (_showControls) _bottomBar(),
-          if (!_playing && _showControls)
+          if (!_playing && _showControls && !_isImage)
             const Center(
               child: Icon(Icons.play_circle, color: Colors.white70, size: 72),
             ),
@@ -366,17 +367,31 @@ class _VerticalMediaPageState extends State<_VerticalMediaPage> {
       return const Center(child: CircularProgressIndicator(color: Color(0xFFE50914)));
     }
     if (_isVideo && _video != null && _video!.value.isInitialized) {
-      return Center(
-        child: AspectRatio(
-          aspectRatio: _video!.value.aspectRatio == 0 ? 16 / 9 : _video!.value.aspectRatio,
-          child: VideoPlayer(_video!),
+      final size = _video!.value.size;
+      return SizedBox.expand(
+        child: FittedBox(
+          fit: BoxFit.cover,
+          child: SizedBox(
+            width: size.width == 0 ? 16 : size.width,
+            height: size.height == 0 ? 9 : size.height,
+            child: VideoPlayer(_video!),
+          ),
+        ),
+      );
+    }
+    if (_isImage && !kIsWeb && widget.path.isNotEmpty) {
+      return SizedBox.expand(
+        child: Image.file(
+          File(widget.path),
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => _fallback(icon: Icons.broken_image, subtitle: 'Could not open image'),
         ),
       );
     }
     if (_isAudio) {
       return _fallback(
         icon: _playing ? Icons.audiotrack : Icons.music_note,
-        subtitle: 'Device audio',
+        subtitle: widget.path.split('/').last,
         visualizer: true,
       );
     }
