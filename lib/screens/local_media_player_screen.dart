@@ -1,18 +1,17 @@
+import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
+import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../widgets/interactive_card.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:video_player/video_player.dart';
 
-enum RepeatMode { none, one, all }
-enum AspectRatioMode { auto, wide, full, original }
-
-class _EqualizerPreset {
-  final String name;
-  final IconData icon;
-  final List<double> bands;
-  _EqualizerPreset(this.name, this.icon, this.bands);
-}
-
+/// Vertical-scroll local player for device MP4 / MP3 files.
+///
+/// Swipe up/down to move through the playlist. Each page owns a real
+/// [VideoPlayerController] or [AudioPlayer] bound to the file on disk.
 class LocalMediaPlayerScreen extends StatefulWidget {
   const LocalMediaPlayerScreen({super.key});
 
@@ -21,242 +20,430 @@ class LocalMediaPlayerScreen extends StatefulWidget {
 }
 
 class _LocalMediaPlayerScreenState extends State<LocalMediaPlayerScreen> {
-  String? _path;
-  String? _type;
-  String? _name;
-  bool _playing = false;
-  bool _shuffle = false;
-  RepeatMode _repeat = RepeatMode.none;
-  double _volume = 0.8;
-  double _brightness = 1.0;
-  double _playbackSpeed = 1.0;
-  int _qualityIndex = 4;
-  int _eqPresetIndex = 0;
-  int _currentTimeSec = 83;
-  int _durationSec = 225;
-  AspectRatioMode _aspectRatio = AspectRatioMode.auto;
-  bool _showControls = true;
-
-  static const _qualities = ['Auto', '144p', '240p', '360p', '480p', '720p', '1080p', '4K'];
-
-  static final _eqPresets = [
-    _EqualizerPreset('Normal', Icons.tune, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
-    _EqualizerPreset('Classical', Icons.music_note, [-1, -1, 0, 0, 2, 3, 4, 3, 1, 0]),
-    _EqualizerPreset('Dance', Icons.auto_awesome, [4, 3, 2, 1, 0, -1, -1, 0, 1, 2]),
-    _EqualizerPreset('Bass Boost', Icons.equalizer, [6, 5, 4, 2, 0, -1, -2, -2, -1, 0]),
-    _EqualizerPreset('Rock', Icons.rocket, [3, 2, 1, 0, -1, -1, 0, 1, 2, 3]),
-    _EqualizerPreset('Jazz', Icons.piano, [2, 1, 0, 1, 2, 3, 2, 1, 0, -1]),
-    _EqualizerPreset('Pop', Icons.star, [-1, 0, 1, 2, 3, 2, 1, 0, -1, -1]),
-    _EqualizerPreset('Vocal', Icons.mic, [-1, 0, 1, 2, 3, 2, 1, 0, -1, -2]),
-    _EqualizerPreset('Flat', Icons.horizontal_rule, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
-  ];
-
-  static const _bandLabels = ['32', '64', '125', '250', '500', '1K', '2K', '4K', '8K', '16K'];
+  List<Map<String, String>> _playlist = [];
+  int _index = 0;
+  final PageController _pageController = PageController();
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (_playlist.isNotEmpty) return;
     final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-    if (args != null && _path == null) {
-      _path = args['path'] as String?;
-      _type = args['type'] as String?;
-      _name = args['name'] as String?;
+    final raw = args?['playlist'];
+    if (raw is List && raw.isNotEmpty) {
+      _playlist = [
+        for (final item in raw)
+          if (item is Map)
+            {
+              'path': '${item['path'] ?? ''}',
+              'type': '${item['type'] ?? 'video'}',
+              'name': '${item['name'] ?? 'Media'}',
+            },
+      ];
+    } else if (args != null) {
+      _playlist = [
+        {
+          'path': '${args['path'] ?? ''}',
+          'type': '${args['type'] ?? 'video'}',
+          'name': '${args['name'] ?? 'Media'}',
+        },
+      ];
     }
   }
 
-  String get _timeStr {
-    final m = (_currentTimeSec ~/ 60).toString().padLeft(2, '0');
-    final s = (_currentTimeSec % 60).toString().padLeft(2, '0');
-    return '$m:$s';
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
-
-  String get _durationStr {
-    final m = (_durationSec ~/ 60).toString().padLeft(2, '0');
-    final s = (_durationSec % 60).toString().padLeft(2, '0');
-    return '$m:$s';
-  }
-
-  double get _progress => _durationSec > 0 ? _currentTimeSec / _durationSec : 0;
 
   @override
   Widget build(BuildContext context) {
+    if (_playlist.isEmpty) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        appBar: AppBar(
+          backgroundColor: Colors.black,
+          title: const Text('Media Player'),
+        ),
+        body: const Center(
+          child: Text('No file selected', style: TextStyle(color: Colors.white54)),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        title: Text(_name ?? 'Media Player', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          if (_type == 'audio')
-            _appBarIcon(Icons.equalizer, _showEqualizerSheet),
-          _appBarIcon(Icons.speed, _showSpeedSheet),
-          _appBarIcon(Icons.more_vert, _showMoreOptions),
+      body: PageView.builder(
+        controller: _pageController,
+        scrollDirection: Axis.vertical,
+        itemCount: _playlist.length,
+        onPageChanged: (i) => setState(() => _index = i),
+        itemBuilder: (_, i) {
+          final item = _playlist[i];
+          return _VerticalMediaPage(
+            key: ValueKey(item['path']),
+            path: item['path'] ?? '',
+            type: item['type'] ?? 'video',
+            name: item['name'] ?? 'Media',
+            index: i,
+            total: _playlist.length,
+            active: i == _index,
+            onPrev: i > 0
+                ? () => _pageController.previousPage(
+                      duration: const Duration(milliseconds: 280),
+                      curve: Curves.easeOut,
+                    )
+                : null,
+            onNext: i < _playlist.length - 1
+                ? () => _pageController.nextPage(
+                      duration: const Duration(milliseconds: 280),
+                      curve: Curves.easeOut,
+                    )
+                : null,
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _VerticalMediaPage extends StatefulWidget {
+  final String path;
+  final String type;
+  final String name;
+  final int index;
+  final int total;
+  final bool active;
+  final VoidCallback? onPrev;
+  final VoidCallback? onNext;
+
+  const _VerticalMediaPage({
+    super.key,
+    required this.path,
+    required this.type,
+    required this.name,
+    required this.index,
+    required this.total,
+    required this.active,
+    this.onPrev,
+    this.onNext,
+  });
+
+  @override
+  State<_VerticalMediaPage> createState() => _VerticalMediaPageState();
+}
+
+class _VerticalMediaPageState extends State<_VerticalMediaPage> {
+  VideoPlayerController? _video;
+  AudioPlayer? _audio;
+  bool _ready = false;
+  bool _playing = false;
+  bool _loop = true;
+  bool _muted = false;
+  bool _liked = false;
+  bool _showControls = true;
+  double _speed = 1.0;
+  double _volume = 0.9;
+  Duration _position = Duration.zero;
+  Duration _duration = Duration.zero;
+  String? _error;
+  Timer? _hideTimer;
+  StreamSubscription<Duration>? _posSub;
+  StreamSubscription<Duration>? _durSub;
+  StreamSubscription<void>? _completeSub;
+
+  bool get _isVideo => widget.type == 'video';
+  bool get _isAudio => widget.type == 'audio';
+
+  @override
+  void initState() {
+    super.initState();
+    _boot();
+  }
+
+  @override
+  void didUpdateWidget(covariant _VerticalMediaPage old) {
+    super.didUpdateWidget(old);
+    if (old.active && !widget.active) {
+      _pause();
+    } else if (!old.active && widget.active && _ready) {
+      _play();
+    }
+  }
+
+  Future<void> _boot() async {
+    if (kIsWeb || widget.path.isEmpty) {
+      setState(() => _error = 'This file cannot be opened here');
+      return;
+    }
+    try {
+      final file = File(widget.path);
+      if (!file.existsSync()) {
+        setState(() => _error = 'File not found');
+        return;
+      }
+      if (_isVideo) {
+        final c = VideoPlayerController.file(file);
+        await c.initialize();
+        await c.setLooping(_loop);
+        await c.setVolume(_volume);
+        c.addListener(_onVideoTick);
+        _video = c;
+        _duration = c.value.duration;
+        _ready = true;
+        if (widget.active) await c.play();
+        _playing = widget.active;
+      } else if (_isAudio) {
+        final p = AudioPlayer();
+        await p.setReleaseMode(_loop ? ReleaseMode.loop : ReleaseMode.stop);
+        await p.setVolume(_volume);
+        await p.setSource(DeviceFileSource(widget.path));
+        _posSub = p.onPositionChanged.listen((d) {
+          if (mounted) setState(() => _position = d);
+        });
+        _durSub = p.onDurationChanged.listen((d) {
+          if (mounted) setState(() => _duration = d);
+        });
+        _completeSub = p.onPlayerComplete.listen((_) {
+          if (mounted) setState(() => _playing = _loop);
+        });
+        _audio = p;
+        _ready = true;
+        if (widget.active) {
+          await p.resume();
+          _playing = true;
+        }
+      } else {
+        _ready = true;
+      }
+    } catch (e) {
+      _error = 'Could not play this file';
+      debugPrint('local player: $e');
+    }
+    if (mounted) setState(() {});
+    _armHide();
+  }
+
+  void _onVideoTick() {
+    final c = _video;
+    if (c == null || !mounted) return;
+    setState(() {
+      _position = c.value.position;
+      _duration = c.value.duration;
+      _playing = c.value.isPlaying;
+    });
+  }
+
+  void _armHide() {
+    _hideTimer?.cancel();
+    _hideTimer = Timer(const Duration(seconds: 4), () {
+      if (mounted && _playing) setState(() => _showControls = false);
+    });
+  }
+
+  Future<void> _play() async {
+    if (_isVideo) await _video?.play();
+    if (_isAudio) await _audio?.resume();
+    if (mounted) setState(() => _playing = true);
+    _armHide();
+  }
+
+  Future<void> _pause() async {
+    if (_isVideo) await _video?.pause();
+    if (_isAudio) await _audio?.pause();
+    if (mounted) setState(() => _playing = false);
+  }
+
+  Future<void> _toggle() async {
+    HapticFeedback.lightImpact();
+    if (_playing) {
+      await _pause();
+    } else {
+      await _play();
+    }
+  }
+
+  Future<void> _seek(Duration d) async {
+    final clamped = d < Duration.zero
+        ? Duration.zero
+        : (_duration == Duration.zero || d < _duration ? d : _duration);
+    if (_isVideo) await _video?.seekTo(clamped);
+    if (_isAudio) await _audio?.seek(clamped);
+  }
+
+  Future<void> _skip(int seconds) async {
+    HapticFeedback.selectionClick();
+    await _seek(_position + Duration(seconds: seconds));
+  }
+
+  Future<void> _setSpeed(double s) async {
+    _speed = s;
+    if (_isVideo) await _video?.setPlaybackSpeed(s);
+    if (_isAudio) await _audio?.setPlaybackRate(s);
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _setVolume(double v) async {
+    _volume = v;
+    _muted = v <= 0.001;
+    if (_isVideo) await _video?.setVolume(v);
+    if (_isAudio) await _audio?.setVolume(v);
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _toggleMute() async {
+    HapticFeedback.lightImpact();
+    if (_muted) {
+      await _setVolume(_volume <= 0.001 ? 0.9 : _volume);
+      _muted = false;
+    } else {
+      if (_isVideo) await _video?.setVolume(0);
+      if (_isAudio) await _audio?.setVolume(0);
+      _muted = true;
+    }
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _toggleLoop() async {
+    HapticFeedback.lightImpact();
+    _loop = !_loop;
+    if (_isVideo) await _video?.setLooping(_loop);
+    if (_isAudio) {
+      await _audio?.setReleaseMode(_loop ? ReleaseMode.loop : ReleaseMode.stop);
+    }
+    if (mounted) setState(() {});
+  }
+
+  String _fmt(Duration d) {
+    final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    final h = d.inHours;
+    return h > 0 ? '$h:$m:$s' : '$m:$s';
+  }
+
+  @override
+  void dispose() {
+    _hideTimer?.cancel();
+    _posSub?.cancel();
+    _durSub?.cancel();
+    _completeSub?.cancel();
+    _video?.removeListener(_onVideoTick);
+    _video?.dispose();
+    _audio?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        setState(() => _showControls = !_showControls);
+        if (_showControls) _armHide();
+      },
+      onDoubleTap: _toggle,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          ColoredBox(color: Colors.black, child: _stage()),
+          if (_showControls) _topBar(),
+          if (_showControls) _sideRail(),
+          if (_showControls) _bottomBar(),
+          if (!_playing && _showControls)
+            const Center(
+              child: Icon(Icons.play_circle, color: Colors.white70, size: 72),
+            ),
         ],
       ),
-      body: _path == null
-          ? const Center(child: Text('No file selected', style: TextStyle(color: Colors.white54)))
-          : GestureDetector(
-              onTap: () => setState(() => _showControls = !_showControls),
-              child: Column(
-                children: [
-                  Expanded(
-                    child: _type == 'video'
-                        ? _buildVideoArea()
-                        : _type == 'audio'
-                            ? _buildAudioArea()
-                            : _buildImageArea(),
-                  ),
-                  AnimatedOpacity(
-                    opacity: _showControls ? 1.0 : 0.0,
-                    duration: const Duration(milliseconds: 300),
-                    child: _buildControls(),
-                  ),
-                ],
-              ),
-            ),
     );
   }
 
-  Widget _appBarIcon(IconData icon, VoidCallback onTap) {
-    return InteractiveCard(
-      onTap: () { HapticFeedback.lightImpact(); onTap(); },
-      child: Padding(
-        padding: const EdgeInsets.all(8),
-        child: Icon(icon, color: Colors.white, size: 22),
-      ),
-    );
+  Widget _stage() {
+    if (_error != null) {
+      return _fallback(icon: Icons.error_outline, subtitle: _error!);
+    }
+    if (!_ready) {
+      return const Center(child: CircularProgressIndicator(color: Color(0xFFE50914)));
+    }
+    if (_isVideo && _video != null && _video!.value.isInitialized) {
+      return Center(
+        child: AspectRatio(
+          aspectRatio: _video!.value.aspectRatio == 0 ? 16 / 9 : _video!.value.aspectRatio,
+          child: VideoPlayer(_video!),
+        ),
+      );
+    }
+    if (_isAudio) {
+      return _fallback(
+        icon: _playing ? Icons.audiotrack : Icons.music_note,
+        subtitle: 'Device audio',
+        visualizer: true,
+      );
+    }
+    return _fallback(icon: Icons.image, subtitle: 'Preview');
   }
 
-  Widget _buildVideoArea() {
+  Widget _fallback({required IconData icon, required String subtitle, bool visualizer = false}) {
     return Container(
-      color: Colors.black,
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: double.infinity,
-              height: 260,
-              color: const Color(0xFF0A0A0A),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Container(
-                    width: double.infinity,
-                    height: double.infinity,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF141414),
-                      border: Border.all(color: Colors.white10),
-                    ),
-                    child: Center(
-                      child: Icon(Icons.videocam_rounded, color: Colors.white.withAlpha(30), size: 80),
-                    ),
-                  ),
-                  if (!_playing)
-                    GestureDetector(
-                      onTap: () => setState(() => _playing = true),
-                      child: Container(
-                        width: 72, height: 72,
-                        decoration: const BoxDecoration(color: Color(0xFFE50914), shape: BoxShape.circle),
-                        child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 40),
-                      ),
-                    ),
-                  Positioned(
-                    top: 8, right: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withAlpha(180),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(_qualities[_qualityIndex], style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Row(
-                children: [
-                  _captionChip('HDR', const Color(0xFFE50914)),
-                  const SizedBox(width: 6),
-                  _captionChip(_qualities[_qualityIndex], const Color(0xFF1E88E5)),
-                  const SizedBox(width: 6),
-                  _captionChip('${_playbackSpeed}x', const Color(0xFFFF8F00)),
-                  const Spacer(),
-                  _captionChip(_aspectRatio.name.toUpperCase(), Colors.white38),
-                ],
-              ),
-            ),
-          ],
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFF2A0A12), Color(0xFF0A0A0A)],
         ),
       ),
-    );
-  }
-
-  Widget _captionChip(String label, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(color: color.withAlpha(25), borderRadius: BorderRadius.circular(4), border: Border.all(color: color.withAlpha(60))),
-      child: Text(label, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w600)),
-    );
-  }
-
-  Widget _buildAudioArea() {
-    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            width: 200, height: 200,
+            width: 168,
+            height: 168,
             decoration: BoxDecoration(
-              color: const Color(0xFF1F1F1F),
-              borderRadius: BorderRadius.circular(100),
-              border: Border.all(color: const Color(0xFFE50914).withAlpha(40), width: 2),
-            ),
-            child: Center(
-              child: Icon(
-                _playing ? Icons.audiotrack_rounded : Icons.play_arrow_rounded,
-                color: const Color(0xFFE50914),
-                size: 72,
+              shape: BoxShape.circle,
+              gradient: const LinearGradient(
+                colors: [Color(0xFFE50914), Color(0xFF7C3AED)],
               ),
+              boxShadow: [
+                BoxShadow(color: const Color(0xFFE50914).withAlpha(80), blurRadius: 28),
+              ],
+            ),
+            child: Icon(icon, color: Colors.white, size: 72),
+          ),
+          const SizedBox(height: 22),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              widget.name,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
             ),
           ),
-          const SizedBox(height: 24),
-          Text(_name ?? '', style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
-          Text('Device Audio', style: TextStyle(color: Colors.white.withAlpha(100), fontSize: 13)),
-          const SizedBox(height: 20),
-          _buildVisualizer(),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(color: const Color(0xFFE50914).withAlpha(20), borderRadius: BorderRadius.circular(6)),
-            child: Text('${_eqPresets[_eqPresetIndex].name} EQ', style: const TextStyle(color: Color(0xFFE50914), fontSize: 11, fontWeight: FontWeight.w600)),
-          ),
+          const SizedBox(height: 6),
+          Text(subtitle, style: const TextStyle(color: Colors.white54, fontSize: 13)),
+          if (visualizer) ...[
+            const SizedBox(height: 18),
+            _bars(),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildVisualizer() {
+  Widget _bars() {
     return SizedBox(
-      height: 40,
+      height: 36,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: List.generate(24, (i) {
-          final height = _playing ? (10.0 + math.sin(i * 3.14) * 15 + math.cos(i * 1.7) * 10).clamp(4.0, 36.0) : 8.0;
+        children: List.generate(22, (i) {
+          final h = _playing
+              ? (8.0 + (math.sin(i * 0.7) * 12 + math.cos(i * 1.3) * 8)).clamp(6.0, 32.0)
+              : 6.0;
           return Container(
             width: 3,
-            height: height.toDouble(),
+            height: h,
             margin: const EdgeInsets.symmetric(horizontal: 2),
             decoration: BoxDecoration(
-              color: const Color(0xFFE50914).withAlpha((100 + (i * 6) % 155).toInt()),
+              color: const Color(0xFFE50914).withAlpha(140 + (i * 4) % 80),
               borderRadius: BorderRadius.circular(2),
             ),
           );
@@ -265,360 +452,183 @@ class _LocalMediaPlayerScreenState extends State<LocalMediaPlayerScreen> {
     );
   }
 
-  Widget _buildImageArea() {
-    return Center(
-      child: Container(
-        width: 280, height: 360,
-        decoration: BoxDecoration(
-          color: const Color(0xFF1F1F1F),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white10),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.image_outlined, color: Colors.white.withAlpha(60), size: 80),
-            const SizedBox(height: 16),
-            Text(_name ?? '', style: const TextStyle(color: Colors.white54, fontSize: 14), textAlign: TextAlign.center),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-              decoration: BoxDecoration(color: const Color(0xFFE50914).withAlpha(25), borderRadius: BorderRadius.circular(6)),
-              child: Text('${_qualities[_qualityIndex]} • ${_aspectRatio.name.toUpperCase()}', style: const TextStyle(color: Color(0xFFE50914), fontSize: 10, fontWeight: FontWeight.w600)),
-            ),
-          ],
+  Widget _topBar() {
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(4, 4, 12, 0),
+          child: Row(
+            children: [
+              IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white, size: 32),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+                    ),
+                    Text(
+                      '${widget.index + 1} / ${widget.total}  ·  swipe for next',
+                      style: const TextStyle(color: Colors.white54, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+              _chip(_isVideo ? 'MP4' : _isAudio ? 'MP3' : widget.type.toUpperCase()),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildControls() {
+  Widget _chip(String label) {
     return Container(
-      padding: EdgeInsets.only(
-        left: 16, right: 16, bottom: MediaQuery.of(context).padding.bottom + 8, top: 8,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Colors.black.withAlpha(0), Colors.black.withAlpha(220)],
-        ),
+        color: const Color(0xFFE50914).withAlpha(40),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: const Color(0xFFE50914).withAlpha(90)),
       ),
+      child: Text(label, style: const TextStyle(color: Color(0xFFE50914), fontSize: 10, fontWeight: FontWeight.w800)),
+    );
+  }
+
+  Widget _sideRail() {
+    return Positioned(
+      right: 10,
+      bottom: 118,
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          SliderTheme(
-            data: SliderThemeData(
-              trackHeight: 3,
-              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-              overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
-              activeTrackColor: const Color(0xFFE50914),
-              inactiveTrackColor: const Color(0xFF2A2A2A),
-              thumbColor: const Color(0xFFE50914),
-              overlayColor: const Color(0xFFE50914).withAlpha(30),
-            ),
-            child: Slider(
-              value: _progress.clamp(0.0, 1.0),
-              onChanged: (v) => setState(() => _currentTimeSec = (v * _durationSec).toInt()),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Row(
-              children: [
-                Text(_timeStr, style: TextStyle(color: Colors.white.withAlpha(120), fontSize: 11)),
-                const Spacer(),
-                Text(_durationStr, style: TextStyle(color: Colors.white.withAlpha(120), fontSize: 11)),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _smallCtrl(Icons.shuffle, _shuffle ? const Color(0xFFE50914) : Colors.white54, () => setState(() => _shuffle = !_shuffle)),
-              const SizedBox(width: 12),
-              _smallCtrl(Icons.skip_previous_rounded, Colors.white, () {}),
-              const SizedBox(width: 16),
-              GestureDetector(
-                onTap: () => setState(() => _playing = !_playing),
-                child: Container(
-                  width: 56, height: 56,
-                  decoration: const BoxDecoration(color: Color(0xFFE50914), shape: BoxShape.circle),
-                  child: Icon(_playing ? Icons.pause_rounded : Icons.play_arrow_rounded, color: Colors.white, size: 32),
-                ),
-              ),
-              const SizedBox(width: 16),
-              _smallCtrl(Icons.skip_next_rounded, Colors.white, () {}),
-              const SizedBox(width: 12),
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _repeat = _repeat == RepeatMode.none ? RepeatMode.one
-                        : _repeat == RepeatMode.one ? RepeatMode.all
-                        : RepeatMode.none;
-                  });
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: _repeat != RepeatMode.none ? const Color(0xFFE50914).withAlpha(25) : Colors.transparent,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    _repeat == RepeatMode.one ? Icons.repeat_one_rounded
-                        : _repeat == RepeatMode.all ? Icons.repeat_rounded
-                        : Icons.repeat_rounded,
-                    color: _repeat != RepeatMode.none ? const Color(0xFFE50914) : Colors.white54,
-                    size: 20,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              _volumeSlider(),
-              const SizedBox(width: 12),
-              if (_type == 'video') _brightnessSlider(),
-            ],
-          ),
+          _railBtn(Icons.favorite, _liked ? const Color(0xFFE50914) : Colors.white, () {
+            setState(() => _liked = !_liked);
+          }),
+          const SizedBox(height: 14),
+          _railBtn(_muted ? Icons.volume_off : Icons.volume_up, Colors.white, _toggleMute),
+          const SizedBox(height: 14),
+          _railBtn(_loop ? Icons.repeat_one : Icons.repeat, _loop ? const Color(0xFFE50914) : Colors.white, _toggleLoop),
+          const SizedBox(height: 14),
+          _railBtn(Icons.speed, Colors.white, _speedSheet),
+          const SizedBox(height: 14),
+          _railBtn(Icons.share, Colors.white, () {
+            Share.share(widget.path);
+          }),
         ],
       ),
     );
   }
 
-  Widget _smallCtrl(IconData icon, Color color, VoidCallback onTap) {
+  Widget _railBtn(IconData icon, Color color, VoidCallback onTap) {
     return GestureDetector(
-      onTap: () { HapticFeedback.lightImpact(); onTap(); },
+      onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(6),
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: Colors.black.withAlpha(120),
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white24),
+        ),
         child: Icon(icon, color: color, size: 22),
       ),
     );
   }
 
-  Widget _volumeSlider() {
-    return Expanded(
-      child: Row(
-        children: [
-          Icon(Icons.volume_down_rounded, color: Colors.white.withAlpha(120), size: 16),
-          Expanded(
-            child: SliderTheme(
-              data: SliderThemeData(
-                trackHeight: 2,
-                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
-                overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
-                activeTrackColor: Colors.white.withAlpha(120),
-                inactiveTrackColor: const Color(0xFF2A2A2A),
-                thumbColor: Colors.white,
-                overlayColor: Colors.white.withAlpha(20),
-              ),
-              child: Slider(value: _volume, onChanged: (v) => setState(() => _volume = v)),
+  Widget _bottomBar() {
+    final totalMs = _duration.inMilliseconds;
+    final value = totalMs <= 0 ? 0.0 : (_position.inMilliseconds / totalMs).clamp(0.0, 1.0);
+    return Positioned(
+      left: 0,
+      right: 0,
+      bottom: 0,
+      child: SafeArea(
+        top: false,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Colors.transparent, Colors.black87],
             ),
           ),
-          Icon(Icons.volume_up_rounded, color: Colors.white.withAlpha(120), size: 16),
-        ],
-      ),
-    );
-  }
-
-  Widget _brightnessSlider() {
-    return Expanded(
-      child: Row(
-        children: [
-          Icon(Icons.brightness_low, color: Colors.white.withAlpha(120), size: 16),
-          Expanded(
-            child: SliderTheme(
-              data: SliderThemeData(
-                trackHeight: 2,
-                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
-                overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
-                activeTrackColor: Colors.white.withAlpha(120),
-                inactiveTrackColor: const Color(0xFF2A2A2A),
-                thumbColor: Colors.white,
-                overlayColor: Colors.white.withAlpha(20),
-              ),
-              child: Slider(value: _brightness, onChanged: (v) => setState(() => _brightness = v)),
-            ),
-          ),
-          Icon(Icons.brightness_high, color: Colors.white.withAlpha(120), size: 16),
-        ],
-      ),
-    );
-  }
-
-  void _showQualitySheet() {
-    HapticFeedback.mediumImpact();
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF1F1F1F),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 36, height: 36,
-                  decoration: BoxDecoration(color: const Color(0xFFE50914).withAlpha(25), borderRadius: BorderRadius.circular(10)),
-                  child: const Icon(Icons.hd, color: Color(0xFFE50914), size: 20),
-                ),
-                const SizedBox(width: 12),
-                const Text('Video Quality', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
-              ],
-            ),
-            const SizedBox(height: 16),
-            ..._qualities.asMap().entries.map((e) {
-              final active = e.key == _qualityIndex;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: InteractiveCard(
-                  onTap: () { setState(() => _qualityIndex = e.key); Navigator.pop(ctx); },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: active ? const Color(0xFFE50914).withAlpha(20) : Colors.transparent,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: active ? const Color(0xFFE50914).withAlpha(80) : Colors.white10),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(active ? Icons.check_circle : Icons.circle_outlined, color: active ? const Color(0xFFE50914) : Colors.white38, size: 18),
-                        const SizedBox(width: 12),
-                        Text(e.value, style: TextStyle(color: active ? Colors.white : Colors.white54, fontWeight: active ? FontWeight.w600 : FontWeight.normal, fontSize: 14)),
-                        const Spacer(),
-                        Text(['Auto (Recommended)', 'Lowest', 'Low', 'Medium', 'Standard', 'High', 'Very High', 'Ultra HD'][e.key], style: TextStyle(color: Colors.white.withAlpha(80), fontSize: 11)),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            }),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showEqualizerSheet() {
-    HapticFeedback.mediumImpact();
-    final bands = _eqPresets[_eqPresetIndex].bands;
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: const Color(0xFF1F1F1F),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheetState) => Padding(
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  Container(
-                    width: 36, height: 36,
-                    decoration: BoxDecoration(color: const Color(0xFFE50914).withAlpha(25), borderRadius: BorderRadius.circular(10)),
-                    child: const Icon(Icons.equalizer, color: Color(0xFFE50914), size: 20),
+                  Text(_fmt(_position), style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                  Expanded(
+                    child: SliderTheme(
+                      data: SliderTheme.of(context).copyWith(
+                        trackHeight: 3,
+                        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                        overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+                      ),
+                      child: Slider(
+                        value: value,
+                        activeColor: const Color(0xFFE50914),
+                        inactiveColor: Colors.white24,
+                        onChanged: (v) {
+                          if (totalMs <= 0) return;
+                          _seek(Duration(milliseconds: (v * totalMs).round()));
+                        },
+                      ),
+                    ),
                   ),
-                  const SizedBox(width: 12),
-                  const Text('Equalizer', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(color: const Color(0xFFE50914).withAlpha(25), borderRadius: BorderRadius.circular(6)),
-                    child: Text(_eqPresets[_eqPresetIndex].name, style: const TextStyle(color: Color(0xFFE50914), fontSize: 11, fontWeight: FontWeight.w600)),
-                  ),
+                  Text(_fmt(_duration), style: const TextStyle(color: Colors.white70, fontSize: 11)),
                 ],
               ),
-              const SizedBox(height: 20),
-              SizedBox(
-                height: 200,
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: List.generate(10, (i) {
-                          final val = bands[i];
-                          final barHeight = ((val + 6) / 12 * 160).clamp(8.0, 160.0);
-                          return Expanded(
-                            child: GestureDetector(
-                              onVerticalDragUpdate: (details) {
-                                final dy = details.localPosition.dy;
-                                final newVal = ((1 - dy / 200) * 12 - 6).clamp(-6.0, 6.0);
-                                final newBands = List<double>.from(bands);
-                                newBands[i] = double.parse(newVal.toStringAsFixed(1));
-                                setSheetState(() { _eqPresets[_eqPresetIndex] = _EqualizerPreset(_eqPresets[_eqPresetIndex].name, _eqPresets[_eqPresetIndex].icon, newBands); });
-                                setState(() {});
-                              },
-                              child: Container(
-                                margin: const EdgeInsets.symmetric(horizontal: 2),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.end,
-                                  children: [
-                                    Text(val.toStringAsFixed(1), style: TextStyle(color: Colors.white.withAlpha(80), fontSize: 8)),
-                                    const SizedBox(height: 2),
-                                    Container(
-                                      width: double.infinity,
-                                      height: barHeight,
-                                      decoration: BoxDecoration(
-                                        color: val > 0 ? const Color(0xFFE50914) : const Color(0xFF2A2A2A),
-                                        borderRadius: BorderRadius.circular(3),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(_bandLabels[i], style: TextStyle(color: Colors.white.withAlpha(80), fontSize: 8)),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          );
-                        }),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _ctrl(Icons.skip_previous, widget.onPrev),
+                  _ctrl(Icons.replay_10, () => _skip(-10)),
+                  GestureDetector(
+                    onTap: _toggle,
+                    child: Container(
+                      width: 58,
+                      height: 58,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFE50914),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(_playing ? Icons.pause : Icons.play_arrow, color: Colors.white, size: 34),
+                    ),
+                  ),
+                  _ctrl(Icons.forward_10, () => _skip(10)),
+                  _ctrl(Icons.skip_next, widget.onNext),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  const Icon(Icons.volume_down, color: Colors.white54, size: 16),
+                  Expanded(
+                    child: SliderTheme(
+                      data: SliderTheme.of(context).copyWith(
+                        trackHeight: 2,
+                        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
+                      ),
+                      child: Slider(
+                        value: _muted ? 0 : _volume,
+                        activeColor: Colors.white,
+                        inactiveColor: Colors.white24,
+                        onChanged: _setVolume,
                       ),
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                height: 36,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  children: _eqPresets.asMap().entries.map((e) {
-                    final active = e.key == _eqPresetIndex;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 6),
-                      child: InteractiveCard(
-                        onTap: () {
-                          setSheetState(() => _eqPresetIndex = e.key);
-                          setState(() {});
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: active ? const Color(0xFFE50914) : const Color(0xFF2A2A2A),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(e.value.icon, color: active ? Colors.white : Colors.white54, size: 12),
-                              const SizedBox(width: 4),
-                              Text(e.value.name, style: TextStyle(color: active ? Colors.white : Colors.white54, fontSize: 11, fontWeight: FontWeight.w600)),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
+                  ),
+                  Text('${_speed}x', style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                ],
               ),
             ],
           ),
@@ -627,168 +637,48 @@ class _LocalMediaPlayerScreenState extends State<LocalMediaPlayerScreen> {
     );
   }
 
-  void _showSpeedSheet() {
-    HapticFeedback.mediumImpact();
-    const speeds = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 3.0, 4.0];
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF1F1F1F),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 36, height: 36,
-                  decoration: BoxDecoration(color: const Color(0xFFE50914).withAlpha(25), borderRadius: BorderRadius.circular(10)),
-                  child: const Icon(Icons.speed, color: Color(0xFFE50914), size: 20),
-                ),
-                const SizedBox(width: 12),
-                const Text('Playback Speed', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: speeds.map((s) {
-                final active = s == _playbackSpeed;
-                return InteractiveCard(
-                  onTap: () { setState(() => _playbackSpeed = s); Navigator.pop(ctx); },
-                  child: Container(
-                    width: (MediaQuery.of(context).size.width - 72) / 4,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    decoration: BoxDecoration(
-                      color: active ? const Color(0xFFE50914) : const Color(0xFF2A2A2A),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: active ? const Color(0xFFE50914) : Colors.white10),
-                    ),
-                    child: Column(
-                      children: [
-                        Text('${s}x', style: TextStyle(color: active ? Colors.white : Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                        if (s == 1.0)
-                          Text('Normal', style: TextStyle(color: active ? Colors.white.withAlpha(180) : Colors.white38, fontSize: 9)),
-                      ],
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ],
-        ),
-      ),
+  Widget _ctrl(IconData icon, VoidCallback? onTap) {
+    return IconButton(
+      onPressed: onTap,
+      icon: Icon(icon, color: onTap == null ? Colors.white24 : Colors.white, size: 28),
     );
   }
 
-  void _showMoreOptions() {
-    HapticFeedback.mediumImpact();
-    showModalBottomSheet(
+  void _speedSheet() {
+    showModalBottomSheet<void>(
       context: context,
-      backgroundColor: const Color(0xFF1F1F1F),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('More Options', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            _optionTile(Icons.hd, 'Quality', _qualities[_qualityIndex], _showQualitySheet),
-            if (_type == 'audio') _optionTile(Icons.equalizer, 'Equalizer', _eqPresets[_eqPresetIndex].name, _showEqualizerSheet),
-            _optionTile(Icons.speed, 'Speed', '${_playbackSpeed}x', _showSpeedSheet),
-            _optionTile(
-              _aspectRatio == AspectRatioMode.auto ? Icons.aspect_ratio : Icons.crop_original,
-              'Aspect Ratio',
-              _aspectRatio.name.toUpperCase(),
-              () { Navigator.pop(ctx); _showAspectRatioSheet(); },
-            ),
-            _optionTile(
-              _repeat == RepeatMode.one ? Icons.repeat_one : Icons.repeat,
-              'Repeat',
-              _repeat == RepeatMode.none ? 'Off' : _repeat == RepeatMode.one ? 'One' : 'All',
-              () { Navigator.pop(ctx); setState(() { _repeat = _repeat == RepeatMode.none ? RepeatMode.one : _repeat == RepeatMode.one ? RepeatMode.all : RepeatMode.none; }); },
-            ),
-            _optionTile(Icons.shuffle, 'Shuffle', _shuffle ? 'On' : 'Off', () { Navigator.pop(ctx); setState(() => _shuffle = !_shuffle); }),
-          ],
-        ),
+      backgroundColor: const Color(0xFF1A1A1A),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
       ),
-    );
-  }
-
-  void _showAspectRatioSheet() {
-    HapticFeedback.mediumImpact();
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF1F1F1F),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Aspect Ratio', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            ...AspectRatioMode.values.map((mode) {
-              final active = mode == _aspectRatio;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: InteractiveCard(
-                  onTap: () { setState(() => _aspectRatio = mode); Navigator.pop(ctx); },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: active ? const Color(0xFFE50914).withAlpha(20) : Colors.transparent,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: active ? const Color(0xFFE50914).withAlpha(80) : Colors.white10),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(active ? Icons.check_circle : Icons.circle_outlined, color: active ? const Color(0xFFE50914) : Colors.white38, size: 18),
-                        const SizedBox(width: 12),
-                        Text(mode.name.toUpperCase(), style: TextStyle(color: active ? Colors.white : Colors.white54, fontWeight: active ? FontWeight.w600 : FontWeight.normal, fontSize: 14)),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            }),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _optionTile(IconData icon, String label, String value, VoidCallback onTap) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: InteractiveCard(
-        onTap: () { HapticFeedback.lightImpact(); onTap(); },
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: BoxDecoration(
-            color: const Color(0xFF2A2A2A),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Row(
+      builder: (ctx) {
+        const speeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, color: Colors.white54, size: 20),
-              const SizedBox(width: 12),
-              Text(label, style: const TextStyle(color: Colors.white, fontSize: 14)),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(color: const Color(0xFFE50914).withAlpha(20), borderRadius: BorderRadius.circular(6)),
-                child: Text(value, style: const TextStyle(color: Color(0xFFE50914), fontSize: 11, fontWeight: FontWeight.w600)),
+              const Text('Playback speed', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                children: [
+                  for (final s in speeds)
+                    ChoiceChip(
+                      label: Text('${s}x'),
+                      selected: _speed == s,
+                      selectedColor: const Color(0xFFE50914),
+                      onSelected: (_) {
+                        _setSpeed(s);
+                        Navigator.pop(ctx);
+                      },
+                    ),
+                ],
               ),
             ],
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

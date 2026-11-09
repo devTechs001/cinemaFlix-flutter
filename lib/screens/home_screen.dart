@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../services/globals.dart';
 import '../models/sample_movies.dart';
 import '../widgets/interactive_card.dart';
+import '../widgets/cinema_app_bar.dart';
 import '../widgets/shimmer_loading.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -103,63 +104,19 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        leading: InteractiveCard(
-          onTap: () => Scaffold.of(context).openDrawer(),
-          scaleAmount: 0.88,
-          child: const Padding(
-            padding: EdgeInsets.all(12),
-            child: Icon(Icons.menu, color: Colors.white54),
-          ),
-        ),
-        title: GestureDetector(
-          onDoubleTap: () {
-            HapticFeedback.heavyImpact();
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('🎬 CinemaFlix v1.0'), duration: Duration(seconds: 1)),
-            );
-          },
-          child: const Text(
-            'CinemaFlix',
-            style: TextStyle(
-              color: Color(0xFFE50914),
-              fontWeight: FontWeight.bold,
-              fontSize: 24,
-            ),
-          ),
-        ),
+      appBar: CinemaAppBar(
+        brandTitle: true,
         actions: [
-          InteractiveCard(
+          CinemaAppBarIcon(
+            icon: Icons.search,
+            tooltip: 'Search',
             onTap: () => Navigator.pushNamed(context, '/search'),
-            scaleAmount: 0.88,
-            child: const Padding(
-              padding: EdgeInsets.all(8),
-              child: Icon(Icons.search, color: Colors.white54),
-            ),
           ),
-          Stack(
-            children: [
-              InteractiveCard(
-                onTap: () => Navigator.pushNamed(context, '/notifications'),
-                scaleAmount: 0.88,
-                child: const Padding(
-                  padding: EdgeInsets.all(8),
-                  child: Icon(Icons.notifications_outlined, color: Colors.white54),
-                ),
-              ),
-              Positioned(
-                right: 6,
-                top: 6,
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFE50914),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
-            ],
+          CinemaAppBarIcon(
+            icon: Icons.notifications_outlined,
+            tooltip: 'Notifications',
+            badge: true,
+            onTap: () => Navigator.pushNamed(context, '/notifications'),
           ),
         ],
       ),

@@ -47,8 +47,12 @@ class ThemeService extends ChangeNotifier {
         surface: Color(surface),
       ),
       appBarTheme: AppBarTheme(
-        backgroundColor: Color(scaffold),
+        backgroundColor: const Color(0xFF0F0F0F),
         elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
+        iconTheme: const IconThemeData(color: Colors.white),
+        titleTextStyle: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: Color(scaffold),
